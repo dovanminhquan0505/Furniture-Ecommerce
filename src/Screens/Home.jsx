@@ -1,6 +1,8 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import Helmet from "../components/Helmet/Helmet";
-import heroImg from '../assets/images/hero-img.png'
+import heroImg from "../assets/images/hero-img.png";
+import "../styles/home.css";
 import { Container, Row, Col } from "reactstrap";
 
 const Home = () => {
@@ -25,7 +27,9 @@ const Home = () => {
                                     praesentium quidem facilis maiores rerum
                                     animi necessitatibus? Corrupti, consectetur?
                                 </p>
-                                <button className="buy__btn">SHOP NOW</button>
+                                <button className="buy__btn">
+                                    <Link to="shop">SHOP NOW</Link>
+                                </button>
                             </div>
                         </Col>
 

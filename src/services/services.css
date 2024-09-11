@@ -1,0 +1,5 @@
+/* Service */
+.service__item{
+    padding: 20px;
+    background: var(--card-bg-01);
+}

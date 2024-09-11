@@ -55,6 +55,7 @@
 .nav__icons span img {
     width: 30px;
     height: 30px;
+    cursor: pointer;
 }
 
 .mobile__menu {
@@ -64,5 +65,5 @@
 }
 
 .nav__active {
-    font-weight: 600;
+    font-weight: 700 !important;
 }

@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import Helmet from "../components/Helmet/Helmet";
 import heroImg from "../assets/images/hero-img.png";
 import "../styles/home.css";
@@ -27,9 +28,13 @@ const Home = () => {
                                     praesentium quidem facilis maiores rerum
                                     animi necessitatibus? Corrupti, consectetur?
                                 </p>
-                                <button className="buy__btn">
+                                <motion.button
+                                    // the button will scale to 120% of its size (scale: 1.2)
+                                    whileTap={{ scale: 1.2 }}
+                                    className="buy__btn"
+                                >
                                     <Link to="shop">SHOP NOW</Link>
-                                </button>
+                                </motion.button>
                             </div>
                         </Col>
 

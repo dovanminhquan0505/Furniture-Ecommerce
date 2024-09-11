@@ -1,0 +1,16 @@
+.header {
+    width: 100%;
+    height: 70px;
+    line-height: 70px;
+}
+
+.nav__wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo{
+    display: flex;
+    column-gap: 8px;
+}

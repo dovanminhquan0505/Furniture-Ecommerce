@@ -15,6 +15,8 @@ const Home = () => {
     //useEffect and useState are two very important hooks that allow us to manage state and side effects in functional components.
     const [trendingProducts, setTrendingProducts] = useState([]);
     const [bestSalesProducts, setBestSalesProducts] = useState([]);
+    const [mobileProducts, setMobileProducts] = useState([]);
+    const [wirelessProducts, setWirelessProducts] = useState([]);
 
     const year = new Date().getFullYear();
 
@@ -26,10 +28,18 @@ const Home = () => {
         const filteredBestSalesProducts = products.filter(
             (item) => item.category === "sofa"
         );
+        const filteredMobileProducts = products.filter(
+            (item) => item.category === "mobile"
+        );
+        const filteredWirelessProducts = products.filter(
+            (item) => item.category === "wireless"
+        );
 
         //Update data
         setBestSalesProducts(filteredBestSalesProducts);
         setTrendingProducts(filteredTrendingProducts);
+        setMobileProducts(filteredMobileProducts);
+        setWirelessProducts(filteredWirelessProducts);
     }, []);
 
     return (
@@ -120,6 +130,18 @@ const Home = () => {
                         <Col lg="6" md="6" className="text-end">
                             <img src={counterImg} alt="" />
                         </Col>
+                    </Row>
+                </Container>
+            </section>
+
+            <section className="new__arrivals">
+                <Container>
+                    <Row>
+                        <Col lg="12" className="text-center">
+                            <h2 className="section__title">New Arrivals</h2>
+                        </Col>
+                        <ProductsList data={mobileProducts} />
+                        <ProductsList data={wirelessProducts} />
                     </Row>
                 </Container>
             </section>

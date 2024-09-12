@@ -9,10 +9,12 @@ const Clock = () => {
 
     let interval;
     const countDown = () => {
-        const destination = new Date("Sep 15, 2024").getTime();
+        const destination = new Date("Sep 13, 2024").getTime();
         interval = setInterval(() => {
             const now = new Date().getTime();
             const distance = destination - now;
+
+            //Calculate days, hours, minutes, seconds
             const days = Math.floor(distance / (1000 * 60 * 60 * 24));
             const hours = Math.floor(
                 (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
@@ -22,12 +24,13 @@ const Clock = () => {
             );
             const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-            if (destination < 0) clearInterval(interval.current);
-            else {
-                setDays(days)
-                setHours(hours)
-                setMinutes(minutes)
-                setSeconds(seconds)
+            if (destination < 0) {
+                clearInterval(interval.current);
+            } else {
+                setDays(days);
+                setHours(hours);
+                setMinutes(minutes);
+                setSeconds(seconds);
             }
         });
     };

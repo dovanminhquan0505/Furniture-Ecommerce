@@ -2,7 +2,6 @@ import React from "react";
 import "../Footer/footer.css";
 import { Container, Row, Col, ListGroup, ListGroupItem } from "reactstrap";
 import { Link } from "react-router-dom";
-import logo from "../../assets/images/eco-logo.png";
 
 const Footer = () => {
     const year = new Date().getFullYear();
@@ -12,9 +11,8 @@ const Footer = () => {
                 <Row>
                     <Col lg="4">
                         <div className="logo">
-                            <img src={logo} alt="logo" />
                             <div>
-                                <h1>Multimart</h1>
+                                <h1 className="text-white">Multimart</h1>
                             </div>
                         </div>
                         <p className="footer__text mt-4">
@@ -77,21 +75,21 @@ const Footer = () => {
                         <div className="footer__quick-links">
                             <h4 className="quick__links-title">Contact</h4>
                             <ListGroup>
-                                <ListGroupItem className="ps-0 border-0">
+                                <ListGroupItem className="ps-0 border-0  d-flex align-items-center gap-2">
                                     <span>
                                         <i class="ri-map-pin-line"></i>
                                     </span>
                                     <p>123 Hoàng Văn Thụ, P7, Quận 1, TPHCM</p>
                                 </ListGroupItem>
 
-                                <ListGroupItem className="ps-0 border-0">
+                                <ListGroupItem className="ps-0 border-0 d-flex align-items-center gap-2">
                                     <span>
                                         <i class="ri-phone-line"></i>
                                     </span>
                                     <p>0123456789</p>
                                 </ListGroupItem>
 
-                                <ListGroupItem className="ps-0 border-0">
+                                <ListGroupItem className="ps-0 border-0 d-flex align-items-center gap-2">
                                     <span>
                                         <i class="ri-mail-line"></i>
                                     </span>

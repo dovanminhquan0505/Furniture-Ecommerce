@@ -56,3 +56,10 @@
         padding: 5px;
     }
 }
+
+/* Use media queries to apply styles to elements while the device has a screen width less than or equal to 576px. */
+@media only screen and (max-width: 576px) {
+    .service__item {
+        padding: 20px;
+    }
+}

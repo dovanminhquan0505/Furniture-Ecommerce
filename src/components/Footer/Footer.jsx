@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import logo from "../../assets/images/eco-logo.png";
 
 const Footer = () => {
+    const year = new Date().getFullYear();
     return (
         <footer className="footer">
             <Container>
@@ -98,6 +99,13 @@ const Footer = () => {
                                 </ListGroupItem>
                             </ListGroup>
                         </div>
+                    </Col>
+
+                    <Col lg="12">
+                        <p className="footer_copyright">
+                            Copyright {year} developed by Minh Quan. All rights
+                            reserved.
+                        </p>
                     </Col>
                 </Row>
             </Container>

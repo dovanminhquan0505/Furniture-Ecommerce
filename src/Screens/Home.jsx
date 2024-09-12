@@ -52,7 +52,7 @@ const Home = () => {
             <section className="trending__products">
                 <Container>
                     <Row>
-                        <Col lg="12" className="text__center">
+                        <Col lg="12" className="text-center">
                             <h2 className="section__title">Trending Products</h2>
                         </Col>
                     </Row>

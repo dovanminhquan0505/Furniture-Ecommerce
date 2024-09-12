@@ -3,11 +3,15 @@
     cursor: pointer;
 }
 
-.product__info h3 {
+.product__info h3 a{
     font-size: 1.2rem;
     color: var(--primary-color);
     font-weight: 600;
     margin-top: 15px;
+}
+
+.product__info a:hover {
+    color: inherit;
 }
 
 .product__info span {

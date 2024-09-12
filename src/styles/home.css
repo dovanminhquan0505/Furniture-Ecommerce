@@ -66,6 +66,10 @@
     .hero__content h2 {
         font-size: 2rem;
     }
+
+    .section__title {
+        font-size: 1.7rem;
+    }
 }
 
 /* Use media queries to apply styles to elements while the device has a screen width less than or equal to 768px. */

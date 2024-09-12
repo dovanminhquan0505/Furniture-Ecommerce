@@ -82,3 +82,12 @@
         font-size: 0.9rem;
     }
 }
+
+
+/* Use media queries to apply styles to elements while the device has a screen width less than or equal to 576px. */
+@media only screen and (max-width: 576px) {
+    .hero__content{
+        padding-top: 0;
+        margin-bottom: 40px;
+    }
+}

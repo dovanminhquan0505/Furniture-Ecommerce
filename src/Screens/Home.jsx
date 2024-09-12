@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import products from "../assets/data/products";
 import Helmet from "../components/Helmet/Helmet";
 import heroImg from "../assets/images/hero-img.png";
 import "../styles/home.css";
@@ -9,7 +10,19 @@ import Services from "../services/Services";
 import ProductsList from "../components/UI/ProductsList";
 
 const Home = () => {
+    //useEffect and useState are two very important hooks that allow us to manage state and side effects in functional components.
+    const [data, setData] = useState(products);
     const year = new Date().getFullYear();
+
+    //If this array is empty [], then useEffect will only be called once after the first render.
+    useEffect(() => {
+        const filteredProducts = products.filter(
+            (item) => item.category == "chair"
+        );
+
+        setData(filteredProducts);
+    }, []);
+
     return (
         <Helmet title={" Home"}>
             <section className="hero__section">
@@ -54,9 +67,11 @@ const Home = () => {
                 <Container>
                     <Row>
                         <Col lg="12" className="text-center">
-                            <h2 className="section__title">Trending Products</h2>
+                            <h2 className="section__title">
+                                Trending Products
+                            </h2>
                         </Col>
-                        <ProductsList />
+                        <ProductsList data={data} />
                     </Row>
                 </Container>
             </section>

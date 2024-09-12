@@ -17,6 +17,7 @@ const Home = () => {
     const [bestSalesProducts, setBestSalesProducts] = useState([]);
     const [mobileProducts, setMobileProducts] = useState([]);
     const [wirelessProducts, setWirelessProducts] = useState([]);
+    const [popularProducts, setPopularProducts] = useState([]);
 
     const year = new Date().getFullYear();
 
@@ -34,12 +35,16 @@ const Home = () => {
         const filteredWirelessProducts = products.filter(
             (item) => item.category === "wireless"
         );
+        const filteredPopularProducts = products.filter(
+            (item) => item.category === "watch"
+        );
 
         //Update data
         setBestSalesProducts(filteredBestSalesProducts);
         setTrendingProducts(filteredTrendingProducts);
         setMobileProducts(filteredMobileProducts);
         setWirelessProducts(filteredWirelessProducts);
+        setPopularProducts(filteredPopularProducts);
     }, []);
 
     return (
@@ -142,6 +147,17 @@ const Home = () => {
                         </Col>
                         <ProductsList data={mobileProducts} />
                         <ProductsList data={wirelessProducts} />
+                    </Row>
+                </Container>
+            </section>
+
+            <section className="popular_category">
+                <Container>
+                    <Row>
+                        <Col lg="12" className="text-center">
+                            <h2 className="section__title">Popular in Category</h2>
+                        </Col>
+                        <ProductsList data={popularProducts} />
                     </Row>
                 </Container>
             </section>

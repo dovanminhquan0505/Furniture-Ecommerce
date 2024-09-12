@@ -1,6 +1,6 @@
 import React from "react";
 import productImage from "../../assets/images/arm-chair-01.jpg";
-import "../../styles/product__card.css";
+import "../../styles/product-card.css";
 import { motion } from "framer-motion";
 import { Col } from "reactstrap";
 

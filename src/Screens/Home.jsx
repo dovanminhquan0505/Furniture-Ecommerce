@@ -8,6 +8,7 @@ import "../styles/home.css";
 import { Container, Row, Col } from "reactstrap";
 import Services from "../services/Services";
 import ProductsList from "../components/UI/ProductsList";
+import counterImg from "../assets/images/counter-timer-img.png";
 
 const Home = () => {
     //useEffect and useState are two very important hooks that allow us to manage state and side effects in functional components.
@@ -90,6 +91,17 @@ const Home = () => {
                             <h2 className="section__title">Best Sales</h2>
                         </Col>
                         <ProductsList data={bestSalesProducts} />
+                    </Row>
+                </Container>
+            </section>
+
+            <section className="timer__count">
+                <Container>
+                    <Row>
+                        <Col lg="6" md="6"></Col>
+                        <Col lg="6" md="6">
+                            <img src={counterImg} alt="" />
+                        </Col>
                     </Row>
                 </Container>
             </section>

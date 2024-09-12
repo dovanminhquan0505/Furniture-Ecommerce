@@ -103,8 +103,8 @@
     background: #fff;
 }
 
+/* Use media queries to apply styles to elements while the device has a screen width less than or equal to 768px. */
 @media only screen and (max-width: 768px) {
-    /* */
     .navigation {
         position: fixed;
         top: 0;

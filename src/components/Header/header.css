@@ -136,4 +136,27 @@
     .mobile__menu {
         display: block;
     }
+
+    .mobile__menu span i {
+        font-size: 1.1rem !important;
+    }
+
+    .logo img{
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .logo h1 {
+        font-size: 1rem;
+    }
+
+    .fav__icon i,
+    .cart__icon i {
+        font-size: 1.2rem !important;
+    }
+
+    .nav__icons span img {
+        width: 1.4rem;
+        height: 1.4rem;
+    }
 }

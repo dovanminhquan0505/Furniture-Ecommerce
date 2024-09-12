@@ -3,10 +3,6 @@
     cursor: pointer;
 }
 
-.product__name a:hover{
-    color: #686de0;
-}
-
 .product__info h3 {
     font-size: 1.2rem;
     color: var(--primary-color);

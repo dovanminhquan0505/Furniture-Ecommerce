@@ -63,6 +63,10 @@ section {
     padding: 60px 0px;
 }
 
+a:hover{
+    color: #686de0;
+}
+
 .section__title {
     color: var(--primary-color);
     font-weight: 600;

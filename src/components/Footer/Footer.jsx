@@ -74,8 +74,8 @@ const Footer = () => {
                     <Col lg="3">
                         <div className="footer__quick-links">
                             <h4 className="quick__links-title">Contact</h4>
-                            <ListGroup>
-                                <ListGroupItem className="ps-0 border-0  d-flex align-items-center gap-2">
+                            <ListGroup className="footer__contact">
+                                <ListGroupItem className="ps-0 border-0 d-flex align-items-center gap-2">
                                     <span>
                                         <i class="ri-map-pin-line"></i>
                                     </span>
@@ -100,7 +100,7 @@ const Footer = () => {
                     </Col>
 
                     <Col lg="12">
-                        <p className="footer_copyright">
+                        <p className="footer__copyright">
                             Copyright {year} developed by Minh Quan. All rights
                             reserved.
                         </p>

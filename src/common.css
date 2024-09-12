@@ -2,7 +2,7 @@
 @import url("https://fonts.googleapis.com/css?family=Montserrat:wght@300;400;500;600;700;800&display=swap");
 
 /* Css Variable */
-:root{
+:root {
     --card-bg-01: #fdefe6;
     --card-bg-02: #d6e5fb;
     --card-bg-03: #ceebe9;
@@ -15,7 +15,7 @@
 }
 
 /* Reset browser default */
-*{
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -36,17 +36,17 @@ p {
     margin: 0;
 }
 
-p{
+p {
     color: var(--small-text-color);
     font-size: 1rem;
 }
 
 h1,
-h2{
+h2 {
     font-size: var(--heading-fontSize);
 }
 
-ul{
+ul {
     list-style: none;
 }
 
@@ -55,10 +55,15 @@ a {
     color: unset;
 }
 
-img{
+img {
     width: 100%;
 }
 
-section{
+section {
     padding: 60px 0px;
+}
+
+.section__title {
+    color: var(--primary-color);
+    font-weight: 600;
 }

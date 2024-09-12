@@ -44,3 +44,15 @@
         font-size: 1rem;
     }
 }
+
+/* Use media queries to apply styles to elements while the device has a screen width less than or equal to 768px. */
+@media only screen and (max-width: 768px) {
+    .service__item {
+        margin-bottom: 1.5rem;
+    }
+
+    .service__item span i {
+        font-size: 1.5rem;
+        padding: 5px;
+    }
+}

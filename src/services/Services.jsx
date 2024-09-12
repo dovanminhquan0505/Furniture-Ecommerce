@@ -9,17 +9,22 @@ const Services = () => {
         <section className="services">
             <Container>
                 <Row>
-                    <Col lg="3" md="4">
-                        <div className="service__item">
-                            <span>
-                                <i class="ri-truck-line"></i>
-                            </span>
-                            <div>
-                                <h3>Free Shipping</h3>
-                                <p>Lorem ipsum dolor sit amet.</p>
+                    {serviceData.map((item, index) => (
+                        <Col lg="3" md="4" key={index}>
+                            <div
+                                className="service__item"
+                                style={{ background: `${item.bg}` }}
+                            >
+                                <span>
+                                    <i class={item.icon}></i>
+                                </span>
+                                <div>
+                                    <h3>{item.title}</h3>
+                                    <p>{item.subtitle}</p>
+                                </div>
                             </div>
-                        </div>
-                    </Col>
+                        </Col>
+                    ))}
                 </Row>
             </Container>
         </section>

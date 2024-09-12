@@ -57,6 +57,28 @@
     font-weight: 600;
 }
 
-.store__btn a:hover{
+.store__btn a:hover {
     color: var(--primary-color);
+}
+
+/* Use media queries to apply styles to elements while the device has a screen width less than or equal to 992px. */
+@media only screen and (max-width: 992px) {
+    .hero__content h2 {
+        font-size: 2rem;
+    }
+}
+
+/* Use media queries to apply styles to elements while the device has a screen width less than or equal to 768px. */
+@media only screen and (max-width: 768px) {
+    .hero__content h2 {
+        font-size: 1.6rem;
+    }
+
+    .hero__content p {
+        font-size: 0.9rem;
+    }
+
+    .buy__btn {
+        font-size: 0.9rem;
+    }
 }

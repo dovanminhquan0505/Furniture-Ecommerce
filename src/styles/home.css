@@ -15,7 +15,7 @@
     line-height: 28px;
 }
 
-.hero__section p:nth-child(1){
+.hero__section p:nth-child(1) {
     font-weight: 500;
 }
 
@@ -31,10 +31,32 @@
     margin-top: 40px;
 }
 
-.buy__btn a:hover{
+.buy__btn a:hover {
     color: #fff;
 }
 
 .hero__content {
     padding-top: 45px;
+}
+
+/* Counter Time */
+.timer__count {
+    background: var(--primary-color);
+    height: 300px;
+}
+
+.timer__count img {
+    width: 70% !important;
+    height: 70% !important;
+    object-fit: contain;
+}
+
+.store__btn {
+    background: #fff;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.store__btn a:hover{
+    color: var(--primary-color);
 }

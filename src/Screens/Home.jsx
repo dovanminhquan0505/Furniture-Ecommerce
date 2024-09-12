@@ -8,6 +8,7 @@ import "../styles/home.css";
 import { Container, Row, Col } from "reactstrap";
 import Services from "../services/Services";
 import ProductsList from "../components/UI/ProductsList";
+import Clock from "../components/UI/Clock";
 import counterImg from "../assets/images/counter-timer-img.png";
 
 const Home = () => {
@@ -98,8 +99,25 @@ const Home = () => {
             <section className="timer__count">
                 <Container>
                     <Row>
-                        <Col lg="6" md="6"></Col>
                         <Col lg="6" md="6">
+                            <div className="clock__top-content">
+                                <h4 className="text-white fs-6 mb-2">
+                                    Limited Offers
+                                </h4>
+                                <h3 className="text-white fs-5 mb-3">
+                                    Quality Arm Chair
+                                </h3>
+                            </div>
+                            <Clock />
+
+                            <motion.button
+                                whileTap={{ scale: 1.2 }}
+                                className="buy__btn store__btn"
+                            >
+                                <Link to="/shop">Visit Store</Link>
+                            </motion.button>
+                        </Col>
+                        <Col lg="6" md="6" className="text-end">
                             <img src={counterImg} alt="" />
                         </Col>
                     </Row>

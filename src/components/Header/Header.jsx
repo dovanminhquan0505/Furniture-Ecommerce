@@ -94,12 +94,12 @@ const Header = () => {
                                     alt=""
                                 />
                             </span>
-                        </div>
 
-                        <div className="mobile__menu">
-                            <span>
-                                <i class="ri-menu-line"></i>
-                            </span>
+                            <div className="mobile__menu">
+                                <span>
+                                    <i class="ri-menu-line"></i>
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </Row>

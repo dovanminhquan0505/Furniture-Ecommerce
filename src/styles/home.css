@@ -70,6 +70,14 @@
     .section__title {
         font-size: 1.7rem;
     }
+
+    .clock__top-content h4 {
+        font-size: 0.9rem !important;
+    }
+
+    .clock__top-content h3 {
+        font-size: 1rem !important;
+    }
 }
 
 /* Use media queries to apply styles to elements while the device has a screen width less than or equal to 768px. */
@@ -82,12 +90,24 @@
         font-size: 0.9rem;
     }
 
-    .buy__btn {
+    .buy__btn a{
         font-size: 0.9rem;
     }
 
     .section__title {
         font-size: 1.4rem;
+    }
+
+    .counter__img {
+        display: none;
+    }
+
+    .clock__top-content {
+        text-align: center;
+    }
+
+    .count__down-col {
+        text-align: center;
     }
 }
 

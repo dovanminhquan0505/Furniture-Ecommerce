@@ -12,15 +12,22 @@ import ProductsList from "../components/UI/ProductsList";
 const Home = () => {
     //useEffect and useState are two very important hooks that allow us to manage state and side effects in functional components.
     const [trendingProducts, setTrendingProducts] = useState([]);
+    const [bestSalesProducts, setBestSalesProducts] = useState([]);
+
     const year = new Date().getFullYear();
 
     //If this array is empty [], then useEffect will only be called once after the first render.
     useEffect(() => {
-        const filteredProducts = products.filter(
+        const filteredTrendingProducts = products.filter(
             (item) => item.category === "chair"
         );
+        const filteredBestSalesProducts = products.filter(
+            (item) => item.category === "sofa"
+        );
 
-        setTrendingProducts(filteredProducts);
+        //Update data
+        setBestSalesProducts(filteredBestSalesProducts);
+        setTrendingProducts(filteredTrendingProducts);
     }, []);
 
     return (
@@ -82,6 +89,7 @@ const Home = () => {
                         <Col lg="12" className="text-center">
                             <h2 className="section__title">Best Sales</h2>
                         </Col>
+                        <ProductsList data={bestSalesProducts} />
                     </Row>
                 </Container>
             </section>

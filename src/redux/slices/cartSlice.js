@@ -15,10 +15,12 @@ const cartSlice = createSlice({
     reducers: {
         addItemToCart: (state, action) => {
             const newItem = action.payload;
+
+            // Search for products in the cart that have the same id as the new product.
+            // If found, increase the quantity and total price of the product.
             const existingItem = state.cartItems.find(
                 (item) => item.id === newItem.id
             );
-
             state.totalQuantity++;
 
             if (!existingItem) {
@@ -37,8 +39,7 @@ const cartSlice = createSlice({
             }
 
             state.totalAmount = state.cartItems.reduce(
-                (total, item) =>
-                    total + Number(item.price) * Number(item.quantity)
+                (total, item) => total + Number(item.totalPrice)
             );
         },
     },

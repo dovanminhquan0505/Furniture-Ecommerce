@@ -14,11 +14,13 @@
     display: flex;
     align-items: center;
     column-gap: 8px;
+    margin-bottom: 15px;
 }
 
 .logo img {
     width: 1.5rem;
     height: 1.5rem;
+    margin-bottom: 5px;
 }
 
 .logo h1 {

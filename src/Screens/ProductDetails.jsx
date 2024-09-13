@@ -53,10 +53,12 @@ const ProductDetails = () => {
                                         </span>
                                     </div>
 
-                                    <p>({avgRating})</p>
+                                    <p>
+                                        (<span>{avgRating}</span> ratings)
+                                    </p>
                                 </div>
 
-                                <span>${price}</span>
+                                <span className="product__price">${price}</span>
                                 <p>{shortDesc}</p>
 
                                 <button className="buy__btn">

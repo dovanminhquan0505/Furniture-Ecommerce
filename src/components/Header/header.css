@@ -59,10 +59,10 @@
 
 .badge {
     position: absolute;
-    top: 50%;
+    top: 26%;
     right: -35%;
-    width: 15px;
-    height: 15px;
+    width: 13px;
+    height: 13px;
     content: "";
     background: var(--primary-color);
     color: #fff;
@@ -70,7 +70,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.7rem;
+    font-size: 0.5rem;
     font-weight: 600;
     z-index: 10;
 }

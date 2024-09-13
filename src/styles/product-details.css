@@ -36,3 +36,12 @@
 .tab__content p {
     line-height: 30px;
 }
+
+.review__wrapper ul li span {
+    color: #ffc000;
+    font-weight: 600;
+}
+
+.review__wrapper ul li p {
+    margin-top: 10px;
+}

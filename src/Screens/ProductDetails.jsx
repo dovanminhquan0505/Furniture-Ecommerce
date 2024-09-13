@@ -106,15 +106,61 @@ const ProductDetails = () => {
                                 <div className="product__review mt-5">
                                     <div className="review__wrapper">
                                         <ul>
-                                            {
-                                                reviews?.map((item, index) => (
-                                                    <li key={index}>
-                                                        <span>{item.rating} (ratings)</span>
-                                                        <p>{item.text}</p>
-                                                    </li>
-                                                ))
-                                            }
+                                            {reviews?.map((item, index) => (
+                                                <li
+                                                    key={index}
+                                                    className="mb-4"
+                                                >
+                                                    <h6>Nguyen Van A</h6>
+                                                    <span>
+                                                        {item.rating} (ratings)
+                                                    </span>
+                                                    <p>{item.text}</p>
+                                                </li>
+                                            ))}
                                         </ul>
+
+                                        <div className="review__form">
+                                            <h4>Leave Your Experience</h4>
+                                            <form action="">
+                                                <div className="form__group">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Enter name"
+                                                    />
+                                                </div>
+
+                                                <div className="form__group">
+                                                    <span>
+                                                        1
+                                                        <i class="ri-star-s-fill"></i>
+                                                    </span>
+                                                    <span>
+                                                        2
+                                                        <i class="ri-star-s-fill"></i>
+                                                    </span>
+                                                    <span>
+                                                        3
+                                                        <i class="ri-star-s-fill"></i>
+                                                    </span>
+                                                    <span>
+                                                        4
+                                                        <i class="ri-star-s-fill"></i>
+                                                    </span>
+                                                    <span>
+                                                        5
+                                                        <i class="ri-star-s-fill"></i>
+                                                    </span>
+                                                </div>
+
+                                                <div className="form__group">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Review Message..."
+                                                    />
+                                                </div>
+                                            </form>
+                                        </div>
                                     </div>
                                 </div>
                             )}

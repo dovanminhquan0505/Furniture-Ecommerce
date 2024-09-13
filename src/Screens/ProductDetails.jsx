@@ -5,6 +5,7 @@ import products from "../assets/data/products";
 import Helmet from "../components/Helmet/Helmet";
 import CommonSection from "../components/UI/CommonSection";
 import "../styles/product-details.css";
+import { motion } from "framer-motion";
 
 const ProductDetails = () => {
     const { id } = useParams();
@@ -21,8 +22,8 @@ const ProductDetails = () => {
     } = product;
 
     return (
-        <Helmet title="">
-            <CommonSection />
+        <Helmet title={productName}>
+            <CommonSection title={productName} />
 
             <section className="pt-0">
                 <Container>
@@ -59,11 +60,11 @@ const ProductDetails = () => {
                                 </div>
 
                                 <span className="product__price">${price}</span>
-                                <p>{shortDesc}</p>
+                                <p className="mt-3">{shortDesc}</p>
 
-                                <button className="buy__btn">
+                                <motion.button whileTap={{ scale: 1.2 }} className="buy__btn">
                                     Add to Cart
-                                </button>
+                                </motion.button>
                             </div>
                         </Col>
                     </Row>

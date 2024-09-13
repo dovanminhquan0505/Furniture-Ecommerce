@@ -18,6 +18,8 @@ const ProductCard = ({ item }) => {
                 imgUrl: item.imgUrl,
             })
         );
+
+        alert("Product added successfully!");
     };
 
     return (

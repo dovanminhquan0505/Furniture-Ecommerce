@@ -33,8 +33,8 @@ const ProductDetails = () => {
 
                         <Col lg="6">
                             <div className="product__details">
-                                <h1>{productName}</h1>
-                                <div className="product__rating">
+                                <h2>{productName}</h2>
+                                <div className="product__rating d-flex align-items-center gap-5 mb-3">
                                     <div>
                                         <span>
                                             <i class="ri-star-s-fill"></i>

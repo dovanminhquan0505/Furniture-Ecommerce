@@ -3,7 +3,11 @@ import CommonSection from "../components/UI/CommonSection";
 import Helmet from "../components/Helmet/Helmet";
 
 const Shop = () => {
-    return <div>Shop</div>;
+    return (
+        <Helmet title=" Shop">
+            <CommonSection title="Products" />
+        </Helmet>
+    );
 };
 
 export default Shop;

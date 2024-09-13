@@ -23,7 +23,7 @@ const nav__links = [
 ];
 
 const Header = () => {
-    const totalQuantity = useSelector(state => state.cart.totalQuantity);
+    const totalQuantity = useSelector((state) => state.cart.totalQuantity);
 
     const headerRef = useRef(null);
     const menuRef = useRef(null);
@@ -48,7 +48,7 @@ const Header = () => {
         };
     });
 
-    const menuToggle = () => menuRef.current.classList.toggle('active__menu');
+    const menuToggle = () => menuRef.current.classList.toggle("active__menu");
 
     return (
         <header className="header" ref={headerRef}>
@@ -62,7 +62,11 @@ const Header = () => {
                             </div>
                         </div>
 
-                        <div className="navigation" ref={menuRef} onClick={menuToggle}>
+                        <div
+                            className="navigation"
+                            ref={menuRef}
+                            onClick={menuToggle}
+                        >
                             <ul className="menu">
                                 {nav__links.map((item, index) => (
                                     <li className="nav_item" key={index}>
@@ -88,7 +92,7 @@ const Header = () => {
                             </span>
 
                             <span className="cart__icon">
-                                <i class="ri-shopping-bag-line"></i>
+                                <i class="ri-shopping-cart-line"></i>
                                 <span className="badge">{totalQuantity}</span>
                             </span>
 

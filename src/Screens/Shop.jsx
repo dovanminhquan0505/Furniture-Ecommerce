@@ -50,6 +50,21 @@ const Shop = () => {
 
             setProductsData(filteredProducts);
         }
+
+        if (filterValue === "all") {
+            setProductsData(products);
+            return;
+        }
+    };
+
+    const handleSearch = (e) => {
+        const searchTerm = e.target.value;
+
+        const searchedProducts = products.filter((item) =>
+            item.productName.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        setProductsData(searchedProducts);
     };
 
     return (
@@ -62,7 +77,9 @@ const Shop = () => {
                         <Col lg="3" md="3">
                             <div className="filter__widget">
                                 <select onChange={handleFilter}>
-                                    <option>Filter By Category</option>
+                                    <option value="all">
+                                        Filter By Category
+                                    </option>
                                     <option value="sofa">Sofa</option>
                                     <option value="mobile">Mobile</option>
                                     <option value="chair">Chair</option>
@@ -84,7 +101,11 @@ const Shop = () => {
                         </Col>
                         <Col lg="6" md="6">
                             <div className="search__box">
-                                <input type="text" placeholder="Search....." />
+                                <input
+                                    type="text"
+                                    placeholder="Search....."
+                                    onChange={handleSearch}
+                                />
                                 <span>
                                     <i class="ri-search-line"></i>
                                 </span>
@@ -98,7 +119,7 @@ const Shop = () => {
                 <Container>
                     <Row>
                         {productsData.length === 0 ? (
-                            <h1>Products are not found!</h1>
+                            <h1 className="text-center fs-4">Products are not found!</h1>
                         ) : (
                             <ProductsList data={productsData} />
                         )}

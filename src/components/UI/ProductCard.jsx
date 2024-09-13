@@ -5,6 +5,8 @@ import { Col } from "reactstrap";
 import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { cartActions } from "../../redux/slices/cartSlice";
+//React-Toastify allows you to add notifications to your app with ease.
+import { ToastContainer, toast } from 'react-toastify';
 
 const ProductCard = ({ item }) => {
     //Add product to cart

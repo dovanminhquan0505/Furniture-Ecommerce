@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Container, Row, Col } from "reactstrap";
 import { useParams } from "react-router-dom";
 import products from "../assets/data/products";
@@ -7,9 +7,15 @@ import CommonSection from "../components/UI/CommonSection";
 import "../styles/product-details.css";
 import { motion } from "framer-motion";
 import ProductsList from "../components/UI/ProductsList";
+import { useDispatch } from "react-redux";
+import { cartActions } from "../redux/slices/cartSlice";
+import { toast } from "react-toastify";
 
 const ProductDetails = () => {
     const [tab, setTab] = useState("desc");
+    const reviewUser = useRef("");
+    const reviewMessage = useRef("");
+    const dispatch = useDispatch();
     //Handle quality of products
     const [rating, setRating] = useState(null);
     const { id } = useParams();
@@ -26,11 +32,31 @@ const ProductDetails = () => {
         category,
     } = product;
 
-
     //List of related products that users are seeking
     const relatedProducts = products.filter(
         (item) => item.category === category
     );
+
+    //Handle Send experiences of users
+    const submitHandler = (e) => {
+        e.preventDefault();
+
+        const reviewUserName = reviewUser.current.value;
+        const reviewUserMessage = reviewMessage.current.value;
+    };
+
+    const addToCart = () => {
+        dispatch(
+            cartActions.addItemToCart({
+                id,
+                image: imgUrl,
+                productName,
+                price,
+            })
+        );
+
+        toast.success("Product added successfully!")
+    };
 
     return (
         <Helmet title={productName}>
@@ -70,12 +96,18 @@ const ProductDetails = () => {
                                     </p>
                                 </div>
 
-                                <span className="product__price">${price}</span>
+                                <div className="d-flex align-items-center gap-5">
+                                    <span className="product__price">
+                                        ${price}
+                                    </span>
+                                    <span>Category: {category}</span>
+                                </div>
                                 <p className="mt-3">{shortDesc}</p>
 
                                 <motion.button
                                     whileTap={{ scale: 1.2 }}
                                     className="buy__btn"
+                                    onClick={addToCart}
                                 >
                                     Add to Cart
                                 </motion.button>
@@ -132,11 +164,15 @@ const ProductDetails = () => {
 
                                         <div className="review__form">
                                             <h4>Leave Your Experience</h4>
-                                            <form action="">
+                                            <form
+                                                action=""
+                                                onSubmit={submitHandler}
+                                            >
                                                 <div className="form__group">
                                                     <input
                                                         type="text"
                                                         placeholder="Enter name"
+                                                        ref={reviewUser}
                                                     />
                                                 </div>
 
@@ -190,6 +226,7 @@ const ProductDetails = () => {
 
                                                 <div className="form__group">
                                                     <textarea
+                                                        ref={reviewMessage}
                                                         rows={4}
                                                         type="text"
                                                         placeholder="Review Message..."
@@ -210,7 +247,9 @@ const ProductDetails = () => {
                         </Col>
 
                         <Col lg="12" className="mt-5">
-                            <h2 className="related__title">You might also like</h2>
+                            <h2 className="related__title">
+                                You might also like
+                            </h2>
                         </Col>
 
                         <ProductsList data={relatedProducts} />

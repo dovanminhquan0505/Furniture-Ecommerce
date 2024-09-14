@@ -6,9 +6,12 @@ import Helmet from "../components/Helmet/Helmet";
 import CommonSection from "../components/UI/CommonSection";
 import "../styles/product-details.css";
 import { motion } from "framer-motion";
+import ProductsList from "../components/UI/ProductsList";
 
 const ProductDetails = () => {
     const [tab, setTab] = useState("desc");
+    //Handle quality of products
+    const [rating, setRating] = useState(null);
     const { id } = useParams();
     const product = products.find((item) => item.id === id);
 
@@ -20,7 +23,14 @@ const ProductDetails = () => {
         reviews,
         description,
         shortDesc,
+        category,
     } = product;
+
+
+    //List of related products that users are seeking
+    const relatedProducts = products.filter(
+        (item) => item.category === category
+    );
 
     return (
         <Helmet title={productName}>
@@ -38,19 +48,19 @@ const ProductDetails = () => {
                                 <h2>{productName}</h2>
                                 <div className="product__rating d-flex align-items-center gap-5 mb-3">
                                     <div>
-                                        <span>
+                                        <span onClick={() => setRating(1)}>
                                             <i class="ri-star-s-fill"></i>
                                         </span>
-                                        <span>
+                                        <span onClick={() => setRating(2)}>
                                             <i class="ri-star-s-fill"></i>
                                         </span>
-                                        <span>
+                                        <span onClick={() => setRating(3)}>
                                             <i class="ri-star-s-fill"></i>
                                         </span>
-                                        <span>
+                                        <span onClick={() => setRating(4)}>
                                             <i class="ri-star-s-fill"></i>
                                         </span>
-                                        <span>
+                                        <span onClick={() => setRating(5)}>
                                             <i class="ri-star-half-s-line"></i>
                                         </span>
                                     </div>
@@ -131,28 +141,48 @@ const ProductDetails = () => {
                                                 </div>
 
                                                 <div className="form__group d-flex align-items-center gap-5">
-                                                    <span>
-                                                        1 
+                                                    <span
+                                                        onClick={() =>
+                                                            setRating(1)
+                                                        }
+                                                    >
+                                                        1
                                                         <i class="ri-star-s-fill"></i>
                                                         = Poor
                                                     </span>
-                                                    <span>
-                                                        2 
+                                                    <span
+                                                        onClick={() =>
+                                                            setRating(2)
+                                                        }
+                                                    >
+                                                        2
                                                         <i class="ri-star-s-fill"></i>
                                                         = Fair
                                                     </span>
-                                                    <span>
-                                                        3 
+                                                    <span
+                                                        onClick={() =>
+                                                            setRating(3)
+                                                        }
+                                                    >
+                                                        3
                                                         <i class="ri-star-s-fill"></i>
                                                         = Good
                                                     </span>
-                                                    <span>
+                                                    <span
+                                                        onClick={() =>
+                                                            setRating(4)
+                                                        }
+                                                    >
                                                         4
                                                         <i class="ri-star-s-fill"></i>
                                                         = Very Good
                                                     </span>
-                                                    <span>
-                                                        5 
+                                                    <span
+                                                        onClick={() =>
+                                                            setRating(5)
+                                                        }
+                                                    >
+                                                        5
                                                         <i class="ri-star-s-fill"></i>
                                                         = Excellent
                                                     </span>
@@ -165,12 +195,25 @@ const ProductDetails = () => {
                                                         placeholder="Review Message..."
                                                     />
                                                 </div>
+
+                                                <button
+                                                    type="submit"
+                                                    className="buy__btn"
+                                                >
+                                                    Send
+                                                </button>
                                             </form>
                                         </div>
                                     </div>
                                 </div>
                             )}
                         </Col>
+
+                        <Col lg="12">
+                            <h2 className="related__title">You might also like</h2>
+                        </Col>
+
+                        <ProductsList data={relatedProducts} />
                     </Row>
                 </Container>
             </section>

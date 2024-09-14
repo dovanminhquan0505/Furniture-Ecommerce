@@ -48,7 +48,7 @@
 
 /* Review Form */
 .review__form {
-    width: 70%;
+    width: 80%;
     margin: auto;
     margin-top: 50px;
 }
@@ -82,4 +82,5 @@
     column-gap: 5px;
     color: #ffc000;
     font-weight: 600;
+    cursor: pointer;
 }

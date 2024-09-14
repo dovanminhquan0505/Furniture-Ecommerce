@@ -130,7 +130,7 @@ const ProductDetails = () => {
                                                     />
                                                 </div>
 
-                                                <div className="form__group">
+                                                <div className="form__group d-flex align-items-center gap-5">
                                                     <span>
                                                         1 
                                                         <i class="ri-star-s-fill"></i>

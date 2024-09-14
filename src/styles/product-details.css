@@ -45,3 +45,31 @@
 .review__wrapper ul li p {
     margin-top: 10px;
 }
+
+/* Review Form */
+.review__form {
+    width: 70%;
+    margin: auto;
+    margin-top: 50px;
+}
+
+.review__form h4 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 30px;
+}
+
+.form__group {
+    margin-bottom: 30px;
+}
+
+.form__group input {
+    width: 70%;
+    border: 1px solid var(--primary-color);
+    border-radius: 5px;
+    padding: 8px 20px;
+}
+
+.form__group input:focus {
+    outline: none;
+}

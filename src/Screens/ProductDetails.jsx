@@ -132,29 +132,35 @@ const ProductDetails = () => {
 
                                                 <div className="form__group">
                                                     <span>
-                                                        1
+                                                        1 
                                                         <i class="ri-star-s-fill"></i>
+                                                        = Poor
                                                     </span>
                                                     <span>
-                                                        2
+                                                        2 
                                                         <i class="ri-star-s-fill"></i>
+                                                        = Fair
                                                     </span>
                                                     <span>
-                                                        3
+                                                        3 
                                                         <i class="ri-star-s-fill"></i>
+                                                        = Good
                                                     </span>
                                                     <span>
                                                         4
                                                         <i class="ri-star-s-fill"></i>
+                                                        = Very Good
                                                     </span>
                                                     <span>
-                                                        5
+                                                        5 
                                                         <i class="ri-star-s-fill"></i>
+                                                        = Excellent
                                                     </span>
                                                 </div>
 
                                                 <div className="form__group">
-                                                    <input
+                                                    <textarea
+                                                        rows={4}
                                                         type="text"
                                                         placeholder="Review Message..."
                                                     />

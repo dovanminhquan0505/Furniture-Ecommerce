@@ -209,7 +209,7 @@ const ProductDetails = () => {
                             )}
                         </Col>
 
-                        <Col lg="12">
+                        <Col lg="12" className="mt-5">
                             <h2 className="related__title">You might also like</h2>
                         </Col>
 

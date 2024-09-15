@@ -39,7 +39,8 @@ const cartSlice = createSlice({
             }
 
             state.totalAmount = state.cartItems.reduce(
-                (total, item) => total + Number(item.totalPrice)
+                (total, item) => total + Number(item.totalPrice),
+                0
             );
         },
 
@@ -54,11 +55,12 @@ const cartSlice = createSlice({
 
                 state.totalQuantity =
                     state.totalQuantity - existingItem.quantity;
-                
             }
 
             state.totalAmount = state.cartItems.reduce(
-                (total, item) => total + Number(item.price) * Number(item.quantity)
+                (total, item) =>
+                    total + Number(item.price) * Number(item.quantity),
+                0
             );
         },
     },

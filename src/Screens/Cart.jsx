@@ -3,7 +3,6 @@ import "../styles/cart.css";
 import Helmet from "../components/Helmet/Helmet";
 import CommonSection from "../components/UI/CommonSection";
 import { Container, Row, Col } from "reactstrap";
-import tdImage from "../assets/images/arm-chair-01.jpg";
 import { motion } from "framer-motion";
 import cartActions from "../redux/slices/cartSlice";
 import { useSelector, useDispatch } from "react-redux";
@@ -47,7 +46,12 @@ const Cart = () => {
                                                 <td>${item.price}</td>
                                                 <td>{item.quantity}</td>
                                                 <td>
-                                                    <i class="ri-delete-bin-line"></i>
+                                                    <motion.i
+                                                        whileTap={{
+                                                            scale: 1.2,
+                                                        }}
+                                                        class="ri-delete-bin-line"
+                                                    ></motion.i>
                                                 </td>
                                             </tr>
                                         ))}

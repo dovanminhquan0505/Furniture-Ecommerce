@@ -35,6 +35,12 @@
     color: #fff;
 }
 
+.auth__btn {
+    background: #fff;
+    color: #000;
+    font-weight: bold;
+}
+
 .hero__content {
     padding-top: 45px;
 }

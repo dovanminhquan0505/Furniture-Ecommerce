@@ -72,20 +72,23 @@ const Checkout = () => {
                                     Subtotal: <span>$120</span>
                                 </h6>
                                 <h6>
-                                    Shipping: <span>$10</span>
+                                    <span>
+                                        Shipping: <br />
+                                        Free Shipping
+                                    </span>
+                                    <span>$0</span>
                                 </h6>
-                                <h6>Free Shipping</h6>
                                 <h4>
-                                    Total Cost: <span>$130</span>
+                                    Total Cost: <span>$120</span>
                                 </h4>
-                            </div>
 
-                            <motion.button
-                                whileTap={{ scale: 1.2 }}
-                                className="buy__btn auth__btn w-100"
-                            >
-                                Place order
-                            </motion.button>
+                                <motion.button
+                                    whileTap={{ scale: 1.2 }}
+                                    className="buy__btn auth__btn w-100"
+                                >
+                                    Place order
+                                </motion.button>
+                            </div>
                         </Col>
                     </Row>
                 </Container>

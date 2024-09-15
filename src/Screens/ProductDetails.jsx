@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Container, Row, Col } from "reactstrap";
 import { useParams } from "react-router-dom";
 import products from "../assets/data/products";
@@ -57,6 +57,11 @@ const ProductDetails = () => {
 
         toast.success("Product added successfully!")
     };
+
+    //when a user switches between products, they start from the top of the page.
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [product]);
 
     return (
         <Helmet title={productName}>

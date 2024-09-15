@@ -4,11 +4,13 @@ import Helmet from "../components/Helmet/Helmet";
 import CommonSection from "../components/UI/CommonSection";
 import { Container, Row, Col } from "reactstrap";
 import { motion } from "framer-motion";
-import {cartActions} from "../redux/slices/cartSlice";
+import { cartActions } from "../redux/slices/cartSlice";
 import { useSelector, useDispatch } from "react-redux";
+import { Link } from "react-router-dom";
 
 const Cart = () => {
     const cartItems = useSelector((state) => state.cart.cartItems);
+    const totalAmount = useSelector((state) => state.cart.totalAmount);
 
     return (
         <Helmet title=" Cart">
@@ -35,14 +37,24 @@ const Cart = () => {
 
                                     <tbody>
                                         {cartItems.map((item, index) => (
-                                            <Tr item={item} key={index}/>
+                                            <Tr item={item} key={index} />
                                         ))}
                                     </tbody>
                                 </table>
                             )}
                         </Col>
 
-                        <Col lg="3"></Col>
+                        <Col lg="3">
+                            <div>
+                                <h6>Subtotal</h6>
+                                <span>${totalAmount}</span>
+                            </div>
+                            <p>Taxes and shipping will calculate in checkout</p>
+                            <div>
+                                <div className="buy__btn"><Link to="/shop">Continue Shopping</Link></div>
+                                <div className="buy__btn"><Link to="/checkout">Checkout</Link></div>
+                            </div>
+                        </Col>
                     </Row>
                 </Container>
             </section>
@@ -55,7 +67,7 @@ const Tr = ({ item }) => {
 
     const deleteProduct = () => {
         dispatch(cartActions.deleteItemFromCart(item.id));
-    }
+    };
     return (
         <tr>
             <td>

@@ -46,13 +46,22 @@ const Cart = () => {
 
                         <Col lg="3">
                             <div>
-                                <h6>Subtotal</h6>
-                                <span>${totalAmount}</span>
+                                <h6 className="d-flex align-items-center justify-content-between">
+                                    Subtotal
+                                    <span className="fs-4 fw-bold">
+                                        ${totalAmount}
+                                    </span>
+                                </h6>
                             </div>
-                            <p>Taxes and shipping will calculate in checkout</p>
+                            <p className="fs-6 mt-2">Taxes and shipping will calculate in checkout</p>
                             <div>
-                                <div className="buy__btn"><Link to="/shop">Continue Shopping</Link></div>
-                                <div className="buy__btn"><Link to="/checkout">Checkout</Link></div>
+                                <button className="buy__btn w-100">
+                                    <Link to="/checkout">Checkout</Link>
+                                </button>
+
+                                <button className="buy__btn w-100 mt-3">
+                                    <Link to="/shop">Continue Shopping</Link>
+                                </button>
                             </div>
                         </Col>
                     </Row>

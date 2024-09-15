@@ -176,7 +176,7 @@ const ProductDetails = () => {
                                                     />
                                                 </div>
 
-                                                <div className="form__group d-flex align-items-center gap-5">
+                                                <div className="form__group d-flex align-items-center gap-5 rating__group">
                                                     <span
                                                         onClick={() =>
                                                             setRating(1)
@@ -184,7 +184,6 @@ const ProductDetails = () => {
                                                     >
                                                         1
                                                         <i class="ri-star-s-fill"></i>
-                                                        = Poor
                                                     </span>
                                                     <span
                                                         onClick={() =>
@@ -193,7 +192,6 @@ const ProductDetails = () => {
                                                     >
                                                         2
                                                         <i class="ri-star-s-fill"></i>
-                                                        = Fair
                                                     </span>
                                                     <span
                                                         onClick={() =>
@@ -202,7 +200,6 @@ const ProductDetails = () => {
                                                     >
                                                         3
                                                         <i class="ri-star-s-fill"></i>
-                                                        = Good
                                                     </span>
                                                     <span
                                                         onClick={() =>
@@ -211,7 +208,6 @@ const ProductDetails = () => {
                                                     >
                                                         4
                                                         <i class="ri-star-s-fill"></i>
-                                                        = Very Good
                                                     </span>
                                                     <span
                                                         onClick={() =>
@@ -220,7 +216,6 @@ const ProductDetails = () => {
                                                     >
                                                         5
                                                         <i class="ri-star-s-fill"></i>
-                                                        = Excellent
                                                     </span>
                                                 </div>
 

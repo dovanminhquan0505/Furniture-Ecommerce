@@ -43,6 +43,14 @@ const ProductDetails = () => {
 
         const reviewUserName = reviewUser.current.value;
         const reviewUserMessage = reviewMessage.current.value;
+
+        const reviewObject = {
+            userName: reviewUserName,
+            message: reviewUserMessage,
+            rating: rating,
+        };
+
+        console.log(reviewObject);
     };
 
     const addToCart = () => {
@@ -55,7 +63,7 @@ const ProductDetails = () => {
             })
         );
 
-        toast.success("Product added successfully!")
+        toast.success("Product added successfully!");
     };
 
     //when a user switches between products, they start from the top of the page.
@@ -79,19 +87,19 @@ const ProductDetails = () => {
                                 <h2>{productName}</h2>
                                 <div className="product__rating d-flex align-items-center gap-5 mb-3">
                                     <div>
-                                        <span onClick={() => setRating(1)}>
+                                        <span>
                                             <i class="ri-star-s-fill"></i>
                                         </span>
-                                        <span onClick={() => setRating(2)}>
+                                        <span>
                                             <i class="ri-star-s-fill"></i>
                                         </span>
-                                        <span onClick={() => setRating(3)}>
+                                        <span>
                                             <i class="ri-star-s-fill"></i>
                                         </span>
-                                        <span onClick={() => setRating(4)}>
+                                        <span>
                                             <i class="ri-star-s-fill"></i>
                                         </span>
-                                        <span onClick={() => setRating(5)}>
+                                        <span>
                                             <i class="ri-star-half-s-line"></i>
                                         </span>
                                     </div>
@@ -182,46 +190,61 @@ const ProductDetails = () => {
                                                 </div>
 
                                                 <div className="form__group d-flex align-items-center gap-5 rating__group">
-                                                    <span
+                                                    <motion.span
+                                                        whileTap={{
+                                                            scale: 1.2,
+                                                        }}
                                                         onClick={() =>
                                                             setRating(1)
                                                         }
                                                     >
                                                         1
                                                         <i class="ri-star-s-fill"></i>
-                                                    </span>
-                                                    <span
+                                                    </motion.span>
+                                                    <motion.span
+                                                        whileTap={{
+                                                            scale: 1.2,
+                                                        }}
                                                         onClick={() =>
                                                             setRating(2)
                                                         }
                                                     >
                                                         2
                                                         <i class="ri-star-s-fill"></i>
-                                                    </span>
-                                                    <span
+                                                    </motion.span>
+                                                    <motion.span
+                                                        whileTap={{
+                                                            scale: 1.2,
+                                                        }}
                                                         onClick={() =>
                                                             setRating(3)
                                                         }
                                                     >
                                                         3
                                                         <i class="ri-star-s-fill"></i>
-                                                    </span>
-                                                    <span
+                                                    </motion.span>
+                                                    <motion.span
+                                                        whileTap={{
+                                                            scale: 1.2,
+                                                        }}
                                                         onClick={() =>
                                                             setRating(4)
                                                         }
                                                     >
                                                         4
                                                         <i class="ri-star-s-fill"></i>
-                                                    </span>
-                                                    <span
+                                                    </motion.span>
+                                                    <motion.span
+                                                        whileTap={{
+                                                            scale: 1.2,
+                                                        }}
                                                         onClick={() =>
                                                             setRating(5)
                                                         }
                                                     >
                                                         5
                                                         <i class="ri-star-s-fill"></i>
-                                                    </span>
+                                                    </motion.span>
                                                 </div>
 
                                                 <div className="form__group">
@@ -233,12 +256,15 @@ const ProductDetails = () => {
                                                     />
                                                 </div>
 
-                                                <button
+                                                <motion.button
+                                                    whileTap={{
+                                                        scale: 1.2,
+                                                    }}
                                                     type="submit"
                                                     className="buy__btn"
                                                 >
                                                     Send
-                                                </button>
+                                                </motion.button>
                                             </form>
                                         </div>
                                     </div>

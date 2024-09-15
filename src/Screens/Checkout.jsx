@@ -4,8 +4,15 @@ import { Container, Row, Col, FormGroup, Form } from "reactstrap";
 import { motion } from "framer-motion";
 import CommonSection from "../components/UI/CommonSection";
 import "../styles/checkout.css";
+import { useSelector } from "react-redux";
 
 const Checkout = () => {
+    const totalQty = useSelector(state => state.cart.totalQuantity);
+    const totalAmount = useSelector(state => state.cart.totalAmount);
+    const totalShipping = useSelector(state => state.cart.totalShipping);
+    const totalTax = useSelector(state => state.cart.totalTax);
+    const totalPrice = useSelector(state => state.cart.totalPrice);
+    
     return (
         <Helmet title=" Checkout">
             <CommonSection title="Checkout" />
@@ -66,20 +73,22 @@ const Checkout = () => {
                         <Col lg="4">
                             <div className="checkout__cart">
                                 <h6>
-                                    Total Qty: <span>0</span>
+                                    Total Qty: <span>{totalQty}</span>
                                 </h6>
                                 <h6>
-                                    Subtotal: <span>$120</span>
+                                    Subtotal: <span>${totalAmount}</span>
                                 </h6>
                                 <h6>
                                     <span>
-                                        Shipping: <br />
-                                        Free Shipping
+                                        Shipping:
                                     </span>
-                                    <span>$0</span>
+                                    <span>${totalShipping}</span>
+                                </h6>
+                                <h6>
+                                    Tax: <span>${totalTax} </span>
                                 </h6>
                                 <h4>
-                                    Total Cost: <span>$120</span>
+                                    Total Cost: <span>${totalPrice}</span>
                                 </h4>
 
                                 <motion.button

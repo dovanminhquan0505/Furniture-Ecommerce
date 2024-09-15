@@ -7,6 +7,9 @@ const initialState = {
     cartItems: [], // List of products in cart
     totalAmount: 0, // Total cart value
     totalQuantity: 0, // Total quantity value
+    totalShipping: 0, // Total shipping
+    totalTax: 0, // Total tax
+    totalPrice: 0, // Total price
 };
 
 const cartSlice = createSlice({
@@ -42,6 +45,11 @@ const cartSlice = createSlice({
                 (total, item) => total + Number(item.totalPrice),
                 0
             );
+
+            // Calculate totalShipping, totalTax, and totalPrice
+            state.totalShipping = state.totalAmount > 100 ? 0 : 10;
+            state.totalTax = Math.round((0.15 * state.totalAmount * 100) / 100);
+            state.totalPrice = state.totalShipping + state.totalTax + state.totalAmount;
         },
 
         deleteItemFromCart: (state, action) => {
@@ -62,6 +70,11 @@ const cartSlice = createSlice({
                     total + Number(item.price) * Number(item.quantity),
                 0
             );
+
+            // Recalculate totalShipping, totalTax, and totalPrice
+            state.totalShipping = state.totalAmount > 100 ? 0 : 10;
+            state.totalTax = Math.round((0.15 * state.totalAmount * 100) / 100);
+            state.totalPrice = state.totalShipping + state.totalTax + state.totalAmount;
         },
     },
 });

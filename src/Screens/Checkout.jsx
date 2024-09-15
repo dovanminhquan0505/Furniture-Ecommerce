@@ -73,7 +73,7 @@ const Checkout = () => {
                         <Col lg="4">
                             <div className="checkout__cart">
                                 <h6>
-                                    Total Qty: <span>{totalQty}</span>
+                                    Total Qty: <span>{Math.abs(totalQty)} {Math.abs(totalQty) <= 1 ? 'item' : 'items'}</span>
                                 </h6>
                                 <h6>
                                     Subtotal: <span>${totalAmount}</span>

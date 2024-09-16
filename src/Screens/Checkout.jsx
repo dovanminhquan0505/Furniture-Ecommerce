@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import CommonSection from "../components/UI/CommonSection";
 import "../styles/checkout.css";
 import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 
 const Checkout = () => {
     const totalQty = useSelector(state => state.cart.totalQuantity);
@@ -95,7 +96,7 @@ const Checkout = () => {
                                     whileTap={{ scale: 1.2 }}
                                     className="buy__btn auth__btn w-100"
                                 >
-                                    Place order
+                                    <Link to="/login">Place order</Link>
                                 </motion.button>
                             </div>
                         </Col>

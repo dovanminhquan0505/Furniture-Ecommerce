@@ -24,22 +24,39 @@ const Signup = () => {
         setLoading(true);
 
         try {
+            //used to create a new user using an email and password.
             const userCredential = await createUserWithEmailAndPassword(
                 auth,
                 email,
                 password
             );
 
+            //The user's information
             const user = userCredential.user;
 
-            const storageRef = ref(storage, `images/${Date.now() + username}`)
+            //This creates a reference to Firebase Storage where a file (e.g., an image) will be uploaded.
+            const storageRef = ref(storage, `images/${Date.now() + username}`);
+
+            //This function uploads the file to the Firebase Storage under the reference created earlier (storageRef).
             const uploadTask = uploadBytesResumable(storageRef, file);
 
-            uploadTask.on((error) => {
-                toast.error(error.message);
-            }, () => {
-                
-            })
+            uploadTask.on(
+                (error) => {
+                    toast.error(error.message);
+                },
+                () => {
+                    // User not only gets created in Firebase Authentication
+                    // but also has a display name and profile picture associated with their account.
+                    getDownloadURL(uploadTask.snapshot.ref).then(
+                        async (downloadURL) => {
+                            updateProfile(user, {
+                                displayName: username,
+                                photoURL: downloadURL,
+                            });
+                        }
+                    );
+                }
+            );
 
             console.log(user);
         } catch (error) {

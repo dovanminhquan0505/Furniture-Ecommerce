@@ -4,8 +4,13 @@ import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col, Form, FormGroup } from "reactstrap";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { setDoc, doc } from "firebase/firestore";
 import { auth } from "../firebase.config";
+import { storage } from "../firebase.config";
+import { db } from "../firebase.config";
+import { toast } from "react-toastify";
 
 const Signup = () => {
     const [username, setUsername] = useState("");
@@ -19,13 +24,28 @@ const Signup = () => {
         setLoading(true);
 
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const userCredential = await createUserWithEmailAndPassword(
+                auth,
+                email,
+                password
+            );
+
             const user = userCredential.user;
+
+            const storageRef = ref(storage, `images/${Date.now() + username}`)
+            const uploadTask = uploadBytesResumable(storageRef, file);
+
+            uploadTask.on((error) => {
+                toast.error(error.message);
+            }, () => {
+                
+            })
+
             console.log(user);
         } catch (error) {
-            
+            toast.error("Something went wrong!");
         }
-    }
+    };
 
     return (
         <Helmet title=" Register">

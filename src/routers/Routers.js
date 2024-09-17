@@ -9,6 +9,8 @@ import Checkout from "../Screens/Checkout";
 import Login from "../Screens/Login";
 import SignUp from "../Screens/SignUp";
 import ProtectedRoute from "./ProtectedRoute";
+import AddProducts from "../admin/AddProducts";
+import AllProducts from "../admin/AllProducts";
 
 const Routers = () => {
     //Link URL to views for each router

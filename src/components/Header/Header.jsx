@@ -51,13 +51,13 @@ const Header = () => {
 
     const logOut = () => {
         signOut(auth)
-           .then(() => {
-                toast.success('Logged out');
+            .then(() => {
+                toast.success("Logged out");
             })
-           .catch((error) => {
+            .catch((error) => {
                 toast.error(error.message);
             });
-    }
+    };
 
     useEffect(() => {
         stickyHeaderFunc();
@@ -146,11 +146,31 @@ const Header = () => {
                                     onClick={toggleProfileActions}
                                 >
                                     {currentUser ? (
-                                        <span onClick={logOut}>Logout</span>
+                                        <span
+                                            className="fw-500"
+                                            onClick={logOut}
+                                        >
+                                            Log out
+                                        </span>
                                     ) : (
                                         <div className="d-flex align-items-center justify-content-center flex-column">
-                                            <Link to="/signup">SignUp</Link>
-                                            <Link to="/login">Login</Link>
+                                            <span className="signup d-flex align-items-center mb-2">
+                                                <Link
+                                                    to="/signup"
+                                                    className="signup__profile"
+                                                >
+                                                    Sign Up
+                                                </Link>
+                                            </span>
+                                            <div className="line"></div>
+                                            <span className="login d-flex align-items-center">
+                                                <Link
+                                                    to="/login"
+                                                    className="login__profile"
+                                                >
+                                                    Login
+                                                </Link>
+                                            </span>
                                         </div>
                                     )}
                                 </div>

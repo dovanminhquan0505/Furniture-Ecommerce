@@ -21,14 +21,17 @@ const Routers = () => {
             <Route path="shop" element={<Shop />} />
             <Route path="shop/:id" element={<ProductDetails />} />
             <Route path="cart" element={<Cart />} />
-            <Route
-                path="checkout"
-                element={
-                    <ProtectedRoute>
-                        <Checkout />
-                    </ProtectedRoute>
-                }
-            />
+            <Route path="/*" element={<ProtectedRoute />}>
+                <Route path="checkout" element={<Checkout />} />
+                <Route
+                    path="dashboard/all-products"
+                    element={<AllProducts />}
+                />
+                <Route
+                    path="dashboard/add-products"
+                    element={<AddProducts />}
+                />
+            </Route>
             <Route path="login" element={<Login />} />
             <Route path="signup" element={<SignUp />} />
         </Routes>

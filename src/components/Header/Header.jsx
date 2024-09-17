@@ -162,13 +162,26 @@ const Header = () => {
                                                     Sign Up
                                                 </Link>
                                             </span>
+
                                             <div className="line"></div>
+
                                             <span className="login d-flex align-items-center">
                                                 <Link
                                                     to="/login"
                                                     className="login__profile"
                                                 >
                                                     Login
+                                                </Link>
+                                            </span>
+
+                                            <div className="line mb-2 mt-2"></div>
+
+                                            <span className="dashboard d-flex align-items-center">
+                                                <Link
+                                                    to="/dashboard"
+                                                    className="dashboard__profile"
+                                                >
+                                                    Dashboard
                                                 </Link>
                                             </span>
                                         </div>

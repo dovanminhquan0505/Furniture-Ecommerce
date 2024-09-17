@@ -11,6 +11,7 @@ import SignUp from "../Screens/SignUp";
 import ProtectedRoute from "./ProtectedRoute";
 import AddProducts from "../admin/AddProducts";
 import AllProducts from "../admin/AllProducts";
+import Dashboard from "../admin/Dashboard";
 
 const Routers = () => {
     //Link URL to views for each router
@@ -23,12 +24,13 @@ const Routers = () => {
             <Route path="cart" element={<Cart />} />
             <Route path="/*" element={<ProtectedRoute />}>
                 <Route path="checkout" element={<Checkout />} />
+                <Route path="dashboard" element={<Dashboard />} />
                 <Route
                     path="dashboard/all-products"
                     element={<AllProducts />}
                 />
                 <Route
-                    path="dashboard/add-products"
+                    path="dashboard/add-product"
                     element={<AddProducts />}
                 />
             </Route>

@@ -43,42 +43,47 @@ const Signup = () => {
             //The user's information
             const user = userCredential.user;
 
-            //This creates a reference to Firebase Storage where a file (e.g., an image) will be uploaded.
-            const storageRef = ref(storage, `images/${ Date.now() + username}`);
-
-            //This function uploads the file to the Firebase Storage under the reference created earlier (storageRef).
-            const uploadTask = uploadBytesResumable(storageRef, file);
-
-            // Listen the process of uploading
-            uploadTask.on(
-                'state_changed',
-                (error) => {
-                    toast.error(error.message);
-                    setLoading(false);
-                },
-                async () => {
-                    // After uploading finished, update file URL
-                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    
-                    // Update information about user's profile
-                    await updateProfile(user, {
-                        displayName: username,
-                        photoURL: downloadURL,
-                    });
+            if (user) {
+                //This creates a reference to Firebase Storage where a file (e.g., an image) will be uploaded.
+                const storageRef = ref(storage, `images/${Date.now() + username}`);
+                //This function uploads the file to the Firebase Storage under the reference created earlier (storageRef).
+                const uploadTask = uploadBytesResumable(storageRef, file);
+                
+                // Listen the process of uploading
+                uploadTask.on(
+                    'state_changed',
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        console.log(`Upload is ${progress}% done`);
+                    },
+                    (error) => {
+                        toast.error(error.message);
+                        setLoading(false);
+                    },
+                    async () => {
+                        // After uploading finished, update file URL
+                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                        
+                        // Update information about user's profile
+                        await updateProfile(user, {
+                            displayName: username,
+                            photoURL: downloadURL,
+                        });
+                        
+                        // Save the user's information to firebase database
+                        await setDoc(doc(db, "users", user.uid), {
+                            uid: user.uid,
+                            displayName: username,
+                            email,
+                            photoURL: downloadURL,
+                        });
     
-                    // Save the user's information to firebase database
-                    await setDoc(doc(db, "users", user.uid), {
-                        uid: user.uid,
-                        displayName: username,
-                        email,
-                        photoURL: downloadURL,
-                    });
-                }
-            );
-            // Complete the process
-            setLoading(false);
-            toast.success("Account created successfully!");
-            navigate("/login");
+                        setLoading(false);
+                        toast.success("Account created successfully!");
+                        navigate("/checkout");
+                    }
+                );
+            }
         } catch (error) {
             setLoading(false);
             toast.error("Something went wrong!");

@@ -78,9 +78,13 @@
 }
 
 .nav__icons span img {
-    width: 30px;
-    height: 30px;
+    border-radius: 50%;
+    overflow: hidden;
+    width: 40px;
+    height: 40px;
     cursor: pointer;
+    object-fit: cover;
+    margin-bottom: 10px;
 }
 
 .mobile__menu {

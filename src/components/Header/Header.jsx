@@ -1,11 +1,12 @@
 import React, { useRef, useEffect } from "react";
-import { NavLink,useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import "./header.css";
 import { motion } from "framer-motion";
 import logo from "../../assets/images/eco-logo.png";
 import userIcon from "../../assets/images/user-icon.png";
 import { useSelector } from "react-redux";
 import { Container, Row } from "reactstrap";
+import useAuth from "../../custom-hooks/useAuth";
 
 const nav__links = [
     {
@@ -29,6 +30,7 @@ const Header = () => {
     const menuRef = useRef(null);
 
     const navigate = useNavigate();
+    const { currentUser } = useAuth();
 
     const stickyHeaderFunc = () => {
         window.addEventListener("scroll", () => {
@@ -54,8 +56,8 @@ const Header = () => {
 
     //Navigate to Cart
     const navigateToCart = () => {
-        navigate('/cart');
-    }
+        navigate("/cart");
+    };
 
     return (
         <header className="header" ref={headerRef}>
@@ -98,7 +100,10 @@ const Header = () => {
                                 <span className="badge">1</span>
                             </span>
 
-                            <span className="cart__icon" onClick={navigateToCart}>
+                            <span
+                                className="cart__icon"
+                                onClick={navigateToCart}
+                            >
                                 <i class="ri-shopping-cart-line"></i>
                                 <span className="badge">{totalQuantity}</span>
                             </span>
@@ -106,7 +111,11 @@ const Header = () => {
                             <span>
                                 <motion.img
                                     whileTap={{ scale: 1.2 }}
-                                    src={userIcon}
+                                    src={
+                                        currentUser
+                                            ? currentUser.photoURL
+                                            : userIcon
+                                    }
                                     alt=""
                                 />
                             </span>

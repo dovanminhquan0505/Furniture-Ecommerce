@@ -11,6 +11,7 @@ import { auth } from "../firebase.config";
 import { storage } from "../firebase.config";
 import { db } from "../firebase.config";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 const Signup = () => {
     const [username, setUsername] = useState("");
@@ -18,6 +19,7 @@ const Signup = () => {
     const [password, setPassword] = useState("");
     const [file, setFile] = useState(null);
     const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
     const register = async (e) => {
         e.preventDefault();
@@ -65,8 +67,11 @@ const Signup = () => {
                 }
             );
 
-            console.log(user);
+            setLoading(false);
+            toast.success("Account created successfully!");
+            navigate("/login");
         } catch (error) {
+            setLoading(false);
             toast.error("Something went wrong!");
         }
     };
@@ -76,65 +81,74 @@ const Signup = () => {
             <section>
                 <Container>
                     <Row>
-                        <Col lg="6" className="m-auto text-center">
-                            <h3 className="fw-bold mb-4">Register</h3>
+                        {loading ? (
+                            <Col lg="12" className="text-center">
+                                <h5 className="fw-bold">Loading...</h5>
+                            </Col>
+                        ) : (
+                            <Col lg="6" className="m-auto text-center">
+                                <h3 className="fw-bold mb-4">Register</h3>
 
-                            <Form className="auth__form" onSubmit={register}>
-                                <FormGroup className="form__group">
-                                    <input
-                                        type="text"
-                                        placeholder="Username"
-                                        value={username}
-                                        onChange={(e) =>
-                                            setUsername(e.target.value)
-                                        }
-                                    />
-                                </FormGroup>
-                                <FormGroup className="form__group">
-                                    <input
-                                        type="email"
-                                        placeholder="Enter your email"
-                                        value={email}
-                                        onChange={(e) =>
-                                            setEmail(e.target.value)
-                                        }
-                                    />
-                                </FormGroup>
-
-                                <FormGroup className="form__group">
-                                    <input
-                                        type="password"
-                                        placeholder="Enter your password"
-                                        value={password}
-                                        onChange={(e) =>
-                                            setPassword(e.target.value)
-                                        }
-                                    />
-                                </FormGroup>
-
-                                <FormGroup className="form__group">
-                                    <input
-                                        type="file"
-                                        onChange={(e) =>
-                                            setFile(e.target.files[0])
-                                        }
-                                    />
-                                </FormGroup>
-
-                                <motion.button
-                                    whileTap={{ scale: 1.2 }}
-                                    type="submit"
-                                    className="buy__btn auth__btn mb-3"
+                                <Form
+                                    className="auth__form"
+                                    onSubmit={register}
                                 >
-                                    Sign up
-                                </motion.button>
+                                    <FormGroup className="form__group">
+                                        <input
+                                            type="text"
+                                            placeholder="Username"
+                                            value={username}
+                                            onChange={(e) =>
+                                                setUsername(e.target.value)
+                                            }
+                                        />
+                                    </FormGroup>
+                                    <FormGroup className="form__group">
+                                        <input
+                                            type="email"
+                                            placeholder="Enter your email"
+                                            value={email}
+                                            onChange={(e) =>
+                                                setEmail(e.target.value)
+                                            }
+                                        />
+                                    </FormGroup>
 
-                                <p>
-                                    Already have any accounts?{" "}
-                                    <Link to="/login">Login</Link>
-                                </p>
-                            </Form>
-                        </Col>
+                                    <FormGroup className="form__group">
+                                        <input
+                                            type="password"
+                                            placeholder="Enter your password"
+                                            value={password}
+                                            onChange={(e) =>
+                                                setPassword(e.target.value)
+                                            }
+                                        />
+                                    </FormGroup>
+
+                                    <FormGroup className="form__group">
+                                        <input
+                                            type="file"
+                                            onChange={(e) =>
+                                                setFile(e.target.files[0])
+                                            }
+                                        />
+                                    </FormGroup>
+
+                                    <motion.button
+                                        whileTap={{ scale: 1.2 }}
+                                        type="submit"
+                                        className="buy__btn auth__btn mb-3"
+                                    >
+                                        Sign up
+                                    </motion.button>
+
+                                    <p>
+                                        Already have any accounts?{" "}
+                                        <Link to="/login">Login</Link>
+                                    </p>
+                                </Form>
+                            </Col>
+                        )}
                     </Row>
                 </Container>
             </section>

@@ -25,6 +25,13 @@ const Signup = () => {
         e.preventDefault();
         setLoading(true);
 
+        // Check if the file has not already been loaded
+        if (!file) {
+            toast.error("Please select a file to upload");
+            setLoading(false);
+            return;
+        }
+
         try {
             //used to create a new user using an email and password.
             const userCredential = await createUserWithEmailAndPassword(
@@ -37,36 +44,38 @@ const Signup = () => {
             const user = userCredential.user;
 
             //This creates a reference to Firebase Storage where a file (e.g., an image) will be uploaded.
-            const storageRef = ref(storage, `images/${Date.now() + username}`);
+            const storageRef = ref(storage, `images/${ Date.now() + username}`);
 
             //This function uploads the file to the Firebase Storage under the reference created earlier (storageRef).
             const uploadTask = uploadBytesResumable(storageRef, file);
 
+            // Listen the process of uploading
             uploadTask.on(
+                'state_changed',
                 (error) => {
                     toast.error(error.message);
+                    setLoading(false);
                 },
-                () => {
-                    getDownloadURL(uploadTask.snapshot.ref).then(
-                        async (downloadURL) => {
-                            // Update user profile
-                            await updateProfile(user, {
-                                displayName: username,
-                                photoURL: downloadURL,
-                            });
-
-                            //store user data in firestore database
-                            await setDoc(doc(db, "users", user.uid), {
-                                uid: user.uid,
-                                displayName: username,
-                                email,
-                                photoURL: downloadURL,
-                            });
-                        }
-                    );
+                async () => {
+                    // After uploading finished, update file URL
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    
+                    // Update information about user's profile
+                    await updateProfile(user, {
+                        displayName: username,
+                        photoURL: downloadURL,
+                    });
+    
+                    // Save the user's information to firebase database
+                    await setDoc(doc(db, "users", user.uid), {
+                        uid: user.uid,
+                        displayName: username,
+                        email,
+                        photoURL: downloadURL,
+                    });
                 }
             );
-
+            // Complete the process
             setLoading(false);
             toast.success("Account created successfully!");
             navigate("/login");

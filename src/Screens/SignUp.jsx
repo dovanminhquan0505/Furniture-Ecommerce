@@ -45,12 +45,19 @@ const Signup = () => {
                     toast.error(error.message);
                 },
                 () => {
-                    // User not only gets created in Firebase Authentication
-                    // but also has a display name and profile picture associated with their account.
                     getDownloadURL(uploadTask.snapshot.ref).then(
                         async (downloadURL) => {
-                            updateProfile(user, {
+                            // Update user profile
+                            await updateProfile(user, {
                                 displayName: username,
+                                photoURL: downloadURL,
+                            });
+
+                            //store user data in firestore database
+                            await setDoc(doc(db, "users", user.uid), {
+                                uid: user.uid,
+                                displayName: username,
+                                email,
                                 photoURL: downloadURL,
                             });
                         }

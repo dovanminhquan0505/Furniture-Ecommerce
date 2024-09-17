@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import "./header.css";
 import { motion } from "framer-motion";
 import logo from "../../assets/images/eco-logo.png";
@@ -7,6 +7,9 @@ import userIcon from "../../assets/images/user-icon.png";
 import { useSelector } from "react-redux";
 import { Container, Row } from "reactstrap";
 import useAuth from "../../custom-hooks/useAuth";
+import { signOut } from "firebase/auth";
+import { auth } from "../../firebase.config";
+import { toast } from "react-toastify";
 
 const nav__links = [
     {
@@ -24,9 +27,10 @@ const nav__links = [
 ];
 
 const Header = () => {
-    const totalQuantity = useSelector((state) => state.cart.totalQuantity);
-
     const headerRef = useRef(null);
+    const totalQuantity = useSelector((state) => state.cart.totalQuantity);
+    const profileActionRef = useRef(null);
+
     const menuRef = useRef(null);
 
     const navigate = useNavigate();
@@ -45,6 +49,16 @@ const Header = () => {
         });
     };
 
+    const logOut = () => {
+        signOut(auth)
+           .then(() => {
+                toast.success('Logged out');
+            })
+           .catch((error) => {
+                toast.error(error.message);
+            });
+    }
+
     useEffect(() => {
         stickyHeaderFunc();
         return () => {
@@ -57,6 +71,12 @@ const Header = () => {
     //Navigate to Cart
     const navigateToCart = () => {
         navigate("/cart");
+    };
+
+    const toggleProfileActions = () => {
+        if (profileActionRef.current) {
+            profileActionRef.current.classList.toggle("active__profileActions");
+        }
     };
 
     return (
@@ -108,7 +128,7 @@ const Header = () => {
                                 <span className="badge">{totalQuantity}</span>
                             </span>
 
-                            <span>
+                            <div className="profile">
                                 <motion.img
                                     whileTap={{ scale: 1.2 }}
                                     src={
@@ -117,8 +137,24 @@ const Header = () => {
                                             : userIcon
                                     }
                                     alt=""
+                                    onClick={toggleProfileActions}
                                 />
-                            </span>
+
+                                <div
+                                    className="profile__actions"
+                                    ref={profileActionRef}
+                                    onClick={toggleProfileActions}
+                                >
+                                    {currentUser ? (
+                                        <span onClick={logOut}>Logout</span>
+                                    ) : (
+                                        <div className="d-flex align-items-center justify-content-center flex-column">
+                                            <Link to="/signup">SignUp</Link>
+                                            <Link to="/login">Login</Link>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
 
                             <div className="mobile__menu">
                                 <span onClick={menuToggle}>

@@ -18,6 +18,18 @@ const Login = () => {
         e.preventDefault();
         setLoading(true);
 
+        if(!email) {
+            toast.error("Please enter your email");
+            setLoading(false);
+            return;
+        }
+
+        if(!password) {
+            toast.error("Please enter your password");
+            setLoading(false);
+            return;
+        }
+
         try {
             const userCredential = await signInWithEmailAndPassword(
                 auth,
@@ -33,7 +45,23 @@ const Login = () => {
             navigate("/checkout");
         } catch (error) {
             setLoading(false);
-            toast.error(error.message);
+            // Check types of error
+            switch (error.code) {
+                case 'auth/wrong-password':
+                    toast.error('Wrong Password!');
+                    break;
+                case 'auth/user-not-found':
+                    toast.error('Account not found!');
+                    break;
+                case 'auth/invalid-email':
+                    toast.error('Invalid Email!');
+                    break;
+                case 'auth/invalid-credential':
+                    toast.error('Invalid Login Information!');
+                    break;
+                default:
+                    toast.error(error.message);  // Thông báo lỗi chung
+            }
         }
     };
 

@@ -147,10 +147,15 @@ const Header = () => {
                                 >
                                     {currentUser ? (
                                         <span
-                                            className="fw-500"
+                                            className="logout d-flex align-items-center mb-2"
                                             onClick={logOut}
                                         >
-                                            Log out
+                                            <Link
+                                                to="/login"
+                                                className="logout__profile"
+                                            >
+                                                Log out
+                                            </Link>
                                         </span>
                                     ) : (
                                         <div className="d-flex align-items-center justify-content-center flex-column">

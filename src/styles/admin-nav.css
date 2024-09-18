@@ -1,0 +1,45 @@
+/*Admin Header*/
+.admin__header {
+    width: 100%;
+    padding: 20px 0px;
+    background: var(--primary-color);
+}
+
+.admin__nav-top {
+    width: 100%;
+}
+
+.admin__nav-wrapper-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    column-gap: 3rem;
+}
+
+.admin__nav-wrapper-top .logo h2 {
+    font-size: 1.2rem;
+    color: #fff;
+}
+
+.admin__nav-wrapper-top .search__box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.admin__nav-top-right {
+    display: flex;
+    align-items: center;
+    column-gap: 2rem;
+}
+
+.admin__nav-top-right img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50px;
+    object-fit: cover;
+}
+
+.admin__nav-top-right span i {
+    color: #fff;
+}

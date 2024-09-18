@@ -3,6 +3,7 @@ import { Container, Row } from "reactstrap";
 import useAuth from "../custom-hooks/useAuth";
 import "../styles/admin-nav.css";
 import { NavLink } from "react-router-dom";
+import { motion } from "framer-motion";
 
 const admin_nav = [
     {
@@ -53,7 +54,12 @@ const AdminNav = () => {
                                 <span>
                                     <i class="ri-settings-3-line"></i>
                                 </span>
-                                <img src={currentUser.photoURL} alt="" />
+                                <motion.img
+                                    whileTap={{ scale: 1.2 }}
+                                    src={currentUser.photoURL}
+                                    alt=""
+                                    className="admin__avatar"
+                                />
                             </div>
                         </div>
                     </Container>

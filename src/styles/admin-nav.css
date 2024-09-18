@@ -42,6 +42,11 @@
 
 .admin__nav-top-right span i {
     color: #fff;
+    cursor: pointer;
+}
+
+.admin__nav-top-right .admin__avatar {
+    cursor: pointer;
 }
 
 /* Admin menu */

@@ -56,7 +56,7 @@ const AdminNav = () => {
                                 </span>
                                 <motion.img
                                     whileTap={{ scale: 1.2 }}
-                                    src={currentUser.photoURL}
+                                    src={currentUser && currentUser.photoURL}
                                     alt=""
                                     className="admin__avatar"
                                 />

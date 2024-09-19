@@ -53,12 +53,12 @@ const AddProducts = () => {
                     );
                     // Add a new document to Firestore with the URL of the uploaded image
                     await addDoc(docRef, {
-                        title: enterTitle,
+                        productName: enterTitle,
                         shortDesc: enterShortDesc,
                         description: enterDescription,
                         category: enterCategory,
                         price: enterPrice,
-                        imgURL: downloadURL,
+                        imgUrl: downloadURL,
                     });
                 }
             );
@@ -153,6 +153,7 @@ const AddProducts = () => {
                                                 }
                                                 required
                                             >
+                                                <option>Select Category</option>
                                                 <option value="chair">
                                                     Chair
                                                 </option>

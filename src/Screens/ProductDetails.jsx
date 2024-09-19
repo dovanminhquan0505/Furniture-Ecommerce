@@ -14,8 +14,6 @@ import { doc, getDoc } from "firebase/firestore";
 import useGetData from '../custom-hooks/useGetData';
 
 const ProductDetails = () => {
-    const [product, setProduct] = useState({});
-
     const [tab, setTab] = useState("desc");
     const reviewUser = useRef("");
     const reviewMessage = useRef("");
@@ -24,6 +22,7 @@ const ProductDetails = () => {
     const [rating, setRating] = useState(null);
     const { id } = useParams();
     
+    const [product, setProduct] = useState({});
     const {data: products} = useGetData('products');
     const docRef = doc(db, 'products', id);
 
@@ -32,14 +31,15 @@ const ProductDetails = () => {
             const docSnap = await getDoc(docRef);
 
             if(docSnap.exists()) {
-                setProduct(docSnap.data());
+                // Set the product data to state
+                setProduct(docSnap.data()); 
             } else {
                 console.log('No products!')
             }
         }
 
         getProduct();
-    }, [])
+    }, []);
 
     const {
         imgUrl,

@@ -41,10 +41,10 @@ const AllProducts = () => {
                                             <td>
                                                 <img src={item.imgUrl} alt="" />
                                             </td>
-                                            <td>{item.productName}</td>
-                                            <td>{item.category}</td>
-                                            <td>${item.price}</td>
-                                            <td>
+                                            <td className="pdt">{item.productName}</td>
+                                            <td className="pdt">{item.category}</td>
+                                            <td className="pdt">${item.price}</td>
+                                            <td className="pt-4">
                                                 <motion.button
                                                     onClick={() => {
                                                         deleteProduct(item.id);

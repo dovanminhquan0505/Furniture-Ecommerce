@@ -1,8 +1,11 @@
 import React from "react";
 import { Container, Row, Col } from "reactstrap";
-import ProductImg from "../assets/images/arm-chair-01.jpg";
+import useGetData from "../custom-hooks/useGetData";
+import { motion } from "framer-motion";
 
 const AllProducts = () => {
+    const { data: productsData } = useGetData("products");
+
     return (
         <section>
             <Container>
@@ -20,19 +23,24 @@ const AllProducts = () => {
                             </thead>
 
                             <tbody>
-                                <tr>
-                                    <td>
-                                        <img src={ProductImg} alt="" />
-                                    </td>
-                                    <td>Arm chair</td>
-                                    <td>Chair</td>
-                                    <td>$193</td>
-                                    <td>
-                                        <button className="btn btn-danger">
-                                            Delete
-                                        </button>
-                                    </td>
-                                </tr>
+                                {productsData.map((item) => (
+                                    <tr key={item.id}>
+                                        <td>
+                                            <img src={item.imgURL} alt="" />
+                                        </td>
+                                        <td>{item.title}</td>
+                                        <td>{item.category}</td>
+                                        <td>${item.price}</td>
+                                        <td>
+                                            <motion.button
+                                                whileTap={{ scale: 1.1 }}
+                                                className="btn btn-danger"
+                                            >
+                                                Delete
+                                            </motion.button>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </Col>

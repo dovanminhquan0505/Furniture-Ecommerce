@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Container, Row, Col, Form, FormGroup, Card } from "reactstrap";
+import { Container, Row, Col, Form, FormGroup } from "reactstrap";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { db, storage } from "../firebase.config";

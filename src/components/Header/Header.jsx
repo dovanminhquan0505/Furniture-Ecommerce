@@ -87,7 +87,9 @@ const Header = () => {
                         <div className="logo">
                             <img src={logo} alt="logo" />
                             <div>
-                                <Link to="home"><h1>Multimart</h1></Link>
+                                <Link to="home">
+                                    <h1>Multimart</h1>
+                                </Link>
                             </div>
                         </div>
 
@@ -146,17 +148,30 @@ const Header = () => {
                                     onClick={toggleProfileActions}
                                 >
                                     {currentUser ? (
-                                        <span
-                                            className="logout d-flex align-items-center mb-2"
-                                            onClick={logOut}
-                                        >
-                                            <Link
-                                                to="/login"
-                                                className="logout__profile"
+                                        <div className="d-flex align-items-center justify-content-center flex-column">
+                                            <span
+                                                className="logout d-flex align-items-center mb-2"
+                                                onClick={logOut}
                                             >
-                                                Log out
-                                            </Link>
-                                        </span>
+                                                <Link
+                                                    to="/login"
+                                                    className="logout__profile"
+                                                >
+                                                    Log out
+                                                </Link>
+                                            </span>
+
+                                            <div className="line mb-2 mt-2"></div>
+
+                                            <span className="dashboard d-flex align-items-center">
+                                                <Link
+                                                    to="/dashboard"
+                                                    className="dashboard__profile"
+                                                >
+                                                    Dashboard
+                                                </Link>
+                                            </span>
+                                        </div>
                                     ) : (
                                         <div className="d-flex align-items-center justify-content-center flex-column">
                                             <span className="signup d-flex align-items-center mb-2">
@@ -176,17 +191,6 @@ const Header = () => {
                                                     className="login__profile"
                                                 >
                                                     Login
-                                                </Link>
-                                            </span>
-
-                                            <div className="line mb-2 mt-2"></div>
-
-                                            <span className="dashboard d-flex align-items-center">
-                                                <Link
-                                                    to="/dashboard"
-                                                    className="dashboard__profile"
-                                                >
-                                                    Dashboard
                                                 </Link>
                                             </span>
                                         </div>

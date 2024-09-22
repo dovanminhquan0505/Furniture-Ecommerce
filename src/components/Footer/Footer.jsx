@@ -1,7 +1,6 @@
 import React from "react";
 import "../Footer/footer.css";
 import { Container, Row, Col, ListGroup, ListGroupItem } from "reactstrap";
-import { Link } from "react-scroll";
 
 const Footer = () => {
     const year = new Date().getFullYear();

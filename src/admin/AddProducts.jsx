@@ -160,8 +160,8 @@ const AddProducts = () => {
                                                 <option value="sofa">
                                                     Sofa
                                                 </option>
-                                                <option value="mobile">
-                                                    Mobile
+                                                <option value="bed">
+                                                    Bed
                                                 </option>
                                                 <option value="watch">
                                                     Watch

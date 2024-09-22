@@ -17,7 +17,7 @@ const Home = () => {
     //useEffect and useState are two very important hooks that allow us to manage state and side effects in functional components.
     const [trendingProducts, setTrendingProducts] = useState([]);
     const [bestSalesProducts, setBestSalesProducts] = useState([]);
-    const [mobileProducts, setMobileProducts] = useState([]);
+    const [bedProducts, setBedProducts] = useState([]);
     const [wirelessProducts, setWirelessProducts] = useState([]);
     const [popularProducts, setPopularProducts] = useState([]);
 
@@ -31,8 +31,8 @@ const Home = () => {
         const filteredBestSalesProducts = products.filter(
             (item) => item.category === "sofa"
         );
-        const filteredMobileProducts = products.filter(
-            (item) => item.category === "mobile"
+        const filteredBedProducts = products.filter(
+            (item) => item.category === "bed"
         );
         const filteredWirelessProducts = products.filter(
             (item) => item.category === "wireless"
@@ -44,7 +44,7 @@ const Home = () => {
         //Update data
         setBestSalesProducts(filteredBestSalesProducts);
         setTrendingProducts(filteredTrendingProducts);
-        setMobileProducts(filteredMobileProducts);
+        setBedProducts(filteredBedProducts);
         setWirelessProducts(filteredWirelessProducts);
         setPopularProducts(filteredPopularProducts);
     }, [products]);
@@ -158,7 +158,7 @@ const Home = () => {
                         {loading ? (
                             <h4 className="fw-bold">Loading...</h4>
                         ) : (
-                            <ProductsList data={mobileProducts} />
+                            <ProductsList data={bedProducts} />
                         )}
                         {loading ? (
                             <h4 className="fw-bold">Loading...</h4>

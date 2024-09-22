@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { db } from "../firebase.config";
 import { doc, deleteDoc } from "firebase/firestore";
 import { toast } from "react-toastify";
+import { Link } from "react-router-dom";
 import "../styles/all-products.css";
 
 const AllProducts = () => {
@@ -42,9 +43,15 @@ const AllProducts = () => {
                                             <td>
                                                 <img src={item.imgUrl} alt="" />
                                             </td>
-                                            <td className="pdt">{item.productName}</td>
-                                            <td className="pdt">{item.category}</td>
-                                            <td className="pdt">${item.price}</td>
+                                            <td className="pdt">
+                                                {item.productName}
+                                            </td>
+                                            <td className="pdt">
+                                                {item.category}
+                                            </td>
+                                            <td className="pdt">
+                                                ${item.price}
+                                            </td>
                                             <td className="pt-4">
                                                 <motion.button
                                                     onClick={() => {
@@ -61,6 +68,17 @@ const AllProducts = () => {
                                 )}
                             </tbody>
                         </table>
+                    </Col>
+
+                    <Col lg="12">
+                        <Link to="/dashboard/add-product">
+                            <motion.button
+                                whileTap={{ scale: 1.2 }}
+                                className="buy__btn product__btn"
+                            >
+                                Create Product
+                            </motion.button>
+                        </Link>
                     </Col>
                 </Row>
             </Container>

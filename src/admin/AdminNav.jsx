@@ -4,6 +4,7 @@ import useAuth from "../custom-hooks/useAuth";
 import "../styles/admin-nav.css";
 import { NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 const admin_nav = [
     {
@@ -37,7 +38,7 @@ const AdminNav = () => {
                     <Container>
                         <div className="admin__nav-wrapper-top">
                             <div className="logo">
-                                <h2>Multimart</h2>
+                                <Link to="/home"><h2>Multimart</h2></Link>
                             </div>
 
                             <div className="search__box">

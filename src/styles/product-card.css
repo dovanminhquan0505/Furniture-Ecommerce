@@ -32,6 +32,11 @@
     border-radius: 50%;
 }
 
+.product__item .product__img {
+    width: 215px;
+    height: 215px;
+}
+
 @media only screen and (max-width: 992px) {
     .product__info h3 a {
         font-size: 1.1rem;

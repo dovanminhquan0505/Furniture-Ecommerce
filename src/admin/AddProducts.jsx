@@ -163,11 +163,11 @@ const AddProducts = () => {
                                                 <option value="bed">
                                                     Bed
                                                 </option>
-                                                <option value="watch">
-                                                    Watch
+                                                <option value="table">
+                                                    Table
                                                 </option>
-                                                <option value="wireless">
-                                                    Wireless
+                                                <option value="television">
+                                                    Television
                                                 </option>
                                             </select>
                                         </FormGroup>

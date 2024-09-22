@@ -18,7 +18,7 @@ const Home = () => {
     const [trendingProducts, setTrendingProducts] = useState([]);
     const [bestSalesProducts, setBestSalesProducts] = useState([]);
     const [bedProducts, setBedProducts] = useState([]);
-    const [wirelessProducts, setWirelessProducts] = useState([]);
+    const [televisionProducts, setTelevisionProducts] = useState([]);
     const [popularProducts, setPopularProducts] = useState([]);
 
     const year = new Date().getFullYear();
@@ -34,18 +34,18 @@ const Home = () => {
         const filteredBedProducts = products.filter(
             (item) => item.category === "bed"
         );
-        const filteredWirelessProducts = products.filter(
-            (item) => item.category === "wireless"
+        const filteredTelevisionProducts = products.filter(
+            (item) => item.category === "television"
         );
         const filteredPopularProducts = products.filter(
-            (item) => item.category === "watch"
+            (item) => item.category === "table"
         );
 
         //Update data
         setBestSalesProducts(filteredBestSalesProducts);
         setTrendingProducts(filteredTrendingProducts);
         setBedProducts(filteredBedProducts);
-        setWirelessProducts(filteredWirelessProducts);
+        setTelevisionProducts(filteredTelevisionProducts);
         setPopularProducts(filteredPopularProducts);
     }, [products]);
 
@@ -163,7 +163,7 @@ const Home = () => {
                         {loading ? (
                             <h4 className="fw-bold">Loading...</h4>
                         ) : (
-                            <ProductsList data={wirelessProducts} />
+                            <ProductsList data={televisionProducts} />
                         )}
                     </Row>
                 </Container>

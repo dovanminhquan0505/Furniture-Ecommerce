@@ -32,9 +32,10 @@
     border-radius: 50%;
 }
 
-.product__item .product__img {
+.product__item .product__img img {
     width: 215px;
     height: 215px;
+    object-fit: contain;
 }
 
 @media only screen and (max-width: 992px) {

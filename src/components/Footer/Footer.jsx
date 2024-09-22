@@ -1,7 +1,7 @@
 import React from "react";
 import "../Footer/footer.css";
 import { Container, Row, Col, ListGroup, ListGroupItem } from "reactstrap";
-import { Link } from "react-router-dom";
+import { Link } from "react-scroll";
 
 const Footer = () => {
     const year = new Date().getFullYear();
@@ -30,19 +30,19 @@ const Footer = () => {
                             </h4>
                             <ListGroup>
                                 <ListGroupItem className="ps-0 border-0">
-                                    <Link to="#">Mobile Phones</Link>
+                                    <a href="#table">Popular Table</a>
                                 </ListGroupItem>
 
                                 <ListGroupItem className="ps-0 border-0">
-                                    <Link to="#">Modern Sofa</Link>
+                                    <a href="#sofa">Modern sofa</a>
                                 </ListGroupItem>
 
                                 <ListGroupItem className="ps-0 border-0">
-                                    <Link to="#">Arm Chair</Link>
+                                    <a href="#chair">Arm chair</a>
                                 </ListGroupItem>
 
                                 <ListGroupItem className="ps-0 border-0">
-                                    <Link to="#">Smart Watches</Link>
+                                    <a href="#bed">Single-Couple bed</a>
                                 </ListGroupItem>
                             </ListGroup>
                         </div>
@@ -53,19 +53,19 @@ const Footer = () => {
                             <h4 className="quick__links-title">Useful Links</h4>
                             <ListGroup>
                                 <ListGroupItem className="ps-0 border-0">
-                                    <Link to="/shop">Shop</Link>
+                                    <a href="/shop">Shop</a>
                                 </ListGroupItem>
 
                                 <ListGroupItem className="ps-0 border-0">
-                                    <Link to="/cart">Cart</Link>
+                                    <a href="/cart">Cart</a>
                                 </ListGroupItem>
 
                                 <ListGroupItem className="ps-0 border-0">
-                                    <Link to="/login">Login</Link>
+                                    <a href="/login">Login</a>
                                 </ListGroupItem>
 
                                 <ListGroupItem className="ps-0 border-0">
-                                    <Link to="#">Privacy Policy</Link>
+                                    <a href="/#">Privacy Policy</a>
                                 </ListGroupItem>
                             </ListGroup>
                         </div>

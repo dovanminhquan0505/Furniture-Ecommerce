@@ -89,7 +89,7 @@ const Home = () => {
             </section>
 
             <Services />
-            <section className="trending__products">
+            <section className="trending__products" id="chair">
                 <Container>
                     <Row>
                         <Col lg="12" className="text-center">
@@ -106,7 +106,7 @@ const Home = () => {
                 </Container>
             </section>
 
-            <section className="best__sales">
+            <section className="best__sales" id="sofa">
                 <Container>
                     <Row>
                         <Col lg="12" className="text-center">
@@ -149,7 +149,7 @@ const Home = () => {
                 </Container>
             </section>
 
-            <section className="new__arrivals">
+            <section className="new__arrivals" id="bed">
                 <Container>
                     <Row>
                         <Col lg="12" className="text-center mb-5">
@@ -169,7 +169,7 @@ const Home = () => {
                 </Container>
             </section>
 
-            <section className="popular_category">
+            <section className="popular_category" id="table">
                 <Container>
                     <Row>
                         <Col lg="12" className="text-center mb-5">

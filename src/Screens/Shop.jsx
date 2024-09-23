@@ -1,70 +1,63 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import CommonSection from "../components/UI/CommonSection";
 import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col } from "reactstrap";
 import "../styles/shop.css";
 import products from "../assets/data/products";
 import ProductsList from "../components/UI/ProductsList";
+import useGetData from "../custom-hooks/useGetData";
 
 const Shop = () => {
-    const [productsData, setProductsData] = useState(products);
+    const { data: productsFirebase, loading } = useGetData("products");
+    const initialProducts = useMemo(() => {
+        return products;
+    },[]);
+    const allProducts = useMemo(() => {
+        return [...initialProducts, ...productsFirebase];
+    }, [initialProducts, productsFirebase])
+
+    const [productsData, setProductsData] = useState([]);
+
+    // Lưu dữ liệu vào localStorage
+    useEffect(() => {
+        if (!loading) {
+            const storedProducts = JSON.parse(
+                localStorage.getItem("productsData")
+            );
+            if (storedProducts && storedProducts.length > 0) {
+                setProductsData(storedProducts);
+            } else {
+                setProductsData(allProducts);
+                localStorage.setItem("productsData", JSON.stringify(allProducts));
+            }
+        }
+    }, [loading, allProducts]);
 
     const handleFilter = (e) => {
         const filterValue = e.target.value;
-        if (filterValue === "sofa") {
-            const filteredProducts = products.filter(
-                (item) => item.category === "sofa"
-            );
-
-            setProductsData(filteredProducts);
-        }
-
-        if (filterValue === "mobile") {
-            const filteredProducts = products.filter(
-                (item) => item.category === "mobile"
-            );
-
-            setProductsData(filteredProducts);
-        }
-
-        if (filterValue === "chair") {
-            const filteredProducts = products.filter(
-                (item) => item.category === "chair"
-            );
-
-            setProductsData(filteredProducts);
-        }
-
-        if (filterValue === "watch") {
-            const filteredProducts = products.filter(
-                (item) => item.category === "watch"
-            );
-
-            setProductsData(filteredProducts);
-        }
-
-        if (filterValue === "wireless") {
-            const filteredProducts = products.filter(
-                (item) => item.category === "wireless"
-            );
-
-            setProductsData(filteredProducts);
-        }
-
+        let filteredProducts;
         if (filterValue === "all") {
-            setProductsData(products);
-            return;
+            filteredProducts = allProducts;
+        } else {
+            filteredProducts = allProducts.filter(
+                (item) => item.category === filterValue
+            );
         }
+        setProductsData(filteredProducts);
+        localStorage.setItem("productsData", JSON.stringify(filteredProducts));
     };
 
     const handleSearch = (e) => {
         const searchTerm = e.target.value;
-
-        const searchedProducts = products.filter((item) =>
-            item.productName.toLowerCase().includes(searchTerm.toLowerCase())
+        const searchedProducts = allProducts.filter(
+            (item) =>
+                item.productName &&
+                item.productName
+                    .toLowerCase()
+                    .includes(searchTerm.toLowerCase())
         );
-
         setProductsData(searchedProducts);
+        localStorage.setItem("productsData", JSON.stringify(searchedProducts));
     };
 
     return (
@@ -81,10 +74,12 @@ const Shop = () => {
                                         Filter By Category
                                     </option>
                                     <option value="sofa">Sofa</option>
-                                    <option value="mobile">Mobile</option>
+                                    <option value="bed">Bed</option>
                                     <option value="chair">Chair</option>
-                                    <option value="watch">Watch</option>
-                                    <option value="wireless">Wireless</option>
+                                    <option value="table">Table</option>
+                                    <option value="television">
+                                        Television
+                                    </option>
                                 </select>
                             </div>
                         </Col>
@@ -118,7 +113,9 @@ const Shop = () => {
             <section className="pt-0">
                 <Container>
                     <Row>
-                        {productsData.length === 0 ? (
+                        {loading ? (
+                            <h4 className="fw-bold text-center">Loading....</h4>
+                        ) : productsData.length === 0 ? (
                             <h1 className="text-center fs-4">
                                 Products are not found!
                             </h1>

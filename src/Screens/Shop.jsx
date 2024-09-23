@@ -8,13 +8,16 @@ import ProductsList from "../components/UI/ProductsList";
 import useGetData from "../custom-hooks/useGetData";
 
 const Shop = () => {
+    //Create products based on firebase data
     const { data: productsFirebase, loading } = useGetData("products");
+    // Create initialProducts based on products data
     const initialProducts = useMemo(() => {
         return products;
-    },[]);
+    }, []);
+    // Combine initialProducts and products from firebase data to get all products
     const allProducts = useMemo(() => {
         return [...initialProducts, ...productsFirebase];
-    }, [initialProducts, productsFirebase])
+    }, [initialProducts, productsFirebase]);
 
     // Create state of productsData
     const [productsData, setProductsData] = useState([]);
@@ -31,7 +34,10 @@ const Shop = () => {
                 setProductsData(storedProducts);
             } else {
                 setProductsData(allProducts);
-                localStorage.setItem("productsData", JSON.stringify(allProducts));
+                localStorage.setItem(
+                    "productsData",
+                    JSON.stringify(allProducts)
+                );
             }
         }
     }, [loading, allProducts]);
@@ -71,9 +77,13 @@ const Shop = () => {
         setSortOrder(sortValue);
         let sortedProducts = [...productsData];
         if (sortValue === "ascending") {
-            sortedProducts.sort((a, b) => a.productName.localeCompare(b.productName));
+            sortedProducts.sort((a, b) =>
+                a.productName.localeCompare(b.productName)
+            );
         } else if (sortValue === "descending") {
-            sortedProducts.sort((a, b) => b.productName.localeCompare(a.productName));
+            sortedProducts.sort((a, b) =>
+                b.productName.localeCompare(a.productName)
+            );
         }
         setProductsData(sortedProducts);
         localStorage.setItem("productsData", JSON.stringify(sortedProducts));

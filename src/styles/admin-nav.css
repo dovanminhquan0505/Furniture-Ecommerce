@@ -19,12 +19,25 @@
 .admin__nav-wrapper-top .logo h2 {
     font-size: 1.2rem;
     color: #fff;
+    margin-top: 10px;
 }
 
 .admin__nav-wrapper-top .search__box {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    position: relative;
+}
+
+.admin__nav-wrapper-top .search__box input {
+    height: 35px;
+}
+
+.admin__nav-wrapper-top .search__box i {
+    position: absolute;
+    color: #000;
+    top: 5px;
+    right: 17px;
 }
 
 .admin__nav-top-right {

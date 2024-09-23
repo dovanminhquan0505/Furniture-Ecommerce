@@ -16,9 +16,12 @@ const Shop = () => {
         return [...initialProducts, ...productsFirebase];
     }, [initialProducts, productsFirebase])
 
+    // Create state of productsData
     const [productsData, setProductsData] = useState([]);
+    // Create state of sort productsData
+    const [sortOrder, setSortOrder] = useState("default");
 
-    // Lưu dữ liệu vào localStorage
+    // Save database to local storage
     useEffect(() => {
         if (!loading) {
             const storedProducts = JSON.parse(
@@ -33,6 +36,7 @@ const Shop = () => {
         }
     }, [loading, allProducts]);
 
+    // Handle filter products based on category
     const handleFilter = (e) => {
         const filterValue = e.target.value;
         let filteredProducts;
@@ -47,6 +51,7 @@ const Shop = () => {
         localStorage.setItem("productsData", JSON.stringify(filteredProducts));
     };
 
+    // Handle search products
     const handleSearch = (e) => {
         const searchTerm = e.target.value;
         const searchedProducts = allProducts.filter(
@@ -58,6 +63,20 @@ const Shop = () => {
         );
         setProductsData(searchedProducts);
         localStorage.setItem("productsData", JSON.stringify(searchedProducts));
+    };
+
+    // Handle sort products based on product name
+    const handleSort = (e) => {
+        const sortValue = e.target.value;
+        setSortOrder(sortValue);
+        let sortedProducts = [...productsData];
+        if (sortValue === "ascending") {
+            sortedProducts.sort((a, b) => a.productName.localeCompare(b.productName));
+        } else if (sortValue === "descending") {
+            sortedProducts.sort((a, b) => b.productName.localeCompare(a.productName));
+        }
+        setProductsData(sortedProducts);
+        localStorage.setItem("productsData", JSON.stringify(sortedProducts));
     };
 
     return (
@@ -85,8 +104,8 @@ const Shop = () => {
                         </Col>
                         <Col lg="3" md="6" className="text-start">
                             <div className="filter__widget">
-                                <select>
-                                    <option>Sort By</option>
+                                <select onChange={handleSort} value={sortOrder}>
+                                    <option value="default">Sort By</option>
                                     <option value="ascending">Ascending</option>
                                     <option value="descending">
                                         Descending

@@ -34,9 +34,10 @@
 }
 
 .admin__nav-top-right img {
+    overflow: hidden;
     width: 40px;
     height: 40px;
-    border-radius: 50px;
+    border-radius: 50%;
     object-fit: cover;
 }
 

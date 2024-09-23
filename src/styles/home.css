@@ -41,6 +41,11 @@
     font-weight: bold;
 }
 
+.auth__btn a:hover {
+    opacity: 0.9;
+    color: #544848;
+}
+
 .hero__content {
     padding-top: 45px;
 }

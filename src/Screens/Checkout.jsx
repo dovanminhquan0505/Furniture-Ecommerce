@@ -6,14 +6,16 @@ import CommonSection from "../components/UI/CommonSection";
 import "../styles/checkout.css";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
+import useAuth from "../custom-hooks/useAuth";
 
 const Checkout = () => {
-    const totalQty = useSelector(state => state.cart.totalQuantity);
-    const totalAmount = useSelector(state => state.cart.totalAmount);
-    const totalShipping = useSelector(state => state.cart.totalShipping);
-    const totalTax = useSelector(state => state.cart.totalTax);
-    const totalPrice = useSelector(state => state.cart.totalPrice);
-    
+    const { currentUser } = useAuth();
+    const totalQty = useSelector((state) => state.cart.totalQuantity);
+    const totalAmount = useSelector((state) => state.cart.totalAmount);
+    const totalShipping = useSelector((state) => state.cart.totalShipping);
+    const totalTax = useSelector((state) => state.cart.totalTax);
+    const totalPrice = useSelector((state) => state.cart.totalPrice);
+
     return (
         <Helmet title=" Checkout">
             <CommonSection title="Checkout" />
@@ -74,15 +76,19 @@ const Checkout = () => {
                         <Col lg="4">
                             <div className="checkout__cart">
                                 <h6>
-                                    Total Qty: <span>{Math.abs(totalQty)} {Math.abs(totalQty) <= 1 ? 'item' : 'items'}</span>
+                                    Total Qty:{" "}
+                                    <span>
+                                        {Math.abs(totalQty)}{" "}
+                                        {Math.abs(totalQty) <= 1
+                                            ? "item"
+                                            : "items"}
+                                    </span>
                                 </h6>
                                 <h6>
                                     Subtotal: <span>${totalAmount}</span>
                                 </h6>
                                 <h6>
-                                    <span>
-                                        Shipping:
-                                    </span>
+                                    <span>Shipping:</span>
                                     <span>${totalShipping}</span>
                                 </h6>
                                 <h6>
@@ -93,10 +99,16 @@ const Checkout = () => {
                                 </h4>
 
                                 <motion.button
-                                    whileTap={{ scale: 1.2 }}
+                                    whileTap={{ scale: 1.1 }}
                                     className="buy__btn auth__btn w-100"
                                 >
-                                    <Link to="/login">Place order</Link>
+                                    {currentUser? (
+                                        <Link to="/payment">Place order</Link>
+                                    ) : (
+                                        <Link to="/login">
+                                            Place order
+                                        </Link>
+                                    )}
                                 </motion.button>
                             </div>
                         </Col>

@@ -64,7 +64,7 @@ const AddProducts = () => {
             );
             setLoading(false);
             toast.success("Product created successfully!");
-            navigate("/dashboard/all-products");
+            navigate("/admin/all-products");
         } catch (error) {
             setLoading(false);
             toast.error("Something went wrong!");

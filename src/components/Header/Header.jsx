@@ -10,6 +10,7 @@ import useAuth from "../../custom-hooks/useAuth";
 import { signOut } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { toast } from "react-toastify";
+import useAdmin from "../../custom-hooks/useAdmin";
 
 const nav__links = [
     {
@@ -35,6 +36,7 @@ const Header = () => {
 
     const navigate = useNavigate();
     const { currentUser } = useAuth();
+    const { isAdmin } = useAdmin();
 
     const stickyHeaderFunc = () => {
         window.addEventListener("scroll", () => {
@@ -147,7 +149,7 @@ const Header = () => {
                                     ref={profileActionRef}
                                     onClick={toggleProfileActions}
                                 >
-                                    {currentUser ? (
+                                    {currentUser ? ( //Check user exists
                                         <div className="d-flex align-items-center justify-content-center flex-column">
                                             <span
                                                 className="logout d-flex align-items-center mb-2"
@@ -161,16 +163,20 @@ const Header = () => {
                                                 </Link>
                                             </span>
 
-                                            <div className="line mb-2 mt-2"></div>
+                                            {isAdmin && ( //Check admin exists
+                                                <>
+                                                    <div className="line mb-2 mt-2"></div>
 
-                                            <span className="dashboard d-flex align-items-center">
-                                                <Link
-                                                    to="/dashboard"
-                                                    className="dashboard__profile"
-                                                >
-                                                    Dashboard
-                                                </Link>
-                                            </span>
+                                                    <span className="dashboard d-flex align-items-center">
+                                                        <Link
+                                                            to="/admin/dashboard"
+                                                            className="dashboard__profile"
+                                                        >
+                                                            Dashboard
+                                                        </Link>
+                                                    </span>
+                                                </>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="d-flex align-items-center justify-content-center flex-column">

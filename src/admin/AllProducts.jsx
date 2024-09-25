@@ -71,7 +71,7 @@ const AllProducts = () => {
                     </Col>
 
                     <Col lg="12">
-                        <Link to="/dashboard/add-product">
+                        <Link to="/admin/add-product">
                             <motion.button
                                 whileTap={{ scale: 1.2 }}
                                 className="buy__btn product__btn"

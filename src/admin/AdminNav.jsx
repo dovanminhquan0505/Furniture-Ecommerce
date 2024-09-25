@@ -5,31 +5,41 @@ import "../styles/admin-nav.css";
 import { NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import useAdmin from "../custom-hooks/useAdmin";
 
 const admin_nav = [
     {
         display: "Dashboard",
-        path: "/dashboard",
+        path: "/admin/dashboard",
     },
 
     {
         display: "All-Products",
-        path: "/dashboard/all-products",
+        path: "/admin/all-products",
     },
 
     {
         display: "Orders",
-        path: "/dashboard/orders",
+        path: "/admin/orders",
     },
 
     {
         display: "Users",
-        path: "/dashboard/users",
+        path: "/admin/users",
     },
 ];
 
 const AdminNav = () => {
     const { currentUser } = useAuth();
+    const { isAdmin, isLoading } = useAdmin();
+
+    if(isLoading) {
+        return <div className="fw-bold text-center">Loading...</div>
+    }
+
+    if(!isAdmin) {
+        return null;
+    }
 
     return (
         <>
@@ -57,7 +67,7 @@ const AdminNav = () => {
                                 </span>
                                 <motion.img
                                     whileTap={{ scale: 1.2 }}
-                                    src={currentUser && currentUser.photoURL}
+                                    src={currentUser.photoURL}
                                     alt=""
                                     className="admin__avatar"
                                 />

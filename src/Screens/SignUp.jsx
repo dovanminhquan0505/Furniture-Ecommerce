@@ -25,6 +25,20 @@ const Signup = () => {
         e.preventDefault();
         setLoading(true);
 
+        // Check email
+        if (!email.includes("@")) {
+            toast.error("Please enter a valid email address");
+            setLoading(false);
+            return;
+        }
+
+        // Check password has at least 6 characters
+        if (password.length < 6) {
+            toast.error("Password should be at least 6 characters");
+            setLoading(false);
+            return;
+        }
+
         // Check if the file has not already been loaded
         if (!file) {
             toast.error("Please select a file to upload");
@@ -70,12 +84,15 @@ const Signup = () => {
                             photoURL: downloadURL,
                         });
                         
+                        const role = email === process.env.FURNITURE_ECOMMERCE_ADMIN_EMAIL ? "admin" : "user";
+
                         // Save the user's information to firebase database
                         await setDoc(doc(db, "users", user.uid), {
                             uid: user.uid,
                             displayName: username,
                             email,
                             photoURL: downloadURL,
+                            role: role,
                         });
     
                         setLoading(false);
@@ -86,7 +103,12 @@ const Signup = () => {
             }
         } catch (error) {
             setLoading(false);
-            toast.error("Something went wrong!");
+            //Check if user use email existed before
+            if (error.code === "auth/email-already-in-use") {
+                toast.error("Email is already in use. Please try another email.");
+            } else {
+                toast.error(error.message || "Something went wrong!");
+            }
         }
     };
 

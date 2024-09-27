@@ -13,6 +13,7 @@ import AllProducts from "../admin/AllProducts";
 import Dashboard from "../admin/Dashboard";
 import Users from "../admin/Users";
 import ProtectedAdminRoute from "./ProtectedAdminRoute";
+import Orders from "../admin/Orders";
 
 const Routers = () => {
     //Link URL to views for each router
@@ -33,6 +34,7 @@ const Routers = () => {
                 <Route path="all-products" element={<AllProducts />} />
                 <Route path="add-product" element={<AddProducts />} />
                 <Route path="users" element={<Users />} />
+                <Route path="orders" element={<Orders />} />
             </Route>
             <Route path="login" element={<Login />} />
             <Route path="signup" element={<SignUp />} />

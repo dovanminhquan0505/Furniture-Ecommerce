@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase.config";
 import { toast } from "react-toastify";
+import "../styles/all-products.css";
 
 const Users = () => {
     const { data: usersData, loading } = useGetData("users");
@@ -42,13 +43,14 @@ const Users = () => {
                                         <tr key={user.uid}>
                                             <td>
                                                 <img
+                                                    className="img__user"
                                                     src={user.photoURL}
                                                     alt=""
                                                 />
                                             </td>
-                                            <td>{user.displayName}</td>
-                                            <td>{user.email}</td>
-                                            <td>
+                                            <td className="pdt">{user.displayName}</td>
+                                            <td className="pdt">{user.email}</td>
+                                            <td className="pt-4">
                                                 <motion.button
                                                     onClick={() => {
                                                         deleteUser(user.uid);

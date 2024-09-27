@@ -6,11 +6,21 @@ import { Container, Row, Col } from "reactstrap";
 import { motion } from "framer-motion";
 import { cartActions } from "../redux/slices/cartSlice";
 import { useSelector, useDispatch } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const Cart = () => {
     const cartItems = useSelector((state) => state.cart.cartItems);
     const totalAmount = useSelector((state) => state.cart.totalAmount);
+    const navigate = useNavigate();
+
+    const handleCheckout = () => {
+        if(cartItems.length === 0) {
+            toast.error("Your cart is empty. Please buy something!")
+        } else {
+            navigate("/checkout");
+        }
+    }
 
     return (
         <Helmet title=" Cart">
@@ -55,8 +65,8 @@ const Cart = () => {
                             </div>
                             <p className="fs-6 mt-2">Taxes and shipping will calculate in checkout</p>
                             <div>
-                                <button className="buy__btn w-100">
-                                    <Link to="/checkout">Checkout</Link>
+                                <button className="buy__btn w-100" onClick={handleCheckout}>
+                                    Checkout
                                 </button>
 
                                 <button className="buy__btn w-100 mt-3">

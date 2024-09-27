@@ -12,15 +12,17 @@ import { toast } from "react-toastify";
 const Cart = () => {
     const cartItems = useSelector((state) => state.cart.cartItems);
     const totalAmount = useSelector((state) => state.cart.totalAmount);
+
     const navigate = useNavigate();
 
+    // Handle checkout if cart is empty
     const handleCheckout = () => {
-        if(cartItems.length === 0) {
-            toast.error("Your cart is empty. Please buy something!")
+        if (cartItems.length === 0) {
+            toast.error("Your cart is empty. Please buy something!");
         } else {
             navigate("/checkout");
         }
-    }
+    };
 
     return (
         <Helmet title=" Cart">
@@ -63,9 +65,14 @@ const Cart = () => {
                                     </span>
                                 </h6>
                             </div>
-                            <p className="fs-6 mt-2">Taxes and shipping will calculate in checkout</p>
+                            <p className="fs-6 mt-2">
+                                Taxes and shipping will calculate in checkout
+                            </p>
                             <div>
-                                <button className="buy__btn w-100" onClick={handleCheckout}>
+                                <button
+                                    className="buy__btn w-100"
+                                    onClick={handleCheckout}
+                                >
                                     Checkout
                                 </button>
 

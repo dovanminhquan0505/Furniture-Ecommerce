@@ -14,6 +14,7 @@ import Dashboard from "../admin/Dashboard";
 import Users from "../admin/Users";
 import ProtectedAdminRoute from "./ProtectedAdminRoute";
 import Orders from "../admin/Orders";
+import Placeorder from "../Screens/Placeorder";
 
 const Routers = () => {
     //Link URL to views for each router
@@ -27,6 +28,7 @@ const Routers = () => {
 
             <Route path="/*" element={<ProtectedRoute />}>
                 <Route path="checkout" element={<Checkout />} />
+                <Route path="placeorder" element={<Placeorder />} />
             </Route>
 
             <Route path="/admin/*" element={<ProtectedAdminRoute />}>

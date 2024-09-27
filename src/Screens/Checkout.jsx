@@ -1,11 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col, FormGroup, Form } from "reactstrap";
 import { motion } from "framer-motion";
 import CommonSection from "../components/UI/CommonSection";
 import "../styles/checkout.css";
 import { useSelector } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import useAuth from "../custom-hooks/useAuth";
 
 const Checkout = () => {
@@ -15,6 +15,39 @@ const Checkout = () => {
     const totalShipping = useSelector((state) => state.cart.totalShipping);
     const totalTax = useSelector((state) => state.cart.totalTax);
     const totalPrice = useSelector((state) => state.cart.totalPrice);
+    const navigate = useNavigate();
+    // Create state of billing information
+    const [billingInfo, setBillingInfo] = useState({
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+        city: "",
+        postalCode: "",
+        country: "",
+    });
+
+    // Update state when user enters information
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setBillingInfo((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+    };
+
+    // Handle when user clicks on place order button
+    const handlePlaceOrder = (e) => {
+        e.preventDefault();
+
+        if (!currentUser) {
+            // Redirect to login if user is not logged in
+            navigate("/login");
+        } else {
+            // Navigate to placeorder page and pass the billingInfo as state
+            navigate("/placeorder", { state: { billingInfo } });
+        }
+    };
 
     return (
         <Helmet title=" Checkout">
@@ -31,44 +64,71 @@ const Checkout = () => {
                                 <FormGroup className="form__group">
                                     <input
                                         type="text"
+                                        name="name"
                                         placeholder="Enter your name"
+                                        value={billingInfo.name}
+                                        onChange={handleInputChange}
                                     />
                                 </FormGroup>
 
                                 <FormGroup className="form__group">
                                     <input
                                         type="email"
+                                        name="email"
                                         placeholder="example@gmail.com"
+                                        value={billingInfo.email}
+                                        onChange={handleInputChange}
                                     />
                                 </FormGroup>
 
                                 <FormGroup className="form__group">
                                     <input
                                         type="number"
+                                        name="phone"
                                         placeholder="Phone number"
+                                        value={billingInfo.phone}
+                                        onChange={handleInputChange}
                                     />
                                 </FormGroup>
 
                                 <FormGroup className="form__group">
                                     <input
                                         type="text"
+                                        name="address"
                                         placeholder="Street address"
+                                        value={billingInfo.address}
+                                        onChange={handleInputChange}
                                     />
-                                </FormGroup>
-
-                                <FormGroup className="form__group">
-                                    <input type="text" placeholder="City" />
                                 </FormGroup>
 
                                 <FormGroup className="form__group">
                                     <input
                                         type="text"
-                                        placeholder="Postal code"
+                                        name="city"
+                                        placeholder="City"
+                                        value={billingInfo.city}
+                                        onChange={handleInputChange}
                                     />
                                 </FormGroup>
 
                                 <FormGroup className="form__group">
-                                    <input type="text" placeholder="Country" />
+                                    <input
+                                        type="text"
+                                        name="postalCode"
+                                        placeholder="Postal code"
+                                        value={billingInfo.postalCode}
+                                        onChange={handleInputChange}
+                                    />
+                                </FormGroup>
+
+                                <FormGroup className="form__group">
+                                    <input
+                                        type="text"
+                                        name="country"
+                                        placeholder="Country"
+                                        value={billingInfo.country}
+                                        onChange={handleInputChange}
+                                    />
                                 </FormGroup>
                             </Form>
                         </Col>
@@ -99,16 +159,12 @@ const Checkout = () => {
                                 </h4>
 
                                 <motion.button
+                                    type="button"
                                     whileTap={{ scale: 1.1 }}
                                     className="buy__btn auth__btn w-100"
+                                    onClick={handlePlaceOrder}
                                 >
-                                    {currentUser? (
-                                        <Link to="/payment">Place order</Link>
-                                    ) : (
-                                        <Link to="/login">
-                                            Place order
-                                        </Link>
-                                    )}
+                                    Place order
                                 </motion.button>
                             </div>
                         </Col>

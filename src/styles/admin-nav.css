@@ -63,6 +63,52 @@
     cursor: pointer;
 }
 
+.admin__nav-top-right .profile {
+    position: relative;
+    z-index: 9;
+}
+
+.admin__nav-top-right .profile .profile__actions {
+    position: absolute;
+    top: 98%;
+    left: 0;
+    width: 150px;
+    z-index: 10;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #8f8e8e7d;
+    border-radius: 5px;
+    line-height: 30px;
+    cursor: pointer;
+    display: none;
+}
+
+.active__profileActions {
+    display: block !important;
+}
+
+.admin__nav-top-right .profile .logout__profile {
+    text-align: center;
+    font-weight: 500;
+}
+
+.admin__nav-top-right .profile .logout__profile:hover {
+    color: #000;
+}
+
+.admin__nav-top-right .profile .logout {
+    width: 110%;
+    padding-left: 10px;
+    border-radius: 5px;
+}
+
+.admin__nav-top-right .profile .logout:hover {
+    background: #f5f5f5;
+}
+
 /* Admin menu */
 .admin__menu {
     width: 100%;

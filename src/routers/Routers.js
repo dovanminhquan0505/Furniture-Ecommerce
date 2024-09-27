@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 //Import Screens
 import Home from "../Screens/Home";
 import Shop from "../Screens/Shop";
@@ -13,7 +13,6 @@ import AllProducts from "../admin/AllProducts";
 import Dashboard from "../admin/Dashboard";
 import Users from "../admin/Users";
 import ProtectedAdminRoute from "./ProtectedAdminRoute";
-import AdminNav from "../admin/AdminNav";
 
 const Routers = () => {
     //Link URL to views for each router

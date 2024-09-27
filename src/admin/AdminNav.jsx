@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Container, Row } from "reactstrap";
 import useAuth from "../custom-hooks/useAuth";
 import "../styles/admin-nav.css";
@@ -6,6 +6,9 @@ import { NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import useAdmin from "../custom-hooks/useAdmin";
+import { signOut } from "firebase/auth";
+import { auth } from "../firebase.config";
+import { toast } from "react-toastify";
 
 const admin_nav = [
     {
@@ -32,14 +35,31 @@ const admin_nav = [
 const AdminNav = () => {
     const { currentUser } = useAuth();
     const { isAdmin, isLoading } = useAdmin();
+    const profileActionRef = useRef();
 
-    if(isLoading) {
-        return <div className="fw-bold text-center">Loading...</div>
+    if (isLoading) {
+        return <div className="fw-bold text-center">Loading...</div>;
     }
 
-    if(!isAdmin) {
+    if (!isAdmin) {
         return null;
     }
+
+    const logOut = () => {
+        signOut(auth)
+            .then(() => {
+                toast.success("Logged out");
+            })
+            .catch((error) => {
+                toast.error(error.message);
+            });
+    };
+
+    const toggleProfileActions = () => {
+        if (profileActionRef.current) {
+            profileActionRef.current.classList.toggle("active__profileActions");
+        }
+    };
 
     return (
         <>
@@ -48,7 +68,9 @@ const AdminNav = () => {
                     <Container>
                         <div className="admin__nav-wrapper-top">
                             <div className="logo">
-                                <Link to="/home"><h2>Multimart</h2></Link>
+                                <Link to="/home">
+                                    <h2>Multimart</h2>
+                                </Link>
                             </div>
 
                             <div className="search__box">
@@ -65,12 +87,35 @@ const AdminNav = () => {
                                 <span>
                                     <i class="ri-settings-3-line"></i>
                                 </span>
-                                <motion.img
-                                    whileTap={{ scale: 1.2 }}
-                                    src={currentUser.photoURL}
-                                    alt=""
-                                    className="admin__avatar"
-                                />
+                                <div className="profile">
+                                    <motion.img
+                                        whileTap={{ scale: 1.2 }}
+                                        src={currentUser.photoURL}
+                                        alt=""
+                                        className="admin__avatar"
+                                        onClick={toggleProfileActions}
+                                    />
+
+                                    <div
+                                        className="profile__actions"
+                                        ref={profileActionRef}
+                                        onClick={toggleProfileActions}
+                                    >
+                                        <div className="d-flex align-items-center justify-content-center flex-column">
+                                            <span
+                                                className="logout d-flex align-items-center"
+                                                onClick={logOut}
+                                            >
+                                                <Link
+                                                    to="/login"
+                                                    className="logout__profile"
+                                                >
+                                                    Log out
+                                                </Link>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </Container>

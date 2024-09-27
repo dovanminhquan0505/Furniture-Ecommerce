@@ -1,4 +1,12 @@
 /* Product Details */
+
+.img__productDetail {
+    margin-top: 15px;
+    width: 532px;
+    height: 350px;
+    object-fit: contain;
+}
+
 .product__details {
     margin-top: 70px;
 }
@@ -27,6 +35,7 @@
     font-weight: 600;
     font-size: 1rem;
     cursor: pointer;
+    margin-top: -40px;
 }
 
 .active__tab {

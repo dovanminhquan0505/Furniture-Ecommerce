@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import CommonSection from "../components/UI/CommonSection";
 import "../styles/checkout.css";
 import { useSelector } from "react-redux";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import useAuth from "../custom-hooks/useAuth";
 
 const Checkout = () => {
@@ -16,6 +16,7 @@ const Checkout = () => {
     const totalTax = useSelector((state) => state.cart.totalTax);
     const totalPrice = useSelector((state) => state.cart.totalPrice);
     const navigate = useNavigate();
+
     // Create state of billing information
     const [billingInfo, setBillingInfo] = useState({
         name: "",
@@ -29,10 +30,12 @@ const Checkout = () => {
 
     // Update state when user enters information
     const handleInputChange = (e) => {
+        // Name is the name attribute of the input tag, value is the value attribute
         const { name, value } = e.target;
+        // Update the state with the new value
         setBillingInfo((prev) => ({
             ...prev,
-            [name]: value,
+            [name]: name === "phone" ? value : value,
         }));
     };
 
@@ -56,6 +59,7 @@ const Checkout = () => {
             <section>
                 <Container>
                     <Row>
+                        {/* Billing Information */}
                         <Col lg="8">
                             <h6 className="mb-4 fw-bold">
                                 Billing Information
@@ -133,6 +137,7 @@ const Checkout = () => {
                             </Form>
                         </Col>
 
+                        {/* Order details */}
                         <Col lg="4">
                             <div className="checkout__cart">
                                 <h6>

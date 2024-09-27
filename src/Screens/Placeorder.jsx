@@ -44,9 +44,9 @@ const PlaceOrder = () => {
                         <Col lg="4">
                             <div className="checkout__cart">
                                 <h6>
-                                    Total Qty:{" "}
+                                    Total Qty:
                                     <span>
-                                        {Math.abs(totalQty)}{" "}
+                                        {Math.abs(totalQty)}
                                         {Math.abs(totalQty) <= 1
                                             ? "item"
                                             : "items"}

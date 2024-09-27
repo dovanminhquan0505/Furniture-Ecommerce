@@ -100,7 +100,7 @@ const ProductDetails = () => {
                 <Container>
                     <Row>
                         <Col lg="6">
-                            <img src={imgUrl} alt="" />
+                            <img src={imgUrl} alt="" className="img__productDetail"/>
                         </Col>
 
                         <Col lg="6">

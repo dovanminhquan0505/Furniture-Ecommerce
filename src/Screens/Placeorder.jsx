@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col } from "reactstrap";
 import { motion } from "framer-motion";
@@ -7,8 +7,14 @@ import { useLocation } from "react-router-dom";
 import "../styles/checkout.css";
 import "../styles/placeorder.css";
 import { useSelector } from "react-redux";
+// import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
+import { toast } from "react-toastify";
+
+// Get Paypal Client from your environment
+const clientId = process.env.REACT_APP_PAYPAL_CLIENT_ID;
 
 const PlaceOrder = () => {
+    const [loading, setLoading] = useState(false);
     // Get billing information from state passed via navigate
     const location = useLocation();
     const { billingInfo } = location.state || {};
@@ -23,8 +29,16 @@ const PlaceOrder = () => {
     // Retrieve cart items
     const cartItems = useSelector((state) => state.cart.cartItems);
 
+    // State for showing PayPal checkout
+    const [showPaypal, setShowPaypal] = useState(false);
+
+    const handleConfirmOrder = () => {
+        // Display paypal button when user clicks on Confirm order button
+        setShowPaypal(true);
+    };
+
     return (
-        <Helmet title="Place Order">
+        <Helmet title=" Place Order">
             <CommonSection title="Place Order" />
 
             <section>
@@ -130,9 +144,24 @@ const PlaceOrder = () => {
                                     type="button"
                                     whileTap={{ scale: 1.1 }}
                                     className="buy__btn auth__btn w-100"
+                                    onClick={handleConfirmOrder}
                                 >
                                     Confirm Order
                                 </motion.button>
+
+                                {/* Display Paypal if user clicks on Confirm button */}
+                                {loading ? (
+                                    <h4 className="fw-bold text-center">
+                                        Loading....
+                                    </h4>
+                                ) : (
+                                    showPaypal && (
+                                        <div
+                                            className="mt-3"
+                                            id="paypal-button"
+                                        />
+                                    )
+                                )}
                             </div>
                         </Col>
                     </Row>

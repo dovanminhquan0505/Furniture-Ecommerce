@@ -84,7 +84,7 @@ const Signup = () => {
                             photoURL: downloadURL,
                         });
                         
-                        const role = email === process.env.FURNITURE_ECOMMERCE_ADMIN_EMAIL ? "admin" : "user";
+                        const role = email === process.env.REACT_APP_FURNITURE_ECOMMERCE_ADMIN_EMAIL ? "admin" : "user";
 
                         // Save the user's information to firebase database
                         await setDoc(doc(db, "users", user.uid), {

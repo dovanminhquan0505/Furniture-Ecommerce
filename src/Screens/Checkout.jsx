@@ -7,6 +7,9 @@ import "../styles/checkout.css";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import useAuth from "../custom-hooks/useAuth";
+import { toast } from "react-toastify";
+import { doc, collection, setDoc } from "firebase/firestore";
+import { db } from "../firebase.config";
 
 const Checkout = () => {
     const { currentUser } = useAuth();
@@ -15,6 +18,7 @@ const Checkout = () => {
     const totalShipping = useSelector((state) => state.cart.totalShipping);
     const totalTax = useSelector((state) => state.cart.totalTax);
     const totalPrice = useSelector((state) => state.cart.totalPrice);
+    const cartItems = useSelector((state) => state.cart.cartItems);
     const navigate = useNavigate();
 
     // Create state of billing information
@@ -28,7 +32,7 @@ const Checkout = () => {
         country: "",
     });
 
-    // Update state when user enters information
+    // Handle when user get values into input fields
     const handleInputChange = (e) => {
         // Name is the name attribute of the input tag, value is the value attribute
         const { name, value } = e.target;
@@ -39,16 +43,47 @@ const Checkout = () => {
         }));
     };
 
-    // Handle when user clicks on place order button
-    const handlePlaceOrder = (e) => {
+    // Update state when user enters information
+    const handlePlaceOrder = async (e) => {
         e.preventDefault();
-
+    
         if (!currentUser) {
             // Redirect to login if user is not logged in
             navigate("/login");
-        } else {
-            // Navigate to placeorder page and pass the billingInfo as state
-            navigate("/placeorder", { state: { billingInfo } });
+            return;
+        }
+    
+        // Create order data
+        const orderData = {
+            userId: currentUser.uid,
+            billingInfo: {
+                name: billingInfo.name,
+                email: billingInfo.email,
+                phone: billingInfo.phone,
+                address: billingInfo.address,
+                city: billingInfo.city,
+                postalCode: billingInfo.postalCode,
+                country: billingInfo.country,
+            },
+            cartItems: cartItems,
+            totalAmount: totalAmount,
+            totalShipping: totalShipping,
+            totalTax: totalTax,
+            totalPrice: totalPrice,
+            isPaid: false,
+            isDelivered: false,
+            createdAt: new Date(),
+        };
+    
+        try {
+            // Create order
+            const orderRef = doc(collection(db, "orders"));
+            await setDoc(orderRef, orderData);
+    
+            // If order created successfully, navigate to place order details
+            navigate("/placeorder", { state: { billingInfo, orderId: orderRef.id } });
+        } catch (error) {
+            toast.error("Error creating order: " + (error.message || error));
         }
     };
 

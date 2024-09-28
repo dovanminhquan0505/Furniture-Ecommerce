@@ -66,6 +66,7 @@ const Checkout = () => {
                 country: billingInfo.country,
             },
             cartItems: cartItems,
+            totalQuantity: totalQty,
             totalAmount: totalAmount,
             totalShipping: totalShipping,
             totalTax: totalTax,

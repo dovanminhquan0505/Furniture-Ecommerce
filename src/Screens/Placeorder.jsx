@@ -9,7 +9,7 @@ import "../styles/placeorder.css";
 import { useSelector } from "react-redux";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { toast } from "react-toastify";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, Timestamp, updateDoc } from "firebase/firestore";
 import { db } from "../firebase.config";
 
 // Get Paypal Client from your environment
@@ -21,21 +21,45 @@ const PlaceOrder = () => {
     const navigate = useNavigate();
 
     // Retrieve billing information
-    const { billingInfo, orderId } = location.state || {};
+    const { orderId } = location.state || {};
+
+    const [orderDetails, setOrderDetails] = useState(null);
 
     useEffect(() => {
-        if(!orderId) {
+        if (!orderId) {
             // If there's no orderId, redirect back to checkout
-            navigate('/checkout');
+            navigate("/checkout");
         }
+
+        const fetchOrderDetails = async () => {
+            try {
+                const orderRef = doc(db, "orders", orderId);
+                const orderSnap = await getDoc(orderRef);
+                if (orderSnap.exists()) {
+                    const data = orderSnap.data();
+                    // Convert Firestore Timestamp to Date object
+                    if (data.paidAt && data.paidAt instanceof Timestamp) {
+                        data.paidAt = data.paidAt.toDate();
+                    }
+                    if (
+                        data.deliveredAt &&
+                        data.deliveredAt instanceof Timestamp
+                    ) {
+                        data.deliveredAt = data.deliveredAt.toDate();
+                    }
+                    setOrderDetails(data);
+                } else {
+                    toast.error("Order not found");
+                    navigate("/checkout");
+                }
+            } catch (error) {
+                toast.error("Error fetching order details: " + error.message);
+            }
+        };
+
+        fetchOrderDetails();
     }, [orderId, navigate]);
 
-    // Retrieve total price details from Redux store
-    const totalQty = useSelector((state) => state.cart.totalQuantity);
-    const totalAmount = useSelector((state) => state.cart.totalAmount);
-    const totalShipping = useSelector((state) => state.cart.totalShipping);
-    const totalTax = useSelector((state) => state.cart.totalTax);
-    const totalPrice = useSelector((state) => state.cart.totalPrice);
     // Retrieve cart items
     const cartItems = useSelector((state) => state.cart.cartItems);
 
@@ -50,11 +74,11 @@ const PlaceOrder = () => {
     const handlePaymentSuccess = async (details) => {
         try {
             setLoading(true);
-            // Use the orderId to update the specific order
             const orderRef = doc(db, "orders", orderId);
+            const paidAt = new Date();
             await updateDoc(orderRef, {
                 isPaid: true,
-                paidAt: new Date(),
+                paidAt: Timestamp.fromDate(paidAt),
                 paymentResult: {
                     id: details.id,
                     status: details.status,
@@ -63,6 +87,12 @@ const PlaceOrder = () => {
                 },
             });
 
+            setOrderDetails((prevDetails) => ({
+                ...prevDetails,
+                isPaid: true,
+                paidAt: paidAt,
+            }));
+
             toast.success("Payment successful!");
         } catch (error) {
             toast.error("Error updating order: " + error.message);
@@ -70,6 +100,15 @@ const PlaceOrder = () => {
             setLoading(false);
         }
     };
+
+    // Handle display Date
+    const formatDate = (date) => {
+        return date instanceof Date ? date.toLocaleString() : "N/A";
+    };
+
+    if (!orderDetails) {
+        return <div className="fw-bold text-center">Loading....</div>;
+    }
 
     return (
         <Helmet title=" Place Order">
@@ -83,33 +122,49 @@ const PlaceOrder = () => {
                             <div className="border rounded p-3 mb-4">
                                 <h6 className="mb-3 fw-bold">Shipping</h6>
                                 <div className="billing__info">
-                                    <p className="info__details">
+                                    <p>
                                         <strong>Name: </strong>
-                                        {billingInfo?.name || "N/A"}
+                                        {orderDetails.billingInfo.name}
                                     </p>
                                     <p>
                                         <strong>Email: </strong>
-                                        {billingInfo?.email || "N/A"}
+                                        {orderDetails.billingInfo.email}
                                     </p>
                                     <p>
                                         <strong>Phone: </strong>
-                                        {billingInfo?.phone || "N/A"}
+                                        {orderDetails.billingInfo.phone}
                                     </p>
                                     <p>
                                         <strong>Address: </strong>
-                                        {billingInfo?.address || "N/A"}
+                                        {orderDetails.billingInfo.address}
                                     </p>
                                     <p>
                                         <strong>City: </strong>
-                                        {billingInfo?.city || "N/A"}
+                                        {orderDetails.billingInfo.city}
                                     </p>
                                     <p>
                                         <strong>Postal Code: </strong>
-                                        {billingInfo?.postalCode || "N/A"}
+                                        {orderDetails.billingInfo.postalCode}
                                     </p>
                                     <p>
                                         <strong>Country: </strong>
-                                        {billingInfo?.country || "N/A"}
+                                        {orderDetails.billingInfo.country}
+                                    </p>
+                                </div>
+
+                                <div className="mt-3">
+                                    <p
+                                        className={
+                                            orderDetails.isDelivered
+                                                ? "text-success"
+                                                : "text-danger"
+                                        }
+                                    >
+                                        {orderDetails.isDelivered
+                                            ? `Delivered at ${formatDate(
+                                                  orderDetails.deliveredAt
+                                              )}`
+                                            : "Not Delivered"}
                                     </p>
                                 </div>
                             </div>
@@ -117,6 +172,19 @@ const PlaceOrder = () => {
                             <div className="border rounded p-3 mb-4">
                                 <h6 className="mb-3 fw-bold">Payment</h6>
                                 <p className="mb-0">Payment Method: Paypal</p>
+                                <p
+                                    className={
+                                        orderDetails.isPaid
+                                            ? "text-success mt-2"
+                                            : "text-danger mt-2"
+                                    }
+                                >
+                                    {orderDetails.isPaid
+                                        ? `Paid at ${formatDate(
+                                              orderDetails.paidAt
+                                          )}`
+                                        : "Not Paid"}
+                                </p>
                             </div>
 
                             <div className="border rounded p-3 mb-4">
@@ -154,39 +222,38 @@ const PlaceOrder = () => {
                                 <h6>
                                     Total Qty:
                                     <span>
-                                        {Math.abs(totalQty)}
-                                        {Math.abs(totalQty) <= 1
-                                            ? " item"
-                                            : " items"}
+                                        {orderDetails.totalQuantity || 0} items
                                     </span>
                                 </h6>
                                 <h6>
-                                    Subtotal: <span>${totalAmount}</span>
+                                    Subtotal:
+                                    <span>${orderDetails.totalAmount}</span>
                                 </h6>
                                 <h6>
                                     <span>Shipping:</span>
-                                    <span>${totalShipping}</span>
+                                    <span>${orderDetails.totalShipping}</span>
                                 </h6>
                                 <h6>
-                                    Tax: <span>${totalTax} </span>
+                                    Tax: <span>${orderDetails.totalTax} </span>
                                 </h6>
                                 <h4>
-                                    Total Cost: <span>${totalPrice}</span>
+                                    Total Cost:
+                                    <span>${orderDetails.totalPrice}</span>
                                 </h4>
 
-                                {!showPaypal && (
+                                {!orderDetails.isPaid && !showPaypal && (
                                     <motion.button
                                         type="button"
                                         whileTap={{ scale: 1.1 }}
                                         className="buy__btn auth__btn w-100"
                                         onClick={handleConfirmOrder}
                                     >
-                                        Confirm Order
+                                        Proceed to Payment
                                     </motion.button>
                                 )}
 
                                 {/* Display Paypal if user clicks on Confirm button */}
-                                {showPaypal && (
+                                {!orderDetails.isPaid && showPaypal && (
                                     <PayPalScriptProvider
                                         options={{ "client-id": clientId }}
                                     >
@@ -196,7 +263,7 @@ const PlaceOrder = () => {
                                                     purchase_units: [
                                                         {
                                                             amount: {
-                                                                value: totalPrice.toString(),
+                                                                value: orderDetails.totalPrice.toString(),
                                                             },
                                                         },
                                                     ],

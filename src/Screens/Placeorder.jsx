@@ -1,23 +1,34 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col } from "reactstrap";
 import { motion } from "framer-motion";
 import CommonSection from "../components/UI/CommonSection";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "../styles/checkout.css";
 import "../styles/placeorder.css";
 import { useSelector } from "react-redux";
-// import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
+import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { toast } from "react-toastify";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "../firebase.config";
 
 // Get Paypal Client from your environment
 const clientId = process.env.REACT_APP_PAYPAL_CLIENT_ID;
 
 const PlaceOrder = () => {
     const [loading, setLoading] = useState(false);
-    // Get billing information from state passed via navigate
     const location = useLocation();
-    const { billingInfo } = location.state || {};
+    const navigate = useNavigate();
+
+    // Retrieve billing information
+    const { billingInfo, orderId } = location.state || {};
+
+    useEffect(() => {
+        if(!orderId) {
+            // If there's no orderId, redirect back to checkout
+            navigate('/checkout');
+        }
+    }, [orderId, navigate]);
 
     // Retrieve total price details from Redux store
     const totalQty = useSelector((state) => state.cart.totalQuantity);
@@ -25,7 +36,6 @@ const PlaceOrder = () => {
     const totalShipping = useSelector((state) => state.cart.totalShipping);
     const totalTax = useSelector((state) => state.cart.totalTax);
     const totalPrice = useSelector((state) => state.cart.totalPrice);
-
     // Retrieve cart items
     const cartItems = useSelector((state) => state.cart.cartItems);
 
@@ -35,6 +45,30 @@ const PlaceOrder = () => {
     const handleConfirmOrder = () => {
         // Display paypal button when user clicks on Confirm order button
         setShowPaypal(true);
+    };
+
+    const handlePaymentSuccess = async (details) => {
+        try {
+            setLoading(true);
+            // Use the orderId to update the specific order
+            const orderRef = doc(db, "orders", orderId);
+            await updateDoc(orderRef, {
+                isPaid: true,
+                paidAt: new Date(),
+                paymentResult: {
+                    id: details.id,
+                    status: details.status,
+                    update_time: details.update_time,
+                    email_address: details.payer.email_address,
+                },
+            });
+
+            toast.success("Payment successful!");
+        } catch (error) {
+            toast.error("Error updating order: " + error.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -140,27 +174,51 @@ const PlaceOrder = () => {
                                     Total Cost: <span>${totalPrice}</span>
                                 </h4>
 
-                                <motion.button
-                                    type="button"
-                                    whileTap={{ scale: 1.1 }}
-                                    className="buy__btn auth__btn w-100"
-                                    onClick={handleConfirmOrder}
-                                >
-                                    Confirm Order
-                                </motion.button>
+                                {!showPaypal && (
+                                    <motion.button
+                                        type="button"
+                                        whileTap={{ scale: 1.1 }}
+                                        className="buy__btn auth__btn w-100"
+                                        onClick={handleConfirmOrder}
+                                    >
+                                        Confirm Order
+                                    </motion.button>
+                                )}
 
                                 {/* Display Paypal if user clicks on Confirm button */}
-                                {loading ? (
-                                    <h4 className="fw-bold text-center">
-                                        Loading....
-                                    </h4>
-                                ) : (
-                                    showPaypal && (
-                                        <div
-                                            className="mt-3"
-                                            id="paypal-button"
+                                {showPaypal && (
+                                    <PayPalScriptProvider
+                                        options={{ "client-id": clientId }}
+                                    >
+                                        <PayPalButtons
+                                            createOrder={(data, actions) => {
+                                                return actions.order.create({
+                                                    purchase_units: [
+                                                        {
+                                                            amount: {
+                                                                value: totalPrice.toString(),
+                                                            },
+                                                        },
+                                                    ],
+                                                });
+                                            }}
+                                            onApprove={(data, actions) => {
+                                                return actions.order
+                                                    .capture()
+                                                    .then((details) => {
+                                                        handlePaymentSuccess(
+                                                            details
+                                                        );
+                                                    });
+                                            }}
                                         />
-                                    )
+                                    </PayPalScriptProvider>
+                                )}
+
+                                {loading && (
+                                    <h4 className="fw-bold text-center">
+                                        Processing...
+                                    </h4>
                                 )}
                             </div>
                         </Col>

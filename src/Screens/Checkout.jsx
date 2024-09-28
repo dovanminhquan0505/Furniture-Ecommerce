@@ -8,7 +8,7 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import useAuth from "../custom-hooks/useAuth";
 import { toast } from "react-toastify";
-import { doc, collection, setDoc } from "firebase/firestore";
+import { collection, setDoc, addDoc } from "firebase/firestore";
 import { db } from "../firebase.config";
 
 const Checkout = () => {
@@ -76,12 +76,12 @@ const Checkout = () => {
         };
     
         try {
-            // Create order
-            const orderRef = doc(collection(db, "orders"));
-            await setDoc(orderRef, orderData);
+            // Create order and get the orderId
+            const orderRef = await addDoc(collection(db, "orders"), orderData);
+            const orderId = orderRef.id;
     
             // If order created successfully, navigate to place order details
-            navigate("/placeorder", { state: { billingInfo, orderId: orderRef.id } });
+            navigate("/placeorder", { state: { billingInfo, orderId } });
         } catch (error) {
             toast.error("Error creating order: " + (error.message || error));
         }

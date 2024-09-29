@@ -8,7 +8,7 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import useAuth from "../custom-hooks/useAuth";
 import { toast } from "react-toastify";
-import { collection, setDoc, addDoc } from "firebase/firestore";
+import { collection, addDoc } from "firebase/firestore";
 import { db } from "../firebase.config";
 
 const Checkout = () => {

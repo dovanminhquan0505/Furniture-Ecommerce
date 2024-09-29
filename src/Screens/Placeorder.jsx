@@ -31,6 +31,7 @@ const PlaceOrder = () => {
             navigate("/checkout");
         }
 
+        // Get order details from Firestore
         const fetchOrderDetails = async () => {
             try {
                 const orderRef = doc(db, "orders", orderId);
@@ -47,6 +48,7 @@ const PlaceOrder = () => {
                     ) {
                         data.deliveredAt = data.deliveredAt.toDate();
                     }
+                    // Store order data in the component's state.
                     setOrderDetails(data);
                 } else {
                     toast.error("Order not found");

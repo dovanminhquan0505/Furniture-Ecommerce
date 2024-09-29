@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { db } from "../firebase.config";
 import { toast } from "react-toastify";
 import { doc, deleteDoc } from "firebase/firestore";
+import "../styles/orders.css";
 
 const Orders = () => {
     const { data: ordersData, loading } = useGetData("orders");
@@ -60,24 +61,24 @@ const Orders = () => {
 
                                         return (
                                             <tr key={order.id}>
-                                                <td>
+                                                <td data-label="OrderID">
                                                     {order.paymentResult
                                                         ? order.paymentResult.id
                                                         : "No ID"}
                                                 </td>
-                                                <td>
+                                                <td data-label="User">
                                                     {order.billingInfo?.name}
                                                 </td>
-                                                <td>{createdAt}</td>
-                                                <td>${order.totalPrice}</td>
-                                                <td>{paidAt}</td>
-                                                <td>{deliveredAt}</td>
-                                                <td>
+                                                <td data-label="Date">{createdAt}</td>
+                                                <td data-label="Total Price">${order.totalPrice}</td>
+                                                <td data-label="Paid at">{paidAt}</td>
+                                                <td data-label="Delivered at">{deliveredAt}</td>
+                                                <td data-label="Actions">
                                                     <motion.button
                                                         whileTap={{
                                                             scale: 1.1,
                                                         }}
-                                                        className="btn"
+                                                        className="btn btn-primary"
                                                     >
                                                         Edit
                                                     </motion.button>

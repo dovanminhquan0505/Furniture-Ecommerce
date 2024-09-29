@@ -16,6 +16,10 @@ const AllProducts = () => {
         toast.success("Product deleted successfully!");
     };
 
+    const editProduct = async (id) => {
+
+    };
+
     return (
         <section>
             <Container>
@@ -28,7 +32,7 @@ const AllProducts = () => {
                                     <th>Title</th>
                                     <th>Category</th>
                                     <th>Price</th>
-                                    <th>Action</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
 
@@ -40,19 +44,29 @@ const AllProducts = () => {
                                 ) : (
                                     productsData.map((item) => (
                                         <tr key={item.id}>
-                                            <td>
+                                            <td data-label="Image">
                                                 <img src={item.imgUrl} alt="" />
                                             </td>
-                                            <td className="pdt">
+                                            <td data-label="Title">
                                                 {item.productName}
                                             </td>
-                                            <td className="pdt">
+                                            <td data-label="Category">
                                                 {item.category}
                                             </td>
-                                            <td className="pdt">
+                                            <td data-label="Price">
                                                 ${item.price}
                                             </td>
-                                            <td className="pt-4">
+                                            <td data-label="Actions">
+                                                <motion.button
+                                                    onClick={() => {
+                                                        editProduct(item.id);
+                                                    }}
+                                                    whileTap={{ scale: 1.1 }}
+                                                    className="btn btn-primary"
+                                                >
+                                                    Edit
+                                                </motion.button>
+
                                                 <motion.button
                                                     onClick={() => {
                                                         deleteProduct(item.id);

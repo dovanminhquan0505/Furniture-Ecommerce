@@ -37,16 +37,16 @@ const Users = () => {
                                 ) : (
                                     usersData?.map((user) => (
                                         <tr key={user.uid}>
-                                            <td>
+                                            <td data-label="Image">
                                                 <img
                                                     className="img__user"
                                                     src={user.photoURL}
                                                     alt=""
                                                 />
                                             </td>
-                                            <td className="pdt">{user.displayName}</td>
-                                            <td className="pdt">{user.email}</td>
-                                            <td className="pt-4">
+                                            <td data-label="Username">{user.displayName}</td>
+                                            <td data-label="Email">{user.email}</td>
+                                            <td data-label="Action">
                                                 <motion.button
                                                     onClick={() => {
                                                         deleteUser(user.uid);

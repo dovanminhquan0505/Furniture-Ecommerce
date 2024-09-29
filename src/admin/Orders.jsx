@@ -58,12 +58,12 @@ const Orders = () => {
                                         const paidAt = order.paidAt
                                             ? order.paidAt
                                                   .toDate()
-                                                  .toLocaleDateString("en-US")
+                                                  .toLocaleString("en-US")
                                             : "No";
                                         const deliveredAt = order.deliveredAt
                                             ? order.deliveredAt
                                                   .toDate()
-                                                  .toLocaleDateString("en-US")
+                                                  .toLocaleString("en-US")
                                             : "No";
 
                                         return (

@@ -1,7 +1,29 @@
-.pdt {
-    padding-top: 35px !important;
-}
-
 .product__btn {
     margin-left: 500px;
+}
+
+/* Responsive table on smaller screens */
+@media screen and (max-width: 768px) {
+    .table, .table thead, .table tbody, .table th, .table td, .table tr {
+        display: block;
+    }
+
+    .table thead tr {
+        display: none;
+    }
+
+    .table td {
+        padding-left: 50%;
+        text-align: right;
+        position: relative;
+    }
+
+    .table td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        padding-left: 15px;
+        font-weight: bold;
+        text-align: left;
+    }
 }

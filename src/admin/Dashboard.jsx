@@ -2,43 +2,58 @@ import React from "react";
 import { Container, Row, Col } from "reactstrap";
 import "../styles/dashboard.css";
 import useGetData from "../custom-hooks/useGetData";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+    PieChart,
+    Pie,
+    Cell,
+    Legend,
+} from "recharts";
 
 const Dashboard = () => {
-    const {data: products} = useGetData('products');
-    const {data: users} = useGetData('users');
-    const { data: orders } = useGetData('orders');
+    const { data: products } = useGetData("products");
+    const { data: users } = useGetData("users");
+    const { data: orders } = useGetData("orders");
 
     // Calculate total revenue from paid orders only
     const totalSales = orders
-        .filter(order => order.isPaid !== false) // Filter paid orders
+        .filter((order) => order.isPaid !== false) // Filter paid orders
         .reduce((acc, order) => acc + order.totalPrice, 0); // Cumulative totalPrice of paid orders
 
-
     // Set Data for line chart
-    const lineChartData = orders.map(order => ({
+    const lineChartData = orders.map((order) => ({
         date: order.createdAt?.toDate().toLocaleDateString("en-US"),
         sales: order.totalPrice,
     }));
 
-    // Get category data for pie chart
-    const categoryData = products.reduce((acc, product) => {
-        const category = product.category || "Unknown";
-        if(!acc[category]) {
-            acc[category] = 0;
+    // Get category data for pie chart based on paidAt
+    const categoryData = orders.reduce((acc, order) => {
+        if (order.paidAt) {
+            order.cartItems.forEach((item) => {
+                const category = item.category || "Unknown";
+                if (!acc[category]) {
+                    acc[category] = 0;
+                }
+                acc[category] += item.quantity;
+            });
         }
-        acc[category] += 1;
         return acc;
     }, {});
 
     // Set Data for pie chart
-    const pieChartData = Object.keys(categoryData).map(category => ({
+    const pieChartData = Object.keys(categoryData).map((category) => ({
         name: category,
         value: categoryData[category],
     }));
 
     // Set colors for chart
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#FF0000'];
+    const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#FF0000"];
 
     return (
         <>
@@ -81,7 +96,11 @@ const Dashboard = () => {
                                     <XAxis dataKey="date" />
                                     <YAxis />
                                     <Tooltip />
-                                    <Line type="monotone" dataKey="sales" stroke="#ff7300" />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="sales"
+                                        stroke="#ff7300"
+                                    />
                                 </LineChart>
                             </ResponsiveContainer>
                         </Col>
@@ -102,7 +121,14 @@ const Dashboard = () => {
                                         dataKey="value"
                                     >
                                         {pieChartData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            <Cell
+                                                key={`cell-${index}`}
+                                                fill={
+                                                    COLORS[
+                                                        index % COLORS.length
+                                                    ]
+                                                }
+                                            />
                                         ))}
                                     </Pie>
                                     <Tooltip />
@@ -111,7 +137,7 @@ const Dashboard = () => {
                             </ResponsiveContainer>
                         </Col>
                     </Row>
-                </Container>    
+                </Container>
             </section>
         </>
     );

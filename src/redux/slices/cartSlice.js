@@ -34,6 +34,7 @@ const cartSlice = createSlice({
                     price: newItem.price,
                     quantity: 1,
                     totalPrice: newItem.price,
+                    category: newItem.category || "Uncategorized",
                 });
             } else {
                 existingItem.quantity++;

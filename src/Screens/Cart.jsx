@@ -41,8 +41,9 @@ const Cart = () => {
                                         <tr>
                                             <th>Image</th>
                                             <th>Title</th>
+                                            <th>Category</th>
                                             <th>Price</th>
-                                            <th>Qty</th>
+                                            <th>Quantity</th>
                                             <th>Delete</th>
                                         </tr>
                                     </thead>
@@ -100,6 +101,7 @@ const Tr = ({ item }) => {
                 <img src={item.imgUrl} alt="" />
             </td>
             <td className="pdt">{item.productName}</td>
+            <td className="pdt">{item.category}</td>
             <td className="pdt">${item.price}</td>
             <td className="pdt">{item.quantity}</td>
             <td className="pdt">

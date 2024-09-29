@@ -18,6 +18,7 @@ const ProductCard = ({ item }) => {
                 productName: item.productName,
                 price: item.price,
                 imgUrl: item.imgUrl,
+                category: item.category,
             })
         );
 

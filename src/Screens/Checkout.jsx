@@ -65,7 +65,10 @@ const Checkout = () => {
                 postalCode: billingInfo.postalCode,
                 country: billingInfo.country,
             },
-            cartItems: cartItems,
+            cartItems: cartItems.map(item => ({
+                ...item,
+                category: item.category || "Unknown",
+            })),
             totalQuantity: totalQty,
             totalAmount: totalAmount,
             totalShipping: totalShipping,

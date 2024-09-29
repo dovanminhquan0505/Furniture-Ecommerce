@@ -88,7 +88,7 @@ const Dashboard = () => {
 
                         {/* Pie Chart */}
                         <Col lg="6" className="mt-5">
-                            <h4 className="mb-2">Categories</h4>
+                            <h4 className="mb-2">Top Categories</h4>
                             <ResponsiveContainer width="100%" height={300}>
                                 <PieChart>
                                     <Pie

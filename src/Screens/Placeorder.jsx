@@ -3,7 +3,7 @@ import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col } from "reactstrap";
 import { motion } from "framer-motion";
 import CommonSection from "../components/UI/CommonSection";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import "../styles/checkout.css";
 import "../styles/placeorder.css";
 import { useSelector } from "react-redux";
@@ -11,19 +11,25 @@ import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { toast } from "react-toastify";
 import { doc, getDoc, Timestamp, updateDoc } from "firebase/firestore";
 import { db } from "../firebase.config";
+import useAuth from "../custom-hooks/useAuth";
+import useAdmin from "../custom-hooks/useAdmin";
 
 // Get Paypal Client from your environment
 const clientId = process.env.REACT_APP_PAYPAL_CLIENT_ID;
 
 const PlaceOrder = () => {
+    const { orderId } = useParams();
     const [loading, setLoading] = useState(false);
-    const location = useLocation();
+    const [isFetchingOrder, setIsFetchingOrder] = useState(true);
     const navigate = useNavigate();
-
-    // Retrieve billing information
-    const { orderId } = location.state || {};
-
+    const { isAdmin, isLoading : adminLoading } = useAdmin();
+    const { currentUser } = useAuth();
     const [orderDetails, setOrderDetails] = useState(null);
+    const [showPaypal, setShowPaypal] = useState(false);
+    const cartItemsFromRedux = useSelector((state) => state.cart.cartItems);
+
+    // Get the order details for user and admin
+    const cartItems = isAdmin && orderDetails ? orderDetails.cartItems : cartItemsFromRedux;
 
     useEffect(() => {
         if (!orderId) {
@@ -34,6 +40,7 @@ const PlaceOrder = () => {
         // Get order details from Firestore
         const fetchOrderDetails = async () => {
             try {
+                setIsFetchingOrder(true);
                 const orderRef = doc(db, "orders", orderId);
                 const orderSnap = await getDoc(orderRef);
                 if (orderSnap.exists()) {
@@ -48,6 +55,7 @@ const PlaceOrder = () => {
                     ) {
                         data.deliveredAt = data.deliveredAt.toDate();
                     }
+
                     // Store order data in the component's state.
                     setOrderDetails(data);
                 } else {
@@ -56,23 +64,19 @@ const PlaceOrder = () => {
                 }
             } catch (error) {
                 toast.error("Error fetching order details: " + error.message);
+            } finally {
+                setIsFetchingOrder(false);
             }
         };
 
         fetchOrderDetails();
-    }, [orderId, navigate]);
-
-    // Retrieve cart items
-    const cartItems = useSelector((state) => state.cart.cartItems);
-
-    // State for showing PayPal checkout
-    const [showPaypal, setShowPaypal] = useState(false);
+    }, [orderId, navigate, currentUser]);
 
     const handleConfirmOrder = () => {
-        // Display paypal button when user clicks on Confirm order button
         setShowPaypal(true);
     };
 
+    // Handle Payment
     const handlePaymentSuccess = async (details) => {
         try {
             setLoading(true);
@@ -103,14 +107,42 @@ const PlaceOrder = () => {
         }
     };
 
+    // Handle Deliver Order, only admin
+    const handleDeliveryConfirmation = async () => {
+        if (!isAdmin) {
+            toast.error("Only admins can confirm delivery");
+            return;
+        }
+
+        try {
+            const orderRef = doc(db, "orders", orderId);
+            await updateDoc(orderRef, {
+                isDelivered: true,
+                deliveredAt: Timestamp.fromDate(new Date()),
+            });
+            setOrderDetails((prev) => ({
+                ...prev,
+                isDelivered: true,
+                deliveredAt: new Date(),
+            }));
+            toast.success("Order marked as delivered");
+        } catch (error) {
+            toast.error("Error updating order: " + error.message);
+        }
+    };
+
     // Handle display Date
     const formatDate = (date) => {
         return date instanceof Date ? date.toLocaleString() : "N/A";
     };
 
-    if (!orderDetails) {
+    if (adminLoading || isFetchingOrder) {
         return <div className="fw-bold text-center">Loading....</div>;
     }
+
+    const shouldShowPaypal = !orderDetails.isPaid && showPaypal;
+    const shouldShowConfirmOrderBtn = !isAdmin && !orderDetails.isPaid && !showPaypal;
+    const shouldShowConfirmDeliverBtn = isAdmin && orderDetails.isPaid && !orderDetails.isDelivered;
 
     return (
         <Helmet title=" Place Order">
@@ -243,7 +275,7 @@ const PlaceOrder = () => {
                                     <span>${orderDetails.totalPrice}</span>
                                 </h4>
 
-                                {!orderDetails.isPaid && !showPaypal && (
+                                {shouldShowConfirmOrderBtn && (
                                     <motion.button
                                         type="button"
                                         whileTap={{ scale: 1.1 }}
@@ -255,7 +287,7 @@ const PlaceOrder = () => {
                                 )}
 
                                 {/* Display Paypal if user clicks on Confirm button */}
-                                {!orderDetails.isPaid && showPaypal && (
+                                {shouldShowPaypal && (
                                     <PayPalScriptProvider
                                         options={{ "client-id": clientId }}
                                     >
@@ -282,6 +314,16 @@ const PlaceOrder = () => {
                                             }}
                                         />
                                     </PayPalScriptProvider>
+                                )}
+
+                                {shouldShowConfirmDeliverBtn && (
+                                    <motion.button
+                                        whileTap={{ scale: 1.1 }}
+                                        className="buy__btn auth__btn w-100"
+                                        onClick={handleDeliveryConfirmation}
+                                    >
+                                        Confirm Delivery
+                                    </motion.button>
                                 )}
 
                                 {loading && (

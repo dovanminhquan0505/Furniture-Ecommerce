@@ -5,10 +5,12 @@ import { motion } from "framer-motion";
 import { db } from "../firebase.config";
 import { toast } from "react-toastify";
 import { doc, deleteDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 import "../styles/orders.css";
 
 const Orders = () => {
     const { data: ordersData, loading } = useGetData("orders");
+    const navigate = useNavigate();
 
     // Handle delete orders
     const deleteOrder = async (orderId) => {
@@ -18,6 +20,11 @@ const Orders = () => {
         } catch (error) {
             toast.error("Failed to delete order:" + error.message);
         }
+    }
+
+    // Handle edit orders
+    const editOrder = (orderId) => {
+        navigate(`/placeorder/${orderId}`);
     }
 
     return (
@@ -77,6 +84,7 @@ const Orders = () => {
                                                             scale: 1.1,
                                                         }}
                                                         className="btn btn-primary"
+                                                        onClick={() => editOrder(order.id)}
                                                     >
                                                         Edit
                                                     </motion.button>

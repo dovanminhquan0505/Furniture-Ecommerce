@@ -85,7 +85,7 @@ const Checkout = () => {
             const orderId = orderRef.id;
     
             // If order created successfully, navigate to place order details
-            navigate("/placeorder", { state: { billingInfo, orderId } });
+            navigate(`/placeorder/${orderId}`, { state: { billingInfo, orderId } });
         } catch (error) {
             toast.error("Error creating order: " + (error.message || error));
         }

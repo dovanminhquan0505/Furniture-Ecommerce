@@ -62,9 +62,7 @@ const Orders = () => {
                                         return (
                                             <tr key={order.id}>
                                                 <td data-label="OrderID">
-                                                    {order.paymentResult
-                                                        ? order.paymentResult.id
-                                                        : "No ID"}
+                                                    {order.id || "No ID"}
                                                 </td>
                                                 <td data-label="User">
                                                     {order.billingInfo?.name}

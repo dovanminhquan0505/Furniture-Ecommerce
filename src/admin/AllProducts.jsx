@@ -5,19 +5,20 @@ import { motion } from "framer-motion";
 import { db } from "../firebase.config";
 import { doc, deleteDoc } from "firebase/firestore";
 import { toast } from "react-toastify";
-import { Link } from "react-router-dom";
 import "../styles/all-products.css";
+import { Link, useNavigate } from "react-router-dom";
 
 const AllProducts = () => {
     const { data: productsData, loading } = useGetData("products");
+    const navigate = useNavigate();
 
     const deleteProduct = async (id) => {
         await deleteDoc(doc(db, "products", id));
         toast.success("Product deleted successfully!");
     };
 
-    const editProduct = async (id) => {
-
+    const editProduct = async (productId) => {
+        navigate(`/admin/edit-product/${productId}`)
     };
 
     return (

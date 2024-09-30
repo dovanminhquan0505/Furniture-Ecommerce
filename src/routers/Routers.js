@@ -16,6 +16,7 @@ import ProtectedAdminRoute from "./ProtectedAdminRoute";
 import Orders from "../admin/Orders";
 import Placeorder from "../Screens/Placeorder";
 import EditProduct from "../admin/EditProduct";
+import ProfileAdmin from "../admin/ProfileAdmin";
 
 const Routers = () => {
     //Link URL to views for each router
@@ -39,6 +40,7 @@ const Routers = () => {
                 <Route path="add-product" element={<AddProducts />} />
                 <Route path="users" element={<Users />} />
                 <Route path="orders" element={<Orders />} />
+                <Route path="profile" element={<ProfileAdmin />} />
             </Route>
             <Route path="login" element={<Login />} />
             <Route path="signup" element={<SignUp />} />

@@ -202,7 +202,7 @@ const EditProduct = () => {
                                         <FormGroup className="form__group">
                                             <span>Product Image</span>
 
-                                            {/* Hiển thị ảnh hiện tại */}
+                                            {/* Display current image */}
                                             {productDetails.imgUrl && (
                                                 <div>
                                                     <img

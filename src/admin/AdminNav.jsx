@@ -12,6 +12,10 @@ import { toast } from "react-toastify";
 
 const admin_nav = [
     {
+        display: "Profile",
+        path: "/admin/profile"
+    },
+    {
         display: "Dashboard",
         path: "/admin/dashboard",
     },

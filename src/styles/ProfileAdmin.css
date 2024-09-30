@@ -1,0 +1,152 @@
+.admin-profile {
+    min-height: 100vh;
+    background-color: #f8f9fa;
+}
+
+.sidebar {
+    background-color: white;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    padding: 0;
+    overflow-y: auto;
+    height: 100vh;
+    width: 100%;
+}
+
+.profile-header {
+    background: linear-gradient(135deg, #4e54c8, #8f94fb);
+    color: white;
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.profile-avatar {
+    width: 150px;
+    height: 150px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 4px solid rgba(255, 255, 255, 0.2);
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-name {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.profile-role {
+    font-size: 14px;
+    opacity: 0.8;
+    color: #000;
+}
+
+.sidebar-content {
+    display: flex;
+    flex-direction: row;
+    padding: 20px;
+}
+
+.menu-section {
+    flex: 0 0 30%; 
+    padding-right: 20px;
+    border-right: 1px solid #e0e0e0;
+}
+
+h2 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background-color: white;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.menu-item:hover,
+.menu-item.active {
+    background-color: #f0f0f0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.menu-item svg:first-child {
+    margin-right: 15px;
+    color: #4e54c8;
+}
+
+.menu-item span {
+    flex-grow: 1;
+    font-size: 14px;
+}
+
+.menu-item svg:last-child {
+    color: #aaa;
+}
+
+.main-content {
+    flex: 1;
+    padding-left: 20px;
+}
+
+.content-area {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+.content-area h3 {
+    color: #4e54c8;
+    margin-bottom: 20px;
+}
+
+.personal-info {
+    margin: 20px 0;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.info-item span {
+    margin-left: 10px;
+    font-size: 16px;
+    color: #333;
+}
+
+.info-item svg {
+    color: #4e54c8;
+}
+
+@media (max-width: 768px) {
+    .sidebar-content {
+        flex-direction: column;
+    }
+
+    .menu-section {
+        flex: 0 0 auto;
+        padding-right: 0;
+        border-right: none;
+    }
+
+    .main-content {
+        padding-left: 0;
+    }
+}

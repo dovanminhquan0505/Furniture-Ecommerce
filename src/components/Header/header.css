@@ -121,6 +121,7 @@
     display: block !important;
 }
 
+.nav__icons .profile .adminPersonal__profile,
 .nav__icons .profile .logout__profile,
 .nav__icons .profile .signup__profile,
 .nav__icons .profile .login__profile,
@@ -129,6 +130,7 @@
     font-weight: 500;
 }
 
+.nav__icons .profile .adminPersonal__profile:hover,
 .nav__icons .profile .logout__profile:hover,
 .nav__icons .profile .signup__profile:hover,
 .nav__icons .profile .login__profile:hover,
@@ -136,6 +138,7 @@
     color: #000;
 }
 
+.nav__icons .profile .admin__profile,
 .nav__icons .profile .logout,
 .nav__icons .profile .signup,
 .nav__icons .profile .login,
@@ -145,6 +148,7 @@
     border-radius: 5px;
 }
 
+.nav__icons .profile .admin__profile:hover,
 .nav__icons .profile .logout:hover,
 .nav__icons .profile .signup:hover,
 .nav__icons .profile .login:hover,

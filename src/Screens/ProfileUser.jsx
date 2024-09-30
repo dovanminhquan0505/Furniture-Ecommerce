@@ -1,32 +1,29 @@
 import React, { useState } from "react";
-import { Container, Row, Col, Button } from "react-bootstrap";
+import { Container, Row, Col, Button, Table } from "react-bootstrap";
 import {
     User,
     Mail,
     Phone,
     MapPin,
-    Calendar,
     Key,
     Bell,
     Globe,
     Moon,
     LogOut,
     ChevronRight,
+    ShoppingCart,
 } from "lucide-react";
 import "../styles/Profile.css";
 
-const emailAdmin = process.env.REACT_APP_FURNITURE_ECOMMERCE_ADMIN_EMAIL;
-
-const ProfileAdmin = () => {
+const ProfileUser = () => {
     const [activeSection, setActiveSection] = useState(null);
 
     const adminInfo = {
         name: "Minh Wuan",
-        birthDate: "May 05, 2003",
-        email: emailAdmin,
-        phone: "+84 0964321553",
-        address: "123 Hoàng Văn Thụ, P7, Quận 1, TPHCM",
-        role: "Admin",
+        email: "user@gmail.com",
+        phone: "+84 0111111111",
+        address: "123 Võ Văn Tần, P7, Quận 1, TPHCM",
+        role: "User",
     };
 
     const menuItems = [
@@ -39,10 +36,6 @@ const ProfileAdmin = () => {
                     <div className="info-item">
                         <User size={18} />
                         <span><strong>Name:</strong> {adminInfo.name}</span>
-                    </div>
-                    <div className="info-item">
-                        <Calendar size={18} />
-                        <span><strong>Date of Birth:</strong> {adminInfo.birthDate}</span>
                     </div>
                     <div className="info-item">
                         <Mail size={18} />
@@ -59,6 +52,44 @@ const ProfileAdmin = () => {
                     <Button variant="primary" className="edit-profile-button">
                         Edit Profile
                     </Button>
+                </div>
+            ),
+        },
+        {
+            icon: <ShoppingCart size={20} />,
+            text: "Order Information",
+            content: (
+                <div className="order-info">
+                    <h3>Your Orders</h3>
+                    <Table striped bordered hover>
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Date</th>
+                                <th>Total Price</th>
+                                <th>Paid At</th>
+                                <th>Delivered At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>001</td>
+                                <td>2024-09-30</td>
+                                <td>$100</td>
+                                <td>2024-09-30</td>
+                                <td>2024-10-05</td>
+                                <td>
+                                    <Button variant="secondary" size="sm" className="action-button">
+                                        View
+                                    </Button>
+                                    <Button variant="danger" size="sm" className="action-button">
+                                        Delete
+                                    </Button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </Table>
                 </div>
             ),
         },
@@ -171,4 +202,4 @@ const ProfileAdmin = () => {
     );
 };
 
-export default ProfileAdmin;
+export default ProfileUser;

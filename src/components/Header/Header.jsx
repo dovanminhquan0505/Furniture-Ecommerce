@@ -151,7 +151,21 @@ const Header = () => {
                                 >
                                     {currentUser ? ( //Check user exists
                                         <div className="d-flex align-items-center justify-content-center flex-column">
-                                            
+                                            {!isAdmin && (
+                                                <>
+                                                    <span className="admin__profile d-flex align-items-center">
+                                                        <Link
+                                                            to="/profile"
+                                                            className="adminPersonal__profile"
+                                                        >
+                                                            Profile
+                                                        </Link>
+                                                    </span>
+
+                                                    <div className="line mb-2 mt-2"></div>
+                                                </>
+                                            )}
+
                                             {isAdmin && ( //Check admin exists
                                                 <>
                                                     <span className="admin__profile d-flex align-items-center">
@@ -179,7 +193,7 @@ const Header = () => {
                                             )}
 
                                             <span
-                                                className="logout d-flex align-items-center mb-2"
+                                                className="logout d-flex align-items-center"
                                                 onClick={logOut}
                                             >
                                                 <Link

@@ -1,4 +1,4 @@
-.admin-profile {
+.profile__personal {
     min-height: 100vh;
     background-color: #f8f9fa;
 }
@@ -114,6 +114,7 @@ h2 {
     margin-bottom: 20px;
 }
 
+/* Personal Information */
 .personal-info {
     margin: 20px 0;
 }
@@ -133,6 +134,63 @@ h2 {
 
 .info-item svg {
     color: #4e54c8;
+}
+
+.edit-profile-button {
+    margin-top: 20px;
+    background-color: #4e54c8; 
+    border: none; 
+    color: white; 
+    padding: 10px 20px;
+    border-radius: 5px; 
+    font-size: 16px; 
+    transition: background-color 0.3s; 
+}
+
+.edit-profile-button:hover {
+    background-color: #3a3f9a; 
+}
+
+/* Order Information - User */
+.order-info {
+    margin-top: 20px; 
+}
+
+.table th, .table td {
+    text-align: center; 
+}
+
+.order-info .action-button {
+    margin-left: 5px; 
+    transition: background-color 0.3s, transform 0.3s;
+    width: 80px;
+    height: 35px;
+}
+
+.order-info .action-button:hover {
+    transform: translateY(-2px);
+}
+
+.order-info .action-button:focus {
+    outline: none;
+}
+
+.action-button.info {
+    background-color: #17a2b8; 
+    color: white; /* Màu chữ */
+}
+
+.action-button.info:hover {
+    background-color: #138496; 
+}
+
+.action-button.danger {
+    background-color: #dc3545; 
+    color: white;
+}
+
+.action-button.danger:hover {
+    background-color: #c82333;
 }
 
 @media (max-width: 768px) {

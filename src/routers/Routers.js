@@ -17,6 +17,7 @@ import Orders from "../admin/Orders";
 import Placeorder from "../Screens/Placeorder";
 import EditProduct from "../admin/EditProduct";
 import ProfileAdmin from "../admin/ProfileAdmin";
+import ProfileUser from "../Screens/ProfileUser";
 
 const Routers = () => {
     //Link URL to views for each router
@@ -29,6 +30,7 @@ const Routers = () => {
             <Route path="cart" element={<Cart />} />
 
             <Route path="/*" element={<ProtectedRoute />}>
+                <Route path="profile" element={<ProfileUser />} />
                 <Route path="checkout" element={<Checkout />} />
                 <Route path="placeorder/:orderId" element={<Placeorder />} />
             </Route>

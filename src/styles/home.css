@@ -19,6 +19,10 @@
     font-weight: 500;
 }
 
+.section__title-trending {
+    margin-bottom: 20px;
+}
+
 .buy__btn {
     border: none;
     outline: none;

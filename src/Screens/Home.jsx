@@ -93,7 +93,7 @@ const Home = () => {
                 <Container>
                     <Row>
                         <Col lg="12" className="text-center">
-                            <h2 className="section__title">
+                            <h2 className="section__title section__title-trending">
                                 Trending Products
                             </h2>
                         </Col>

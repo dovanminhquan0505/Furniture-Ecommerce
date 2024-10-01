@@ -12,16 +12,19 @@ import {
     Moon,
     LogOut,
     ChevronRight,
+    EyeOff,
+    Eye,
 } from "lucide-react";
 import "../styles/Profile.css";
 import { auth, db } from "../firebase.config";
 import { toast } from "react-toastify";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 
 const ProfileAdmin = () => {
     const [activeSection, setActiveSection] = useState(null);
     const [editing, setEditing] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     //Set information for admin
     const [adminInfo, setAdminInfo] = useState({
         displayName: "",
@@ -118,6 +121,51 @@ const ProfileAdmin = () => {
         setEditing(false);
     };
 
+    // Handle Change Password
+    const handleChangePassword = async (e) => {
+        e.preventDefault();
+
+        const currentPassword = e.target.currentPassword.value;
+        const newPassword = e.target.newPassword.value;
+        const confirmPassword = e.target.confirmPassword.value;
+
+        if(newPassword !== confirmPassword) {
+            toast.error("Passwords do not match!");
+            return;
+        }
+
+        try {
+            const user = auth.currentUser;
+            if(!user) {
+                toast.error("No authenticated user found!");
+                return;
+            }
+
+            // Create credential to re-authenticate user
+            const credential = EmailAuthProvider.credential(
+                user.email,
+                currentPassword
+            );
+            // Re-authenticate user with the credential
+            await reauthenticateWithCredential(user, credential);
+
+            // Update new password
+            await updatePassword(user, newPassword);
+            toast.success("Password updated successfully!");
+
+            // Reset input fields after successful password change
+            e.target.reset();
+        } catch (error) {
+            if (error.code === "auth/wrong-password") {
+                toast.error("Incorrect current password. Please try again.");
+            } else if (error.code === "auth/invalid-credential") {
+                toast.error("Invalid credentials. Please check your input.");
+            } else {
+                toast.error("Failed to change password: " + error.message);
+            }
+        }
+    }
+
     // Render profile admin
     const renderPersonalInfo = () => (
         <div className="personal-info">
@@ -213,6 +261,75 @@ const ProfileAdmin = () => {
         </div>
     );
 
+    // Render Change Password
+    const renderChangePasswordAdmin = () => (
+        <div className="change-password">
+            <h3>Change Password</h3>
+            <p>
+                For your account's security, do not share your password with anyone else.
+            </p>
+            <form className="change-password-form" onSubmit={handleChangePassword}>
+                <div className="form-group">
+                    <label htmlFor="currentPassword">Current Password</label>
+                    <div className="password-input-wrapper">
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            id="currentPassword"
+                            className="form-control"
+                            placeholder="Enter current password"
+                            required
+                        />
+                        <span
+                            className="toggle-password-visibility"
+                            onClick={() => setShowPassword(!showPassword)}
+                        >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                        </span>
+                    </div>
+                </div>
+                <div className="form-group">
+                    <label htmlFor="newPassword">New Password</label>
+                    <div className="password-input-wrapper">
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            id="newPassword"
+                            className="form-control"
+                            placeholder="Enter new password"
+                            required
+                        />
+                        <span
+                            className="toggle-password-visibility"
+                            onClick={() => setShowPassword(!showPassword)}
+                        >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                        </span>
+                    </div>
+                </div>
+                <div className="form-group">
+                    <label htmlFor="confirmPassword">Confirm New Password</label>
+                    <div className="password-input-wrapper">
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            id="confirmPassword"
+                            className="form-control"
+                            placeholder="Re-enter new password"
+                            required
+                        />
+                        <span
+                            className="toggle-password-visibility"
+                            onClick={() => setShowPassword(!showPassword)}
+                        >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                        </span>
+                    </div>
+                </div>
+                <Button type="submit" variant="primary" className="change-password-button">
+                    Save Changes
+                </Button>
+            </form>
+        </div>
+    );
+
     const menuItems = [
         {
             icon: <User size={20} />,
@@ -222,15 +339,7 @@ const ProfileAdmin = () => {
         {
             icon: <Key size={20} />,
             text: "Change Password",
-            content: (
-                <div>
-                    <h3>Change Your Password</h3>
-                    <p>
-                        Enter your current password and a new password to change
-                        your login credentials.
-                    </p>
-                </div>
-            ),
+            content: renderChangePasswordAdmin(),
         },
         {
             icon: <Bell size={20} />,

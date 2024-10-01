@@ -13,6 +13,8 @@ import {
     ChevronRight,
     ShoppingCart,
     Calendar,
+    Eye,
+    EyeOff,
 } from "lucide-react";
 import "../styles/Profile.css";
 import {
@@ -27,13 +29,20 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "../firebase.config";
 import { toast } from "react-toastify";
-import { onAuthStateChanged } from "firebase/auth";
+import {
+    onAuthStateChanged,
+    updatePassword,
+    EmailAuthProvider,
+    reauthenticateWithCredential,
+} from "firebase/auth";
 import { useNavigate } from "react-router-dom";
+import Helmet from "../components/Helmet/Helmet";
 
 const ProfileUser = () => {
     const navigate = useNavigate();
     const [activeSection, setActiveSection] = useState(null);
     const [editing, setEditing] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const [userInfo, setUserInfo] = useState({
         displayName: "",
         birthDate: "",
@@ -86,7 +95,7 @@ const ProfileUser = () => {
                 toast.error("User ID is undefined!");
                 return;
             }
-    
+
             try {
                 // Use query to filter orders by userId
                 const ordersQuery = query(
@@ -95,7 +104,7 @@ const ProfileUser = () => {
                 );
                 const orderDocs = await getDocs(ordersQuery);
                 const orders = [];
-    
+
                 orderDocs.forEach((doc) => {
                     const orderData = doc.data();
                     orders.push({
@@ -106,7 +115,10 @@ const ProfileUser = () => {
                             .split("T")[0],
                         totalPrice: orderData.totalPrice,
                         paidAt: orderData.isPaid
-                            ? orderData.paidAt.toDate().toISOString().split("T")[0]
+                            ? orderData.paidAt
+                                  .toDate()
+                                  .toISOString()
+                                  .split("T")[0]
                             : "No",
                         deliveredAt: orderData.isDelivered
                             ? orderData.deliveredAt
@@ -116,12 +128,13 @@ const ProfileUser = () => {
                             : "No",
                     });
                 });
-    
+
                 // Update the state with the fetched orders
                 setOrderInfo(orders);
             } catch (error) {
                 toast.error(
-                    "Failed to get order document from Firestore: " + error.message
+                    "Failed to get order document from Firestore: " +
+                        error.message
                 );
             }
         };
@@ -171,8 +184,8 @@ const ProfileUser = () => {
     };
 
     const handleViewOrder = (orderId) => {
-        navigate(`/placeorder/${orderId}`)
-    }
+        navigate(`/placeorder/${orderId}`);
+    };
 
     const handleDeleteOrder = async (orderId) => {
         try {
@@ -180,12 +193,57 @@ const ProfileUser = () => {
             await deleteDoc(orderDocRef);
 
             // Update state list of orders after deleting order
-            setOrderInfo((prevOrders) => prevOrders.filter((order) => order.orderId !== orderId));
-            toast.success("Order deleted successfully!")
+            setOrderInfo((prevOrders) =>
+                prevOrders.filter((order) => order.orderId !== orderId)
+            );
+            toast.success("Order deleted successfully!");
         } catch (error) {
             toast.error("Failed to delete order: " + error.message);
         }
-    }
+    };
+
+    const handleChangePassword = async (e) => {
+        e.preventDefault();
+        const currentPassword = e.target.currentPassword.value;
+        const newPassword = e.target.newPassword.value;
+        const confirmPassword = e.target.confirmPassword.value;
+
+        if (newPassword !== confirmPassword) {
+            toast.error("Passwords do not match!");
+            return;
+        }
+
+        try {
+            const user = auth.currentUser;
+            if (!user) {
+                toast.error("No authenticated user found!");
+                return;
+            }
+
+            // Create credential to re-authenticate user
+            const credential = EmailAuthProvider.credential(
+                user.email,
+                currentPassword
+            );
+            // Re-authenticate user with the credential
+            await reauthenticateWithCredential(user, credential);
+
+            // Update new password
+            await updatePassword(user, newPassword);
+            toast.success("Password updated successfully!");
+
+            // Reset input fields after successful password change
+            e.target.reset();
+        } catch (error) {
+            if (error.code === "auth/wrong-password") {
+                toast.error("Incorrect current password. Please try again.");
+            } else if (error.code === "auth/invalid-credential") {
+                toast.error("Invalid credentials. Please check your input.");
+            } else {
+                toast.error("Failed to change password: " + error.message);
+            }
+        }
+    };
 
     // Render Personal Information
     const renderPersonalInfo = () => (
@@ -311,7 +369,9 @@ const ProfileUser = () => {
                                         variant="secondary"
                                         size="sm"
                                         className="action-button"
-                                        onClick={() => handleViewOrder(order.orderId)}
+                                        onClick={() =>
+                                            handleViewOrder(order.orderId)
+                                        }
                                     >
                                         View
                                     </Button>
@@ -319,7 +379,9 @@ const ProfileUser = () => {
                                         variant="danger"
                                         size="sm"
                                         className="action-button"
-                                        onClick={() => handleDeleteOrder(order.orderId)}
+                                        onClick={() =>
+                                            handleDeleteOrder(order.orderId)
+                                        }
                                     >
                                         Delete
                                     </Button>
@@ -338,6 +400,75 @@ const ProfileUser = () => {
         </div>
     );
 
+    // Render Change Password
+    const renderChangePassword = () => (
+        <div className="change-password">
+            <h3>Change Password</h3>
+            <p>
+                For your account's security, do not share your password with anyone else.
+            </p>
+            <form className="change-password-form" onSubmit={handleChangePassword}>
+                <div className="form-group">
+                    <label htmlFor="currentPassword">Current Password</label>
+                    <div className="password-input-wrapper">
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            id="currentPassword"
+                            className="form-control"
+                            placeholder="Enter current password"
+                            required
+                        />
+                        <span
+                            className="toggle-password-visibility"
+                            onClick={() => setShowPassword(!showPassword)}
+                        >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                        </span>
+                    </div>
+                </div>
+                <div className="form-group">
+                    <label htmlFor="newPassword">New Password</label>
+                    <div className="password-input-wrapper">
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            id="newPassword"
+                            className="form-control"
+                            placeholder="Enter new password"
+                            required
+                        />
+                        <span
+                            className="toggle-password-visibility"
+                            onClick={() => setShowPassword(!showPassword)}
+                        >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                        </span>
+                    </div>
+                </div>
+                <div className="form-group">
+                    <label htmlFor="confirmPassword">Confirm New Password</label>
+                    <div className="password-input-wrapper">
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            id="confirmPassword"
+                            className="form-control"
+                            placeholder="Re-enter new password"
+                            required
+                        />
+                        <span
+                            className="toggle-password-visibility"
+                            onClick={() => setShowPassword(!showPassword)}
+                        >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                        </span>
+                    </div>
+                </div>
+                <Button type="submit" variant="primary" className="change-password-button">
+                    Save Changes
+                </Button>
+            </form>
+        </div>
+    );
+
     const menuItems = [
         {
             icon: <User size={20} />,
@@ -352,15 +483,7 @@ const ProfileUser = () => {
         {
             icon: <Key size={20} />,
             text: "Change Password",
-            content: (
-                <div>
-                    <h3>Change Your Password</h3>
-                    <p>
-                        Enter your current password and a new password to change
-                        your login credentials.
-                    </p>
-                </div>
-            ),
+            content: renderChangePassword(),
         },
         {
             icon: <Bell size={20} />,
@@ -410,52 +533,58 @@ const ProfileUser = () => {
     ];
 
     return (
-        <Container fluid className="profile__personal">
-            <Row>
-                <Col md={12} className="sidebar">
-                    <div className="profile-header">
-                        <div className="profile-avatar">
-                            <img
-                                src={
-                                    userInfo.photoURL ||
-                                    "https://via.placeholder.com/150"
-                                }
-                                alt="Admin Avatar"
-                            />
-                        </div>
-                        <h1 className="profile-name">{userInfo.displayName}</h1>
-                        <p className="profile-role">{userInfo.role}</p>
-                    </div>
-
-                    <div className="sidebar-content">
-                        <div className="menu-section">
-                            <h2>Account Settings</h2>
-                            {menuItems.map((item, index) => (
-                                <div
-                                    key={index}
-                                    className={`menu-item ${
-                                        activeSection === index ? "active" : ""
-                                    }`}
-                                    onClick={() => setActiveSection(index)}
-                                >
-                                    {item.icon}
-                                    <span>{item.text}</span>
-                                    <ChevronRight size={20} />
-                                </div>
-                            ))}
+        <Helmet title=" Profile">
+            <Container fluid className="profile__personal">
+                <Row>
+                    <Col md={12} className="sidebar">
+                        <div className="profile-header">
+                            <div className="profile-avatar">
+                                <img
+                                    src={
+                                        userInfo.photoURL ||
+                                        "https://via.placeholder.com/150"
+                                    }
+                                    alt="Admin Avatar"
+                                />
+                            </div>
+                            <h1 className="profile-name">
+                                {userInfo.displayName}
+                            </h1>
+                            <p className="profile-role">{userInfo.role}</p>
                         </div>
 
-                        <div className="main-content">
-                            {activeSection !== null && (
-                                <div className="content-area">
-                                    {menuItems[activeSection].content}
-                                </div>
-                            )}
+                        <div className="sidebar-content">
+                            <div className="menu-section">
+                                <h2>Account Settings</h2>
+                                {menuItems.map((item, index) => (
+                                    <div
+                                        key={index}
+                                        className={`menu-item ${
+                                            activeSection === index
+                                                ? "active"
+                                                : ""
+                                        }`}
+                                        onClick={() => setActiveSection(index)}
+                                    >
+                                        {item.icon}
+                                        <span>{item.text}</span>
+                                        <ChevronRight size={20} />
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="main-content">
+                                {activeSection !== null && (
+                                    <div className="content-area">
+                                        {menuItems[activeSection].content}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                </Col>
-            </Row>
-        </Container>
+                    </Col>
+                </Row>
+            </Container>
+        </Helmet>
     );
 };
 

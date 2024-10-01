@@ -15,7 +15,15 @@ import {
     Calendar,
 } from "lucide-react";
 import "../styles/Profile.css";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import {
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    query,
+    updateDoc,
+    where,
+} from "firebase/firestore";
 import { auth, db } from "../firebase.config";
 import { toast } from "react-toastify";
 import { onAuthStateChanged } from "firebase/auth";
@@ -32,6 +40,8 @@ const ProfileUser = () => {
         role: "",
         photoURL: "",
     });
+
+    const [orderInfo, setOrderInfo] = useState([]);
 
     const [originalUserInfo, setOriginalUserInfo] = useState({ ...userInfo });
 
@@ -68,9 +78,55 @@ const ProfileUser = () => {
             }
         };
 
+        const fetchOrderData = async (userId) => {
+            if (!userId) {
+                toast.error("User ID is undefined!");
+                return;
+            }
+    
+            try {
+                // Use query to filter orders by userId
+                const ordersQuery = query(
+                    collection(db, "orders"),
+                    where("userId", "==", userId)
+                );
+                const orderDocs = await getDocs(ordersQuery);
+                const orders = [];
+    
+                orderDocs.forEach((doc) => {
+                    const orderData = doc.data();
+                    orders.push({
+                        orderId: doc.id || "No ID",
+                        date: orderData.createdAt
+                            .toDate()
+                            .toISOString()
+                            .split("T")[0],
+                        totalPrice: orderData.totalPrice,
+                        paidAt: orderData.isPaid
+                            ? orderData.paidAt.toDate().toISOString().split("T")[0]
+                            : "No",
+                        deliveredAt: orderData.isDelivered
+                            ? orderData.deliveredAt
+                                  .toDate()
+                                  .toISOString()
+                                  .split("T")[0]
+                            : "No",
+                    });
+                });
+    
+                // Update the state with the fetched orders
+                setOrderInfo(orders);
+            } catch (error) {
+                toast.error(
+                    "Failed to get order document from Firestore: " + error.message
+                );
+            }
+        };
+
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
                 fetchUserData(user);
+                fetchOrderData(user.uid);
             } else {
                 toast.error("User not found!");
             }
@@ -111,7 +167,7 @@ const ProfileUser = () => {
         setEditing(false);
     };
 
-    // Render personal Information
+    // Render Personal Information
     const renderPersonalInfo = () => (
         <div className="personal-info">
             <h3>Personal Information</h3>
@@ -206,36 +262,30 @@ const ProfileUser = () => {
         </div>
     );
 
-    const menuItems = [
-        {
-            icon: <User size={20} />,
-            text: "Personal Information",
-            content: renderPersonalInfo(),
-        },
-        {
-            icon: <ShoppingCart size={20} />,
-            text: "Order Information",
-            content: (
-                <div className="order-info">
-                    <h3>Your Orders</h3>
-                    <Table striped bordered hover>
-                        <thead>
-                            <tr>
-                                <th>Order ID</th>
-                                <th>Date</th>
-                                <th>Total Price</th>
-                                <th>Paid At</th>
-                                <th>Delivered At</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>001</td>
-                                <td>2024-09-30</td>
-                                <td>$100</td>
-                                <td>2024-09-30</td>
-                                <td>2024-10-05</td>
+    // Render Order Information
+    const renderOrderInformation = () => (
+        <div className="order-info">
+            <h3>Your Orders</h3>
+            <Table striped bordered hover>
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Date</th>
+                        <th>Total Price</th>
+                        <th>Paid At</th>
+                        <th>Delivered At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {orderInfo.length > 0 ? (
+                        orderInfo.map((order) => (
+                            <tr key={order.orderId}>
+                                <td>{order.orderId}</td>
+                                <td>{order.date}</td>
+                                <td>${order.totalPrice}</td>
+                                <td>{order.paidAt}</td>
+                                <td>{order.deliveredAt}</td>
                                 <td>
                                     <Button
                                         variant="secondary"
@@ -253,10 +303,29 @@ const ProfileUser = () => {
                                     </Button>
                                 </td>
                             </tr>
-                        </tbody>
-                    </Table>
-                </div>
-            ),
+                        ))
+                    ) : (
+                        <tr>
+                            <td colSpan="6" className="text-center">
+                                No orders found.
+                            </td>
+                        </tr>
+                    )}
+                </tbody>
+            </Table>
+        </div>
+    );
+
+    const menuItems = [
+        {
+            icon: <User size={20} />,
+            text: "Personal Information",
+            content: renderPersonalInfo(),
+        },
+        {
+            icon: <ShoppingCart size={20} />,
+            text: "Order Information",
+            content: renderOrderInformation(),
         },
         {
             icon: <Key size={20} />,

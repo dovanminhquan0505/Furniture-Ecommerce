@@ -10,8 +10,8 @@ import { useDispatch } from "react-redux";
 import { cartActions } from "../redux/slices/cartSlice";
 import { toast } from "react-toastify";
 import { db } from "../firebase.config";
-import { doc, getDoc } from "firebase/firestore";
-import useGetData from '../custom-hooks/useGetData';
+import { arrayUnion, doc, getDoc, updateDoc } from "firebase/firestore";
+import useGetData from "../custom-hooks/useGetData";
 
 const ProductDetails = () => {
     const [tab, setTab] = useState("desc");
@@ -21,22 +21,43 @@ const ProductDetails = () => {
     //Handle quality of products
     const [rating, setRating] = useState(null);
     const { id } = useParams();
-    
+
     const [product, setProduct] = useState({});
-    const {data: products} = useGetData('products');
-    const docRef = doc(db, 'products', id);
+    const { data: products } = useGetData("products");
+    const docRef = doc(db, "products", id);
 
     useEffect(() => {
         const getProduct = async () => {
-            const docSnap = await getDoc(docRef);
+            try {
+                const docSnap = await getDoc(docRef);
 
-            if(docSnap.exists()) {
-                // Set the product data to state
-                setProduct(docSnap.data()); 
-            } else {
-                console.log('No products!')
+                if (docSnap.exists()) {
+                    const productData = docSnap.data();
+                    setProduct(productData);
+
+                    // Calculate average rating
+                    if (
+                        Array.isArray(productData.reviews) &&
+                        productData.reviews.length > 0
+                    ) {
+                        const avgRating =
+                            productData.reviews.reduce(
+                                (sum, review) => sum + review.rating,
+                                0
+                            ) / productData.reviews.length;
+                        setProduct((prev) => ({
+                            ...prev,
+                            avgRating: avgRating.toFixed(1),
+                        }));
+                    }
+                } else {
+                    toast.error("Product not found!");
+                }
+            } catch (error) {
+                toast.error("Error fetching product data");
+                console.error("Error fetching product:", error);
             }
-        }
+        };
 
         getProduct();
     }, []);
@@ -45,12 +66,14 @@ const ProductDetails = () => {
         imgUrl,
         productName,
         price,
-        // avgRating,
-        // reviews,
         description,
         shortDesc,
         category,
+        reviews,
+        avgRating,
     } = product;
+
+    const totalReviews = Array.isArray(reviews) ? reviews.length : 0;
 
     //List of related products that users are seeking
     const relatedProducts = products.filter(
@@ -58,11 +81,16 @@ const ProductDetails = () => {
     );
 
     //Handle Send experiences of users
-    const submitHandler = (e) => {
+    const submitHandler = async (e) => {
         e.preventDefault();
 
         const reviewUserName = reviewUser.current.value;
         const reviewUserMessage = reviewMessage.current.value;
+
+        if (!rating) {
+            toast.error("Please select a rating");
+            return;
+        }
 
         const reviewObject = {
             userName: reviewUserName,
@@ -70,8 +98,35 @@ const ProductDetails = () => {
             rating: rating,
         };
 
-        console.log(reviewObject);
-        toast.success("Review sent successfully!");
+        try {
+            await updateDoc(docRef, {
+                reviews: arrayUnion(reviewObject),
+            });
+
+            // Recalculate avgRating based on new ratings
+            const updatedReviews = Array.isArray(product.reviews)
+                ? [...product.reviews, reviewObject]
+                : [reviewObject];
+            const newAvgRating =
+                updatedReviews.reduce((sum, review) => sum + review.rating, 0) /
+                updatedReviews.length;
+
+            // Update local state
+            setProduct((prev) => ({
+                ...prev,
+                reviews: updatedReviews,
+                avgRating: newAvgRating.toFixed(1),
+            }));
+
+            toast.success("Review send successfully!");
+
+            // Reset form review
+            reviewUser.current.value = "";
+            reviewMessage.current.value = "";
+            setRating(null);
+        } catch (error) {
+            toast.error("Failed to send review. Please try again");
+        }
     };
 
     const addToCart = () => {
@@ -101,33 +156,28 @@ const ProductDetails = () => {
                 <Container>
                     <Row>
                         <Col lg="6">
-                            <img src={imgUrl} alt="" className="img__productDetail"/>
+                            <img
+                                src={imgUrl}
+                                alt=""
+                                className="img__productDetail"
+                            />
                         </Col>
 
                         <Col lg="6">
                             <div className="product__details">
                                 <h2>{productName}</h2>
                                 <div className="product__rating d-flex align-items-center gap-5 mb-3">
-                                    <div>
-                                        <span>
-                                            <i class="ri-star-s-fill"></i>
-                                        </span>
-                                        <span>
-                                            <i class="ri-star-s-fill"></i>
-                                        </span>
-                                        <span>
-                                            <i class="ri-star-s-fill"></i>
-                                        </span>
-                                        <span>
-                                            <i class="ri-star-s-fill"></i>
-                                        </span>
-                                        <span>
-                                            <i class="ri-star-half-s-line"></i>
-                                        </span>
+                                    <div className="stars">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <span key={star}>
+                                                <i className={`ri-star-${star <= Math.floor(avgRating || 0) ? 'fill' : 'line'}`}></i>
+                                            </span>
+                                        ))}
                                     </div>
 
                                     <p>
-                                        {/* (<span>{avgRating}</span> ratings) */}
+                                        <span className="avg-rating">{avgRating}</span> 
+                                        <span className="total-reviews">({totalReviews} reviews)</span>
                                     </p>
                                 </div>
 
@@ -171,7 +221,11 @@ const ProductDetails = () => {
                                     }`}
                                     onClick={() => setTab("rev")}
                                 >
-                                    Reviews
+                                    Reviews (
+                                    {Array.isArray(reviews)
+                                        ? reviews.length
+                                        : 0}
+                                    )
                                 </h6>
                             </div>
 
@@ -182,27 +236,26 @@ const ProductDetails = () => {
                             ) : (
                                 <div className="product__review mt-5">
                                     <div className="review__wrapper">
-                                        {/* <ul>
-                                            {reviews?.map((item, index) => (
-                                                <li
-                                                    key={index}
-                                                    className="mb-4"
-                                                >
-                                                    <h6>Nguyen Van A</h6>
-                                                    <span>
-                                                        {item.rating} (ratings)
-                                                    </span>
-                                                    <p>{item.text}</p>
-                                                </li>
-                                            ))}
-                                        </ul> */}
+                                        <ul>
+                                            {Array.isArray(reviews) &&
+                                                reviews.map((item, index) => (
+                                                    <li
+                                                        key={index}
+                                                        className="mb-4"
+                                                    >
+                                                        <h6>{item.userName}</h6>
+                                                        <span className="stars">
+                                                            {item.rating}{" "}
+                                                            <i class="ri-star-s-fill"></i>
+                                                        </span>
+                                                        <p>{item.message}</p>
+                                                    </li>
+                                                ))}
+                                        </ul>
 
                                         <div className="review__form">
                                             <h4>Leave Your Experience</h4>
-                                            <form
-                                                action=""
-                                                onSubmit={submitHandler}
-                                            >
+                                            <form onSubmit={submitHandler}>
                                                 <div className="form__group">
                                                     <input
                                                         type="text"
@@ -213,61 +266,32 @@ const ProductDetails = () => {
                                                 </div>
 
                                                 <div className="form__group d-flex align-items-center gap-5 rating__group">
-                                                    <motion.span
-                                                        whileTap={{
-                                                            scale: 1.2,
-                                                        }}
-                                                        onClick={() =>
-                                                            setRating(1)
-                                                        }
-                                                    >
-                                                        1
-                                                        <i class="ri-star-s-fill"></i>
-                                                    </motion.span>
-                                                    <motion.span
-                                                        whileTap={{
-                                                            scale: 1.2,
-                                                        }}
-                                                        onClick={() =>
-                                                            setRating(2)
-                                                        }
-                                                    >
-                                                        2
-                                                        <i class="ri-star-s-fill"></i>
-                                                    </motion.span>
-                                                    <motion.span
-                                                        whileTap={{
-                                                            scale: 1.2,
-                                                        }}
-                                                        onClick={() =>
-                                                            setRating(3)
-                                                        }
-                                                    >
-                                                        3
-                                                        <i class="ri-star-s-fill"></i>
-                                                    </motion.span>
-                                                    <motion.span
-                                                        whileTap={{
-                                                            scale: 1.2,
-                                                        }}
-                                                        onClick={() =>
-                                                            setRating(4)
-                                                        }
-                                                    >
-                                                        4
-                                                        <i class="ri-star-s-fill"></i>
-                                                    </motion.span>
-                                                    <motion.span
-                                                        whileTap={{
-                                                            scale: 1.2,
-                                                        }}
-                                                        onClick={() =>
-                                                            setRating(5)
-                                                        }
-                                                    >
-                                                        5
-                                                        <i class="ri-star-s-fill"></i>
-                                                    </motion.span>
+                                                    {[1, 2, 3, 4, 5].map(
+                                                        (star) => (
+                                                            <motion.span
+                                                                key={star}
+                                                                whileTap={{
+                                                                    scale: 1.2,
+                                                                }}
+                                                                onClick={() =>
+                                                                    setRating(
+                                                                        star
+                                                                    )
+                                                                }
+                                                                style={{
+                                                                    cursor: "pointer",
+                                                                    color:
+                                                                        rating >=
+                                                                        star
+                                                                            ? "orange"
+                                                                            : "gray",
+                                                                }}
+                                                            >
+                                                                {star}{" "}
+                                                                <i className="ri-star-s-fill"></i>
+                                                            </motion.span>
+                                                        )
+                                                    )}
                                                 </div>
 
                                                 <div className="form__group">

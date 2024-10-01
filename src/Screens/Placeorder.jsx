@@ -26,10 +26,6 @@ const PlaceOrder = () => {
     const { currentUser } = useAuth();
     const [orderDetails, setOrderDetails] = useState(null);
     const [showPaypal, setShowPaypal] = useState(false);
-    const cartItemsFromRedux = useSelector((state) => state.cart.cartItems);
-
-    // Get the order details for user and admin
-    const cartItems = isAdmin && orderDetails ? orderDetails.cartItems : cartItemsFromRedux;
 
     useEffect(() => {
         if (!orderId) {
@@ -70,7 +66,10 @@ const PlaceOrder = () => {
         };
 
         fetchOrderDetails();
-    }, [orderId, navigate, currentUser]);
+    }, [orderId, navigate]);
+
+    // Get order details
+    const cartItems = orderDetails ? orderDetails.cartItems : [];
 
     const handleConfirmOrder = () => {
         setShowPaypal(true);

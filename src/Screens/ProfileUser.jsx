@@ -17,6 +17,7 @@ import {
 import "../styles/Profile.css";
 import {
     collection,
+    deleteDoc,
     doc,
     getDoc,
     getDocs,
@@ -27,8 +28,10 @@ import {
 import { auth, db } from "../firebase.config";
 import { toast } from "react-toastify";
 import { onAuthStateChanged } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 
 const ProfileUser = () => {
+    const navigate = useNavigate();
     const [activeSection, setActiveSection] = useState(null);
     const [editing, setEditing] = useState(false);
     const [userInfo, setUserInfo] = useState({
@@ -167,6 +170,23 @@ const ProfileUser = () => {
         setEditing(false);
     };
 
+    const handleViewOrder = (orderId) => {
+        navigate(`/placeorder/${orderId}`)
+    }
+
+    const handleDeleteOrder = async (orderId) => {
+        try {
+            const orderDocRef = doc(db, "orders", orderId);
+            await deleteDoc(orderDocRef);
+
+            // Update state list of orders after deleting order
+            setOrderInfo((prevOrders) => prevOrders.filter((order) => order.orderId !== orderId));
+            toast.success("Order deleted successfully!")
+        } catch (error) {
+            toast.error("Failed to delete order: " + error.message);
+        }
+    }
+
     // Render Personal Information
     const renderPersonalInfo = () => (
         <div className="personal-info">
@@ -291,6 +311,7 @@ const ProfileUser = () => {
                                         variant="secondary"
                                         size="sm"
                                         className="action-button"
+                                        onClick={() => handleViewOrder(order.orderId)}
                                     >
                                         View
                                     </Button>
@@ -298,6 +319,7 @@ const ProfileUser = () => {
                                         variant="danger"
                                         size="sm"
                                         className="action-button"
+                                        onClick={() => handleDeleteOrder(order.orderId)}
                                     >
                                         Delete
                                     </Button>

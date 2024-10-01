@@ -116,7 +116,7 @@ h2 {
 
 /* Personal Information */
 .personal-info {
-    margin: 20px 0;
+    padding: 20px;
 }
 
 .info-item {
@@ -126,10 +126,32 @@ h2 {
     border-bottom: 1px solid #e0e0e0;
 }
 
+.last {
+    border-bottom: none;
+}
+
+.info-item strong {
+    margin-right: 5px;
+}
+
 .info-item span {
     margin-left: 10px;
     font-size: 16px;
     color: #333;
+}
+
+.personal-info .info-item input[type="text"],
+.personal-info .info-item input[type="date"] {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 8px;
+    transition: border-color 0.3s;
+}
+
+.personal-info .info-item input[type="text"]:focus,
+.personal-info .info-item input[type="date"]:focus {
+    border-color: #007bff;
+    outline: none;
 }
 
 .info-item svg {
@@ -137,18 +159,35 @@ h2 {
 }
 
 .edit-profile-button {
-    margin-top: 20px;
-    background-color: #4e54c8; 
-    border: none; 
-    color: white; 
-    padding: 10px 20px;
-    border-radius: 5px; 
-    font-size: 16px; 
-    transition: background-color 0.3s; 
+    background-color: #4e54c8;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    margin-right: 10px; 
+    transition: background-color 0.3s;
+    margin-top: 10px;
 }
 
 .edit-profile-button:hover {
     background-color: #3a3f9a; 
+}
+
+.cancel-edit-button {
+    background-color: #6c757d; /* Secondary color */
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-top: 10px;
+
+}
+
+.cancel-edit-button:hover {
+    background-color: #5a6268; /* Darker shade on hover */
 }
 
 /* Order Information - User */

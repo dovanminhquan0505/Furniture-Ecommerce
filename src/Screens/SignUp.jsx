@@ -114,73 +114,65 @@ const Signup = () => {
 
     return (
         <Helmet title=" Register">
-            <section>
+            <section className="signup-section">
                 <Container>
                     <Row>
                         {loading ? (
                             <Col lg="12" className="text-center">
-                                <h5 className="fw-bold">Loading...</h5>
+                                <h5 className="signup-loading">Loading...</h5>
                             </Col>
                         ) : (
-                            <Col lg="6" className="m-auto text-center">
-                                <h3 className="fw-bold mb-4">Register</h3>
-
-                                <Form
-                                    className="auth__form"
-                                    onSubmit={register}
-                                >
-                                    <FormGroup className="form__group">
+                            <Col lg="6" className="m-auto text-center signup-col">
+                                <h3 className="signup__title">Register</h3>
+                                <Form className="signup__form" onSubmit={register}>
+                                    <FormGroup className="signup__formGroup">
                                         <input
                                             type="text"
                                             placeholder="Username"
                                             value={username}
-                                            onChange={(e) =>
-                                                setUsername(e.target.value)
-                                            }
+                                            onChange={(e) => setUsername(e.target.value)}
+                                            className="signup__input"
                                         />
                                     </FormGroup>
-                                    <FormGroup className="form__group">
+                                    <FormGroup className="signup__formGroup">
                                         <input
                                             type="email"
                                             placeholder="Enter your email"
                                             value={email}
-                                            onChange={(e) =>
-                                                setEmail(e.target.value)
-                                            }
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="signup__input"
                                         />
                                     </FormGroup>
-
-                                    <FormGroup className="form__group">
+                                    <FormGroup className="signup__formGroup">
                                         <input
                                             type="password"
                                             placeholder="Enter your password"
                                             value={password}
-                                            onChange={(e) =>
-                                                setPassword(e.target.value)
-                                            }
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="signup__input"
                                         />
                                     </FormGroup>
-
-                                    <FormGroup className="form__group">
+                                    <FormGroup className="signup__formGroup">
                                         <input
                                             type="file"
-                                            onChange={(e) =>
-                                                setFile(e.target.files[0])
-                                            }
+                                            onChange={(e) => setFile(e.target.files[0])}
+                                            className="signup__input"
                                         />
                                     </FormGroup>
 
                                     <motion.button
                                         whileTap={{ scale: 1.2 }}
                                         type="submit"
-                                        className="buy__btn auth__btn mb-3"
+                                        className="signup__btn"
                                     >
-                                        Sign up
+                                        Sign Up
                                     </motion.button>
 
-                                    <p>
-                                        Already have any accounts?{" "}
-                                        <Link to="/login">Login</Link>
+                                    <p className="signup__text">
+                                        Already have an account?
+                                        <Link to="/login" className="signup__link">
+                                            Login
+                                        </Link>
                                     </p>
                                 </Form>
                             </Col>

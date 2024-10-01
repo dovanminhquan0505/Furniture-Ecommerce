@@ -71,7 +71,7 @@ const AdminNav = () => {
                 <div className="admin__nav-top">
                     <Container>
                         <div className="admin__nav-wrapper-top">
-                            <div className="logo">
+                            <div className="logo__admin">
                                 <Link to="/home">
                                     <h2>Multimart</h2>
                                 </Link>

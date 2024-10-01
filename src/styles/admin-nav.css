@@ -1,7 +1,6 @@
 /*Admin Header*/
 .admin__header {
     width: 100%;
-    padding: 20px 0px;
     background: var(--primary-color);
 }
 
@@ -16,10 +15,10 @@
     column-gap: 3rem;
 }
 
-.admin__nav-wrapper-top .logo h2 {
+.admin__nav-wrapper-top .logo__admin h2 {
     font-size: 1.2rem;
     color: #fff;
-    margin-top: 10px;
+    margin-top: 22px;
 }
 
 .admin__nav-wrapper-top .search__box {

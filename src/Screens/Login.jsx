@@ -67,51 +67,45 @@ const Login = () => {
 
     return (
         <Helmet title=" Login">
-            <section>
+            <section className="login-section">
                 <Container>
                     <Row>
                         {loading ? (
                             <Col lg="12" className="text-center">
-                                <h5 className="fw-bold">Loading...</h5>
+                                <h5 className="login-loading">Loading...</h5>
                             </Col>
                         ) : (
-                            <Col lg="6" className="m-auto text-center">
-                                <h3 className="fw-bold mb-4">Login</h3>
-
-                                <Form className="auth__form" onSubmit={signIn}>
-                                    <FormGroup className="form__group">
+                            <Col lg="6" className="m-auto text-center login-col">
+                                <h3 className="login-title">Login</h3>
+                                <Form className="login-form" onSubmit={signIn}>
+                                    <FormGroup className="login-form-group">
                                         <input
                                             type="email"
+                                            className="login-input"
                                             placeholder="Enter your email"
                                             value={email}
-                                            onChange={(e) =>
-                                                setEmail(e.target.value)
-                                            }
+                                            onChange={(e) => setEmail(e.target.value)}
                                         />
                                     </FormGroup>
-
-                                    <FormGroup className="form__group">
+                                    <FormGroup className="login-form-group">
                                         <input
                                             type="password"
+                                            className="login-input"
                                             placeholder="Enter your password"
                                             value={password}
-                                            onChange={(e) =>
-                                                setPassword(e.target.value)
-                                            }
+                                            onChange={(e) => setPassword(e.target.value)}
                                         />
                                     </FormGroup>
-
                                     <motion.button
                                         whileTap={{ scale: 1.2 }}
                                         type="submit"
-                                        className="buy__btn auth__btn mb-3"
+                                        className="login-btn"
                                     >
                                         Login
                                     </motion.button>
-
-                                    <p>
-                                        Don't have any accounts?{" "}
-                                        <Link to="/signup">
+                                    <p className="login-text">
+                                        Don't have an account?
+                                        <Link to="/signup" className="login-link">
                                             Create an account
                                         </Link>
                                     </p>

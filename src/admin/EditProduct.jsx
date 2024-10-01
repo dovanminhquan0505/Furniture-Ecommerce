@@ -6,6 +6,7 @@ import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db, storage } from "../firebase.config";
 import { toast } from "react-toastify";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
+import "../styles/Add-EditProduct.css";
 
 const EditProduct = () => {
     const { productId } = useParams();
@@ -117,12 +118,12 @@ const EditProduct = () => {
     return (
         <section>
             <Container>
-                <Row>
-                    <Col lg="12">
+                <Row className="justify-content-center">
+                    <Col lg="8">
                         {loading ? (
                             <h4 className="text-center fw-bold">Loading...</h4>
                         ) : (
-                            <>
+                            <div className="create-product-form">
                                 <h4 className="mb-4">Edit Product</h4>
                                 <Form onSubmit={updateProduct}>
                                     <FormGroup className="form__group">
@@ -174,6 +175,7 @@ const EditProduct = () => {
                                             <span>Category</span>
                                             <select
                                                 className="p-2"
+                                                name="category"
                                                 value={productDetails.category}
                                                 onChange={handleInputChange}
                                                 required
@@ -202,14 +204,11 @@ const EditProduct = () => {
                                         <FormGroup className="form__group">
                                             <span>Product Image</span>
 
-                                            {/* Display current image */}
                                             {productDetails.imgUrl && (
                                                 <div>
                                                     <img
-                                                        src={
-                                                            productDetails.imgUrl
-                                                        }
-                                                        alt= "Current Product"
+                                                        src={productDetails.imgUrl}
+                                                        alt="Current Product"
                                                         style={{
                                                             width: "100px",
                                                             height: "100px",
@@ -229,13 +228,13 @@ const EditProduct = () => {
 
                                     <motion.button
                                         whileTap={{ scale: 1.2 }}
-                                        className="buy__btn"
+                                        className="buy__btn__product"
                                         type="submit"
                                     >
                                         Update Product
                                     </motion.button>
                                 </Form>
-                            </>
+                            </div>
                         )}
                     </Col>
                 </Row>

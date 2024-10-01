@@ -1,20 +1,84 @@
-/* Login Form */
-.auth__form {
-    background: var(--primary-color);
+/* login */
+.login-section {
+    background-color: #f0f4f8;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 50px 0;
+}
+
+.login-col {
+    background-color: #fff;
     padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.login-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 1.5rem;
+}
+
+.login-form {
+    width: 100%;
+}
+
+.login-form-group {
+    margin-bottom: 1.25rem;
+}
+
+.login-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
     border-radius: 5px;
+    font-size: 1rem;
+    background-color: #f9f9f9;
+    transition: all 0.3s ease;
 }
 
-.auth__btn {
-     background: #fff !important;
-     color: var(--primary-color);
-     font-weight: 600;
+.login-input:focus {
+    border-color: #5a67d8;
+    background-color: #fff;
+    box-shadow: 0 0 0 0.2rem rgba(90, 103, 216, 0.25);
 }
 
-.auth__form {
-    margin-top: 30px;
+.login-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: #5a67d8;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
-.auth__form p a {
-    color: rgba(255, 255, 255, 0.735)
+.login-btn:hover {
+    background-color: #4c51bf;
+}
+
+.login-text {
+    margin-top: 1.25rem;
+    color: #777;
+}
+
+.login-link {
+    color: #5a67d8;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.login-link:hover {
+    text-decoration: underline;
+}
+
+.login-loading {
+    font-size: 1.2rem;
+    color: #5a67d8;
 }

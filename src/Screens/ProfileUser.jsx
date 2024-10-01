@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Button, Table } from "react-bootstrap";
 import {
     User,
@@ -12,48 +12,205 @@ import {
     LogOut,
     ChevronRight,
     ShoppingCart,
+    Calendar,
 } from "lucide-react";
 import "../styles/Profile.css";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { auth, db } from "../firebase.config";
+import { toast } from "react-toastify";
+import { onAuthStateChanged } from "firebase/auth";
 
 const ProfileUser = () => {
     const [activeSection, setActiveSection] = useState(null);
+    const [editing, setEditing] = useState(false);
+    const [userInfo, setUserInfo] = useState({
+        displayName: "",
+        birthDate: "",
+        email: "",
+        phone: "",
+        address: "",
+        role: "",
+        photoURL: "",
+    });
 
-    const adminInfo = {
-        name: "Minh Wuan",
-        email: "user@gmail.com",
-        phone: "+84 0111111111",
-        address: "123 Võ Văn Tần, P7, Quận 1, TPHCM",
-        role: "User",
+    const [originalUserInfo, setOriginalUserInfo] = useState({ ...userInfo });
+
+    useEffect(() => {
+        const fetchUserData = async (user) => {
+            try {
+                if (user) {
+                    const userDocRef = doc(db, "users", user.uid);
+                    const userDoc = await getDoc(userDocRef);
+
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        const newUserInfo = {
+                            displayName: userData.displayName || "",
+                            birthDate: userData.birthDate
+                                ? new Date(userData.birthDate.toDate())
+                                      .toISOString()
+                                      .split("T")[0]
+                                : "",
+                            email: userData.email,
+                            phone: userData.phone || "",
+                            address: userData.address || "",
+                            role: userData.role || "user",
+                            photoURL: userData.photoURL || "",
+                        };
+                        setUserInfo(newUserInfo);
+                        setOriginalUserInfo(newUserInfo);
+                    } else {
+                        toast.error("User document not found in Firestore!");
+                    }
+                }
+            } catch (error) {
+                toast.error("Fetch failed for user: " + error.message);
+            }
+        };
+
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                fetchUserData(user);
+            } else {
+                toast.error("User not found!");
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    // Handle Edit Profile
+    const handleEditUserProfile = async () => {
+        const user = auth.currentUser;
+        if (user) {
+            const userDocRef = doc(db, "users", user.uid);
+
+            try {
+                await updateDoc(userDocRef, {
+                    displayName: userInfo.displayName,
+                    birthDate: new Date(userInfo.birthDate),
+                    phone: userInfo.phone,
+                    address: userInfo.address,
+                });
+
+                toast.success("Updated Profile Successfully!");
+                setEditing(false);
+            } catch (error) {
+                toast.error("Failed to update Profile: " + error.message);
+            }
+        }
     };
+
+    const handleInputChanges = (e) => {
+        const { name, value } = e.target;
+        setUserInfo((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleCancelEdit = () => {
+        setUserInfo(originalUserInfo);
+        setEditing(false);
+    };
+
+    // Render personal Information
+    const renderPersonalInfo = () => (
+        <div className="personal-info">
+            <h3>Personal Information</h3>
+            <div className="info-item">
+                <User size={18} />
+                <span>
+                    <strong>Name:</strong>
+                    {editing ? (
+                        <input
+                            type="text"
+                            name="displayName"
+                            value={userInfo.displayName}
+                            onChange={handleInputChanges}
+                        />
+                    ) : (
+                        userInfo.displayName || "Not Provided"
+                    )}
+                </span>
+            </div>
+            <div className="info-item">
+                <Calendar size={18} />
+                <span>
+                    <strong>BirthDate:</strong>
+                    {editing ? (
+                        <input
+                            type="date"
+                            name="birthDate"
+                            value={userInfo.birthDate}
+                            onChange={handleInputChanges}
+                        />
+                    ) : (
+                        userInfo.birthDate || "Not Provided"
+                    )}
+                </span>
+            </div>
+            <div className="info-item">
+                <Mail size={18} />
+                <span>
+                    <strong>Email:</strong> {userInfo.email}
+                </span>
+            </div>
+            <div className="info-item">
+                <Phone size={18} />
+                <span>
+                    <strong>Phone:</strong>
+                    {editing ? (
+                        <input
+                            type="text"
+                            name="phone"
+                            value={userInfo.phone}
+                            onChange={handleInputChanges}
+                        />
+                    ) : (
+                        userInfo.phone || "Not Provided"
+                    )}
+                </span>
+            </div>
+            <div className="info-item last">
+                <MapPin size={18} />
+                <span>
+                    <strong>Address:</strong>
+                    {editing ? (
+                        <input
+                            type="text"
+                            name="address"
+                            value={userInfo.address}
+                            onChange={handleInputChanges}
+                        />
+                    ) : (
+                        userInfo.address || "Not Provided"
+                    )}
+                </span>
+            </div>
+            <Button
+                variant="primary"
+                className="edit-profile-button"
+                onClick={() =>
+                    editing ? handleEditUserProfile() : setEditing(true)
+                }
+            >
+                {editing ? "Save Changes" : "Edit Profile"}
+            </Button>
+            {editing && (
+                <Button
+                    variant="secondary"
+                    className="cancel-edit-button"
+                    onClick={handleCancelEdit}
+                >
+                    Back
+                </Button>
+            )}
+        </div>
+    );
 
     const menuItems = [
         {
             icon: <User size={20} />,
             text: "Personal Information",
-            content: (
-                <div className="personal-info">
-                    <h3>Personal Information</h3>
-                    <div className="info-item">
-                        <User size={18} />
-                        <span><strong>Name:</strong> {adminInfo.name}</span>
-                    </div>
-                    <div className="info-item">
-                        <Mail size={18} />
-                        <span><strong>Email:</strong> {adminInfo.email}</span>
-                    </div>
-                    <div className="info-item">
-                        <Phone size={18} />
-                        <span><strong>Phone:</strong> {adminInfo.phone}</span>
-                    </div>
-                    <div className="info-item">
-                        <MapPin size={18} />
-                        <span><strong>Address:</strong> {adminInfo.address}</span>
-                    </div>
-                    <Button variant="primary" className="edit-profile-button">
-                        Edit Profile
-                    </Button>
-                </div>
-            ),
+            content: renderPersonalInfo(),
         },
         {
             icon: <ShoppingCart size={20} />,
@@ -80,10 +237,18 @@ const ProfileUser = () => {
                                 <td>2024-09-30</td>
                                 <td>2024-10-05</td>
                                 <td>
-                                    <Button variant="secondary" size="sm" className="action-button">
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        className="action-button"
+                                    >
                                         View
                                     </Button>
-                                    <Button variant="danger" size="sm" className="action-button">
+                                    <Button
+                                        variant="danger"
+                                        size="sm"
+                                        className="action-button"
+                                    >
                                         Delete
                                     </Button>
                                 </td>
@@ -160,16 +325,18 @@ const ProfileUser = () => {
                     <div className="profile-header">
                         <div className="profile-avatar">
                             <img
-                                src="https://via.placeholder.com/150"
+                                src={
+                                    userInfo.photoURL ||
+                                    "https://via.placeholder.com/150"
+                                }
                                 alt="Admin Avatar"
                             />
                         </div>
-                        <h1 className="profile-name">{adminInfo.name}</h1>
-                        <p className="profile-role">{adminInfo.role}</p>
+                        <h1 className="profile-name">{userInfo.displayName}</h1>
+                        <p className="profile-role">{userInfo.role}</p>
                     </div>
 
                     <div className="sidebar-content">
-                        {/* Menu Section */}
                         <div className="menu-section">
                             <h2>Account Settings</h2>
                             {menuItems.map((item, index) => (
@@ -187,7 +354,6 @@ const ProfileUser = () => {
                             ))}
                         </div>
 
-                        {/* Main Content Section */}
                         <div className="main-content">
                             {activeSection !== null && (
                                 <div className="content-area">

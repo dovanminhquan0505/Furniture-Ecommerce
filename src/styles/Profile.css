@@ -1,6 +1,7 @@
 .profile__personal {
     min-height: 100vh;
-    background-color: #f8f9fa;
+    background-color: #f9f9f9;
+    color: #333;
 }
 
 .sidebar {
@@ -74,6 +75,7 @@ h2 {
     margin-bottom: 10px;
     cursor: pointer;
     transition: all 0.3s ease;
+    color: black;
 }
 
 .menu-item:hover,
@@ -103,7 +105,8 @@ h2 {
 }
 
 .content-area {
-    background-color: white;
+    background-color: #fff;
+    color: #000;
     border-radius: 8px;
     padding: 20px;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
@@ -295,6 +298,213 @@ h2 {
     top: 50%;
     transform: translateY(-50%);
     cursor: pointer;
+}
+
+/* Dark Mode */
+.dark-mode {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+}
+
+.dark-mode .sidebar {
+    background-color: #2c2c2c;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .profile-header {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    border-bottom: 1px solid #444;
+}
+
+.dark-mode .profile-name,
+.dark-mode .profile-role {
+    color: #ffffff;
+}
+
+.dark-mode .menu-item {
+    background-color: #3a3a3a;
+    color: #e0e0e0;
+    transition: all 0.3s ease;
+}
+
+.dark-mode .menu-item:hover,
+.dark-mode .menu-item.active {
+    background-color: #4a4a4a;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .menu-item svg {
+    color: #6c7ae0;
+}
+
+.dark-mode .content-area {
+    background-color: #2c2c2c;
+    color: #e0e0e0;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .content-area h3 {
+    color: #6c7ae0;
+}
+
+.dark-mode .info-item {
+    border-bottom: 1px solid #444;
+    background-color: #2c2c2c; 
+    margin-bottom: 5px; 
+    border-radius: 4px; 
+    padding: 12px; 
+}
+
+.dark-mode .info-item:last-child {
+    border-bottom: none;
+}
+
+.dark-mode .info-item strong {
+    color: #8c9cf0; 
+    font-weight: 600;
+}
+
+.dark-mode .info-item span {
+    color: #ffffff; 
+}
+
+.dark-mode .info-item svg {
+    color: #8c9cf0;
+}
+
+.dark-mode .personal-info .info-item input[type="text"],
+.dark-mode .personal-info .info-item input[type="date"] {
+    background-color: #3a3a3a;
+    border: 1px solid #555;
+    color: #e0e0e0;
+    padding: 8px 12px;
+}
+
+.dark-mode .personal-info .info-item input[type="text"]:focus,
+.dark-mode .personal-info .info-item input[type="date"]:focus {
+    border-color: #6c7ae0;
+    box-shadow: 0 0 0 2px rgba(140, 156, 240, 0.2);
+}
+
+.dark-mode .edit-profile-button,
+.dark-mode .change-password-button {
+    background-color: #6c7ae0;
+}
+
+.dark-mode .edit-profile-button:hover,
+.dark-mode .change-password-button:hover {
+    background-color: #5c6ad0;
+}
+
+.dark-mode .cancel-edit-button {
+    background-color: #4a4a4a;
+}
+
+.dark-mode .cancel-edit-button:hover {
+    background-color: #5a5a5a;
+}
+
+.dark-mode .change-password {
+    background-color: #2c2c2c;
+    border: 1px solid #444;
+    padding: 25px;
+    border-radius: 8px;
+}
+
+.dark-mode .change-password h3 {
+    color: #ffffff;
+    margin-bottom: 15px;
+}
+
+.dark-mode .change-password p {
+    color: #b0b0b0;
+    margin-bottom: 25px;
+}
+
+.dark-mode .change-password-form .form-group {
+    margin-bottom: 20px;
+}
+
+.dark-mode .change-password-form .form-group label {
+    color: #8c9cf0;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.dark-mode .change-password-form .form-control {
+    background-color: #3a3a3a;
+    border: 1px solid #555;
+    color: #ffffff;
+    padding: 12px 15px;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.dark-mode .change-password-form .form-control:focus {
+    border-color: #8c9cf0;
+    box-shadow: 0 0 0 2px rgba(140, 156, 240, 0.2);
+    background-color: #444;
+}
+
+.dark-mode .change-password-form .form-control::placeholder {
+    color: #888;
+}
+
+.dark-mode .password-input-wrapper {
+    position: relative;
+}
+
+.dark-mode .toggle-password-visibility {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #8c9cf0;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.dark-mode .toggle-password-visibility:hover {
+    color: #ffffff;
+}
+
+.dark-mode .change-password-button {
+    background-color: #6c7ae0;
+    color: #ffffff;
+    border: none;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.dark-mode .change-password-button:hover {
+    background-color: #5c6ad0;
+}
+
+.dark-mode .dark-mode-settings {
+    background-color: #2c2c2c;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.dark-mode .dark-mode-toggle .form-check-input {
+    background-color: #6c7ae0;
+    border-color: #6c7ae0;
+}
+
+.dark-mode .dark-mode-toggle .form-check-input:checked {
+    background-color: #5c6ad0;
+    border-color: #5c6ad0;
+}
+
+/* Light Mode */
+.light-mode {
+    background-color: #f9f9f9;
+    color: #333;
 }
 
 @media (max-width: 768px) {

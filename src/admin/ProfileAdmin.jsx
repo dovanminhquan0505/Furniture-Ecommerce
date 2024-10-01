@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Button } from "react-bootstrap";
+import { Container, Row, Col, Button, Form } from "react-bootstrap";
 import {
     User,
     Mail,
@@ -20,11 +20,13 @@ import { auth, db } from "../firebase.config";
 import { toast } from "react-toastify";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
+import { useTheme } from "../components/UI/ThemeContext";
 
 const ProfileAdmin = () => {
     const [activeSection, setActiveSection] = useState(null);
     const [editing, setEditing] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const { isDarkMode, toggleDarkMode } = useTheme();
     //Set information for admin
     const [adminInfo, setAdminInfo] = useState({
         displayName: "",
@@ -165,6 +167,11 @@ const ProfileAdmin = () => {
             }
         }
     }
+
+    // Handle Toggle Dark Mode
+    const handleDarkModeToggle = () => {
+        toggleDarkMode();
+    };
 
     // Render profile admin
     const renderPersonalInfo = () => (
@@ -330,6 +337,22 @@ const ProfileAdmin = () => {
         </div>
     );
 
+    // Render Dark Mode
+    const renderDarkMode = () => (
+        <div>
+                    <h3>Display Settings</h3>
+                    <p>Toggle between light and dark mode for the admin panel.</p>
+                    <Form.Check 
+                        type="switch"
+                        id="dark-mode-switch"
+                        label="Dark Mode"
+                        checked={isDarkMode}
+                        onChange={handleDarkModeToggle}
+                        className="dark-mode-toggle"
+                    />
+                </div>
+    )
+
     const menuItems = [
         {
             icon: <User size={20} />,
@@ -366,14 +389,7 @@ const ProfileAdmin = () => {
         {
             icon: <Moon size={20} />,
             text: "Dark Mode",
-            content: (
-                <div>
-                    <h3>Display Settings</h3>
-                    <p>
-                        Toggle between light and dark mode for the admin panel.
-                    </p>
-                </div>
-            ),
+            content: renderDarkMode(),
         },
         {
             icon: <LogOut size={20} />,
@@ -389,7 +405,7 @@ const ProfileAdmin = () => {
     ];
 
     return (
-        <Container fluid className="profile__personal">
+        <Container fluid className={`profile__personal ${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
             <Row>
                 <Col md={12} className="sidebar">
                     <div className="profile-header">

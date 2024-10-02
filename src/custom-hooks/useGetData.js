@@ -7,22 +7,19 @@ import { collection, onSnapshot } from "firebase/firestore";
 const useGetData = (collectionName) => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
-    const collectionRef = collection(db, collectionName);
 
     //By using this function(onSnapShot), don't need to manually refresh or reload the data; the app stays in sync automatically.
     useEffect(() => {
-        const getData = async () => {
-            //Firebase firestore realtime data update
-            await onSnapshot(collectionRef, (snapshot) => {
-                setData(
-                    snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }))
-                );
-                setLoading(false);
-            });
-        };
+        const collectionRef = collection(db, collectionName); 
 
-        getData();
-    }, [collectionRef]);
+        const unsubscribe = onSnapshot(collectionRef, (snapshot) => {
+            setData(snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [collectionName]);
+
     return { data, loading };
 };
 

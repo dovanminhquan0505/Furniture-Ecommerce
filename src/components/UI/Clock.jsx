@@ -8,37 +8,44 @@ const Clock = () => {
     const [minutes, setMinutes] = useState();
     const [seconds, setSeconds] = useState();
 
-    let interval;
     const countDown = () => {
         const destination = new Date("Oct 20, 2024").getTime();
-        interval = setInterval(() => {
+        const interval = setInterval(() => {
             const now = new Date().getTime();
             const distance = destination - now;
 
             //Calculate days, hours, minutes, seconds
-            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-            const hours = Math.floor(
+            const newDays = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const newHours = Math.floor(
                 (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
             );
-            const minutes = Math.floor(
+            const newMinutes = Math.floor(
                 (distance % (1000 * 60 * 60)) / (1000 * 60)
             );
-            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            const newSeconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-            if (destination < 0) {
-                clearInterval(interval.current);
+            if (distance < 0) {
+                clearInterval(interval);
+                setDays(0);
+                setHours(0);
+                setMinutes(0);
+                setSeconds(0);
             } else {
-                setDays(days);
-                setHours(hours);
-                setMinutes(minutes);
-                setSeconds(seconds);
+                setDays(newDays);
+                setHours(newHours);
+                setMinutes(newMinutes);
+                setSeconds(newSeconds);
             }
-        });
+        }, 1000);
+
+        return interval; 
     };
 
     useEffect(() => {
-        countDown();
-    });
+        const intervalId = countDown(); 
+
+        return () => clearInterval(intervalId); 
+    }, []); 
 
     return (
         <div className="clock__wrapper d-flex align-items-center gap-3">

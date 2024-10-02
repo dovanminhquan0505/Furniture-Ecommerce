@@ -1,5 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Button, Form } from "react-bootstrap";
+import React, { useEffect, useRef, useState } from "react";
+import {
+    Container,
+    Row,
+    Col,
+    Button,
+    Form,
+    Spinner,
+    Alert,
+} from "react-bootstrap";
 import {
     User,
     Mail,
@@ -16,7 +24,7 @@ import {
     Eye,
 } from "lucide-react";
 import "../styles/Profile.css";
-import { auth, db } from "../firebase.config";
+import { auth, db, storage } from "../firebase.config";
 import { toast } from "react-toastify";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import {
@@ -28,11 +36,20 @@ import {
 } from "firebase/auth";
 import { useTheme } from "../components/UI/ThemeContext";
 import { useNavigate } from "react-router-dom";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import useAdmin from "../custom-hooks/useAdmin";
 
 const ProfileAdmin = () => {
+    const [editing, setEditing] = useState(false);
+    const inputFileRef = useRef(null);
+
+    const [isDataLoading, setIsDataLoading] = useState(true);
+    const [isEmpty, setIsEmpty] = useState(false);
+
+    const { isAdmin, isLoading } = useAdmin();
+    const [isAvatarUpLoading, setIsAvatarUpLoading] = useState(false);
     const [activeSection, setActiveSection] = useState(null);
     const navigate = useNavigate();
-    const [editing, setEditing] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const { isDarkMode, toggleDarkMode } = useTheme();
     //Set information for admin
@@ -54,6 +71,8 @@ const ProfileAdmin = () => {
     // Get admin data from firebase
     useEffect(() => {
         const fetchAdminData = async (user) => {
+            setIsDataLoading(true);
+            setIsEmpty(false);
             try {
                 if (user) {
                     const userDocRef = doc(db, "users", user.uid);
@@ -76,12 +95,20 @@ const ProfileAdmin = () => {
                         };
                         setAdminInfo(newAdminInfo);
                         setOriginalAdminInfo(newAdminInfo);
+
+                        if (Object.keys(userData).length === 0) {
+                            setIsEmpty(true);
+                        }
+                    } else {
+                        toast.error("User not found");
                     }
                 } else {
                     toast.error("User document not found in Firestore!");
                 }
             } catch (error) {
                 toast.error("Fetch failed for user: " + error.message);
+            } finally {
+                setIsDataLoading(false);
             }
         };
 
@@ -192,6 +219,45 @@ const ProfileAdmin = () => {
         navigate("/login");
     };
 
+    const handleAvatarChange = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setIsAvatarUpLoading(true);
+            // Update temporary image in UI
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setAdminInfo((prev) => ({ ...prev, photoURL: reader.result }));
+            };
+            reader.readAsDataURL(file);
+
+            // Upload image to Firebase Storage
+            const avatarRef = ref(storage, `avatars/${auth.currentUser.uid}`);
+
+            try {
+                await uploadBytes(avatarRef, file); // Upload file
+                const downloadURL = await getDownloadURL(avatarRef);
+
+                // Update photoURL in Firebase Storage
+                const userDocRef = doc(db, "users", auth.currentUser.uid);
+                await updateDoc(userDocRef, { photoURL: downloadURL });
+
+                toast.success("Avatar uploaded successfully!");
+            } catch (error) {
+                toast.error("Failed to upload avatar: " + error.message);
+            } finally {
+                setIsAvatarUpLoading(false);
+            }
+        }
+    };
+
+    const handleAvatarClick = () => {
+        if (editing) {
+            inputFileRef.current.click();
+        } else {
+            toast.info("You need to be in Edit mode to upload");
+        }
+    };
+
     // Render profile admin
     const renderPersonalInfo = () => (
         <div className="personal-info">
@@ -269,9 +335,9 @@ const ProfileAdmin = () => {
             <Button
                 variant="primary"
                 className="edit-profile-button"
-                onClick={() =>
-                    editing ? handleEditProfile() : setEditing(true)
-                }
+                onClick={() => {
+                    editing ? handleEditProfile() : setEditing(true);
+                }}
             >
                 {editing ? "Save changes" : "Edit Profile"}
             </Button>
@@ -438,6 +504,31 @@ const ProfileAdmin = () => {
         },
     ];
 
+    if (isEmpty) {
+        return (
+            <Alert variant="info">
+                No user data available. Please update your profile.
+            </Alert>
+        );
+    }
+
+    if (isLoading || isDataLoading) {
+        return (
+            <Container
+                className="d-flex justify-content-center align-items-center"
+                style={{ height: "100vh" }}
+            >
+                <Spinner animation="border" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </Spinner>
+            </Container>
+        );
+    }
+
+    if (!isAdmin) {
+        toast.error("Admin only!");
+    }
+
     return (
         <Container
             fluid
@@ -455,7 +546,34 @@ const ProfileAdmin = () => {
                                     "https://via.placeholder.com/150"
                                 }
                                 alt="Admin Avatar"
+                                onClick={handleAvatarClick}
+                                style={{
+                                    cursor: editing ? "pointer" : "default",
+                                    opacity: isAvatarUpLoading ? 0.5 : 1,
+                                }}
                             />
+                            {editing && (
+                                <>
+                                    <input
+                                        type="file"
+                                        ref={inputFileRef}
+                                        accept="image/*"
+                                        style={{ display: "none" }}
+                                        onChange={handleAvatarChange}
+                                    />
+                                    <div className="avatar-edit-overlay">
+                                        {isAvatarUpLoading
+                                            ? "Uploading..."
+                                            : "Click to change your avatar"}
+                                    </div>
+                                </>
+                            )}
+
+                            {isAvatarUpLoading && (
+                                <div className="avatar-loading-overlay">
+                                    <Spinner animation="border" size="sm" />
+                                </div>
+                            )}
                         </div>
                         <h1 className="profile-name">
                             {adminInfo.displayName}

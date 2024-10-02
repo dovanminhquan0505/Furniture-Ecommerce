@@ -40,13 +40,15 @@ const Header = () => {
 
     const stickyHeaderFunc = () => {
         window.addEventListener("scroll", () => {
-            if (
-                document.body.scrollTop > 80 ||
-                document.documentElement.scrollTop > 80
-            ) {
-                headerRef.current.classList.add("sticky__header");
-            } else {
-                headerRef.current.classList.remove("sticky__header");
+            if (headerRef.current) {
+                if (
+                    document.body.scrollTop > 80 ||
+                    document.documentElement.scrollTop > 80
+                ) {
+                    headerRef.current.classList.add("sticky__header");
+                } else {
+                    headerRef.current.classList.remove("sticky__header");
+                }
             }
         });
     };
@@ -66,9 +68,15 @@ const Header = () => {
         return () => {
             window.removeEventListener("scroll", stickyHeaderFunc);
         };
-    });
+    }, []);
 
-    const menuToggle = () => menuRef.current.classList.toggle("active__menu");
+    const menuToggle = () => {
+        if (menuRef.current) {
+            menuRef.current.classList.toggle("active__menu");
+        } else {
+            console.warn("menuRef is null");
+        }
+    };
 
     //Navigate to Cart
     const navigateToCart = () => {
@@ -78,6 +86,8 @@ const Header = () => {
     const toggleProfileActions = () => {
         if (profileActionRef.current) {
             profileActionRef.current.classList.toggle("active__profileActions");
+        } else {
+            console.warn("profileActionRef is null")
         }
     };
 

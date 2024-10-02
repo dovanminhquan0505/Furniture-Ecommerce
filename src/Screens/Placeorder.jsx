@@ -135,21 +135,26 @@ const PlaceOrder = () => {
     };
 
     if (adminLoading || isFetchingOrder) {
-        <Container
-            className="d-flex justify-content-center align-items-center"
-            style={{ height: "100vh" }}
-        >
-            <Spinner animation="border" role="status">
-                <span className="visually-hidden">Loading...</span>
-            </Spinner>
-        </Container>;
+        return (
+            <Container
+                className="d-flex justify-content-center align-items-center"
+                style={{ height: "100vh" }}
+            >
+                <Spinner animation="border" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </Spinner>
+            </Container>
+        );
     }
 
-    const shouldShowPaypal = !orderDetails.isPaid && showPaypal;
+    const shouldShowPaypal = orderDetails && !orderDetails.isPaid && showPaypal;
     const shouldShowConfirmOrderBtn =
-        !isAdmin && !orderDetails.isPaid && !showPaypal;
+        !isAdmin && orderDetails && !orderDetails.isPaid && !showPaypal;
     const shouldShowConfirmDeliverBtn =
-        isAdmin && orderDetails.isPaid && !orderDetails.isDelivered;
+        isAdmin &&
+        orderDetails &&
+        orderDetails.isPaid &&
+        !orderDetails.isDelivered;
 
     return (
         <Helmet title=" Place Order">

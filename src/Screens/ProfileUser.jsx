@@ -34,6 +34,7 @@ import {
     updatePassword,
     EmailAuthProvider,
     reauthenticateWithCredential,
+    signOut,
 } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import Helmet from "../components/Helmet/Helmet";
@@ -249,7 +250,18 @@ const ProfileUser = () => {
 
     const handleDarkModeToggle = () => {
         toggleDarkMode();
-    }
+    };
+
+    const handleLogOut = () => {
+        signOut(auth)
+            .then(() => {
+                toast.success("Logged out");
+            })
+            .catch((error) => {
+                toast.error(error.message);
+            });
+        navigate("/login");
+    };
 
     // Render Personal Information
     const renderPersonalInfo = () => (
@@ -411,9 +423,13 @@ const ProfileUser = () => {
         <div className="change-password">
             <h3>Change Password</h3>
             <p>
-                For your account's security, do not share your password with anyone else.
+                For your account's security, do not share your password with
+                anyone else.
             </p>
-            <form className="change-password-form" onSubmit={handleChangePassword}>
+            <form
+                className="change-password-form"
+                onSubmit={handleChangePassword}
+            >
                 <div className="form-group">
                     <label htmlFor="currentPassword">Current Password</label>
                     <div className="password-input-wrapper">
@@ -451,7 +467,9 @@ const ProfileUser = () => {
                     </div>
                 </div>
                 <div className="form-group">
-                    <label htmlFor="confirmPassword">Confirm New Password</label>
+                    <label htmlFor="confirmPassword">
+                        Confirm New Password
+                    </label>
                     <div className="password-input-wrapper">
                         <input
                             type={showPassword ? "text" : "password"}
@@ -468,7 +486,11 @@ const ProfileUser = () => {
                         </span>
                     </div>
                 </div>
-                <Button type="submit" variant="primary" className="change-password-button">
+                <Button
+                    type="submit"
+                    variant="primary"
+                    className="change-password-button"
+                >
                     Save Changes
                 </Button>
             </form>
@@ -478,18 +500,27 @@ const ProfileUser = () => {
     // Render Dark Mode
     const renderDarkMode = () => (
         <div>
-                    <h3>Display Settings</h3>
-                    <p>Toggle between light and dark mode for the admin panel.</p>
-                    <Form.Check 
-                        type="switch"
-                        id="dark-mode-switch"
-                        label="Dark Mode"
-                        checked={isDarkMode}
-                        onChange={handleDarkModeToggle}
-                        className="dark-mode-toggle"
-                    />
-                </div>
-    )
+            <h3>Display Settings</h3>
+            <p>Toggle between light and dark mode for the admin panel.</p>
+            <Form.Check
+                type="switch"
+                id="dark-mode-switch"
+                label="Dark Mode"
+                checked={isDarkMode}
+                onChange={handleDarkModeToggle}
+                className="dark-mode-toggle"
+            />
+        </div>
+    );
+
+    // Render LogOut information
+    const renderLogOut = () => (
+        <div>
+            <h3>Logout</h3>
+            <p>Are you sure you want to log out of the user profile?</p>
+            <Button variant="danger" className="mt-3" onClick={handleLogOut}>Logout</Button>
+        </div>
+    );
 
     const menuItems = [
         {
@@ -537,19 +568,18 @@ const ProfileUser = () => {
         {
             icon: <LogOut size={20} />,
             text: "Logout",
-            content: (
-                <div>
-                    <h3>Logout</h3>
-                    <p>Are you sure you want to log out of the admin panel?</p>
-                    <Button variant="danger">Logout</Button>
-                </div>
-            ),
+            content: renderLogOut(),
         },
     ];
 
     return (
         <Helmet title=" Profile">
-            <Container fluid className={`profile__personal ${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
+            <Container
+                fluid
+                className={`profile__personal ${
+                    isDarkMode ? "dark-mode" : "light-mode"
+                }`}
+            >
                 <Row>
                     <Col md={12} className="sidebar">
                         <div className="profile-header">

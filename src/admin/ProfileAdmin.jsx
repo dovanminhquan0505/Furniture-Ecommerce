@@ -19,11 +19,19 @@ import "../styles/Profile.css";
 import { auth, db } from "../firebase.config";
 import { toast } from "react-toastify";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
+import {
+    onAuthStateChanged,
+    EmailAuthProvider,
+    reauthenticateWithCredential,
+    updatePassword,
+    signOut,
+} from "firebase/auth";
 import { useTheme } from "../components/UI/ThemeContext";
+import { useNavigate } from "react-router-dom";
 
 const ProfileAdmin = () => {
     const [activeSection, setActiveSection] = useState(null);
+    const navigate = useNavigate();
     const [editing, setEditing] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const { isDarkMode, toggleDarkMode } = useTheme();
@@ -131,14 +139,14 @@ const ProfileAdmin = () => {
         const newPassword = e.target.newPassword.value;
         const confirmPassword = e.target.confirmPassword.value;
 
-        if(newPassword !== confirmPassword) {
+        if (newPassword !== confirmPassword) {
             toast.error("Passwords do not match!");
             return;
         }
 
         try {
             const user = auth.currentUser;
-            if(!user) {
+            if (!user) {
                 toast.error("No authenticated user found!");
                 return;
             }
@@ -166,11 +174,22 @@ const ProfileAdmin = () => {
                 toast.error("Failed to change password: " + error.message);
             }
         }
-    }
+    };
 
     // Handle Toggle Dark Mode
     const handleDarkModeToggle = () => {
         toggleDarkMode();
+    };
+
+    const handleLogOut = () => {
+        signOut(auth)
+            .then(() => {
+                toast.success("Logged out");
+            })
+            .catch((error) => {
+                toast.error(error.message);
+            });
+        navigate("/login");
     };
 
     // Render profile admin
@@ -273,9 +292,13 @@ const ProfileAdmin = () => {
         <div className="change-password">
             <h3>Change Password</h3>
             <p>
-                For your account's security, do not share your password with anyone else.
+                For your account's security, do not share your password with
+                anyone else.
             </p>
-            <form className="change-password-form" onSubmit={handleChangePassword}>
+            <form
+                className="change-password-form"
+                onSubmit={handleChangePassword}
+            >
                 <div className="form-group">
                     <label htmlFor="currentPassword">Current Password</label>
                     <div className="password-input-wrapper">
@@ -313,7 +336,9 @@ const ProfileAdmin = () => {
                     </div>
                 </div>
                 <div className="form-group">
-                    <label htmlFor="confirmPassword">Confirm New Password</label>
+                    <label htmlFor="confirmPassword">
+                        Confirm New Password
+                    </label>
                     <div className="password-input-wrapper">
                         <input
                             type={showPassword ? "text" : "password"}
@@ -330,7 +355,11 @@ const ProfileAdmin = () => {
                         </span>
                     </div>
                 </div>
-                <Button type="submit" variant="primary" className="change-password-button">
+                <Button
+                    type="submit"
+                    variant="primary"
+                    className="change-password-button"
+                >
                     Save Changes
                 </Button>
             </form>
@@ -340,18 +369,29 @@ const ProfileAdmin = () => {
     // Render Dark Mode
     const renderDarkMode = () => (
         <div>
-                    <h3>Display Settings</h3>
-                    <p>Toggle between light and dark mode for the admin panel.</p>
-                    <Form.Check 
-                        type="switch"
-                        id="dark-mode-switch"
-                        label="Dark Mode"
-                        checked={isDarkMode}
-                        onChange={handleDarkModeToggle}
-                        className="dark-mode-toggle"
-                    />
-                </div>
-    )
+            <h3>Display Settings</h3>
+            <p>Toggle between light and dark mode for the admin panel.</p>
+            <Form.Check
+                type="switch"
+                id="dark-mode-switch"
+                label="Dark Mode"
+                checked={isDarkMode}
+                onChange={handleDarkModeToggle}
+                className="dark-mode-toggle"
+            />
+        </div>
+    );
+
+    // Render LogOut information
+    const renderLogOut = () => (
+        <div>
+            <h3>Logout</h3>
+            <p>Are you sure you want to log out of the user profile?</p>
+            <Button variant="danger" className="mt-3" onClick={handleLogOut}>
+                Logout
+            </Button>
+        </div>
+    );
 
     const menuItems = [
         {
@@ -394,18 +434,17 @@ const ProfileAdmin = () => {
         {
             icon: <LogOut size={20} />,
             text: "Logout",
-            content: (
-                <div>
-                    <h3>Logout</h3>
-                    <p>Are you sure you want to log out of the admin panel?</p>
-                    <Button variant="danger">Logout</Button>
-                </div>
-            ),
+            content: renderLogOut(),
         },
     ];
 
     return (
-        <Container fluid className={`profile__personal ${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
+        <Container
+            fluid
+            className={`profile__personal ${
+                isDarkMode ? "dark-mode" : "light-mode"
+            }`}
+        >
             <Row>
                 <Col md={12} className="sidebar">
                     <div className="profile-header">

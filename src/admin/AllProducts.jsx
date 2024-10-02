@@ -7,10 +7,12 @@ import { doc, deleteDoc } from "firebase/firestore";
 import { toast } from "react-toastify";
 import "../styles/all-products.css";
 import { Link, useNavigate } from "react-router-dom";
+import { useTheme } from "../components/UI/ThemeContext";
 
 const AllProducts = () => {
     const { data: productsData, loading } = useGetData("products");
     const navigate = useNavigate();
+    const { isDarkMode } = useTheme();
 
     const deleteProduct = async (id) => {
         await deleteDoc(doc(db, "products", id));
@@ -22,7 +24,7 @@ const AllProducts = () => {
     };
 
     return (
-        <section>
+        <section className={`${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
             <Container>
                 <Row>
                     <Col lg="12">

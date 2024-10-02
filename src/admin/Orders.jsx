@@ -7,10 +7,12 @@ import { toast } from "react-toastify";
 import { doc, deleteDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import "../styles/orders.css";
+import { useTheme } from "../components/UI/ThemeContext";
 
 const Orders = () => {
     const { data: ordersData, loading } = useGetData("orders");
     const navigate = useNavigate();
+    const { isDarkMode } = useTheme();
 
     // Handle delete orders
     const deleteOrder = async (orderId) => {
@@ -28,7 +30,7 @@ const Orders = () => {
     }
 
     return (
-        <section>
+        <section className={`${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
             <Container>
                 <Row>
                     <Col lg="12">

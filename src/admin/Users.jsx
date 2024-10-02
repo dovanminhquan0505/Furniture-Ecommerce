@@ -6,16 +6,18 @@ import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase.config";
 import { toast } from "react-toastify";
 import "../styles/all-products.css";
+import { useTheme } from "../components/UI/ThemeContext";
 
 const Users = () => {
     const { data: usersData, loading } = useGetData("users");
+    const { isDarkMode } = useTheme();
 
     const deleteUser = async (id) => {
         await deleteDoc(doc(db, "users", id));
         toast.success("User deleted successfully!");
     };
     return (
-        <section>
+        <section className={`${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
             <Container>
                 <Row>
                     <Col lg="12" className="pt-1">

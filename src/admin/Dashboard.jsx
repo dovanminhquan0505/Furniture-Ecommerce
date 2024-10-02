@@ -15,11 +15,13 @@ import {
     Cell,
     Legend,
 } from "recharts";
+import { useTheme } from "../components/UI/ThemeContext";
 
 const Dashboard = () => {
     const { data: products } = useGetData("products");
     const { data: users } = useGetData("users");
     const { data: orders } = useGetData("orders");
+    const { isDarkMode } = useTheme();
 
     // Calculate total revenue from paid orders only
     const totalSales = orders
@@ -57,7 +59,7 @@ const Dashboard = () => {
 
     return (
         <>
-            <section>
+            <section className={`${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
                 <Container>
                     <Row>
                         <Col lg="3">

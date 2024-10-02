@@ -3,7 +3,7 @@ import "../../styles/product-card.css";
 import { motion } from "framer-motion";
 import { Col } from "reactstrap";
 import { Link } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { cartActions } from "../../redux/slices/cartSlice";
 import { toast } from "react-toastify";
 import { wishListActions } from "../../redux/slices/wishListSlice";
@@ -11,6 +11,8 @@ import { wishListActions } from "../../redux/slices/wishListSlice";
 const ProductCard = ({ item }) => {
     //Add product to cart
     const dispatch = useDispatch();
+    const wishListItems = useSelector((state) => state.wishlist.wishListItems);
+
     const addToCart = () => {
         dispatch(
             cartActions.addItemToCart({
@@ -27,8 +29,14 @@ const ProductCard = ({ item }) => {
 
     // Add product to wish list
     const addToWishList = () => {
-        dispatch(wishListActions.addToWishList(item));
-        toast.success("Product added to wishlist successfully!");
+        const existingItem = wishListItems.find(wishItem => wishItem.id === item.id);
+
+        if(existingItem) {
+            toast.error("You have already saved this product!")
+        } else {
+            dispatch(wishListActions.addToWishList(item));
+            toast.success("Product added to wishlist successfully!");
+        }
     }
 
     return (

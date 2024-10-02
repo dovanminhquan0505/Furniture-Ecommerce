@@ -1,0 +1,87 @@
+/* Container for the wishlist section */
+.wishlist-container {
+    padding: 20px;
+}
+
+/* Styling for the wishlist title */
+.wishlist-title {
+    font-size: 2rem;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+/* Table styling */
+.wishlist-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+}
+
+/* Table header styling */
+.wishlist-table thead {
+    background-color: #dcd8d8;
+    color: white;
+}
+
+.wishlist-table th {
+    padding: 15px;
+    text-align: center;
+}
+
+/* Table row styling */
+.wishlist-table tbody tr {
+    transition: background-color 0.3s;
+    border-bottom: 1px solid #ccc;
+}
+
+.wishlist-table tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* Image styling */
+.wishlist-table img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* Product name styling */
+.wishlist-product-name {
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Price styling */
+.wishlist-price {
+    color: #28a745;
+}
+
+/* Quantity styling */
+.wishlist-quantity {
+    width: 80px;
+}
+
+/* Delete icon styling */
+.wishlist-delete-icon {
+    color: #333;
+    cursor: pointer;
+    font-size: 1.3rem;
+}
+
+.wishlist-delete-icon:hover {
+    color: #555;
+    transition: color 0.2s;
+}
+
+/* No products message */
+.wishlist-empty-message {
+    font-size: 1.5rem;
+    text-align: center;
+    color: #999;
+    margin-top: 20px;
+}

@@ -100,11 +100,11 @@ const Tr = ({ item }) => {
             <td>
                 <img src={item.imgUrl} alt="" />
             </td>
-            <td className="pdt">{item.productName}</td>
-            <td className="pdt">{item.category}</td>
-            <td className="pdt">${item.price}</td>
-            <td className="pdt">{item.quantity}</td>
-            <td className="pdt">
+            <td>{item.productName}</td>
+            <td>{item.category}</td>
+            <td>${item.price}</td>
+            <td>{item.quantity}</td>
+            <td>
                 <motion.i
                     whileTap={{
                         scale: 1.2,

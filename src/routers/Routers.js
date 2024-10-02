@@ -18,6 +18,7 @@ import Placeorder from "../Screens/Placeorder";
 import EditProduct from "../admin/EditProduct";
 import ProfileAdmin from "../admin/ProfileAdmin";
 import ProfileUser from "../Screens/ProfileUser";
+import WishList from "../Screens/WishList";
 
 const Routers = () => {
     //Link URL to views for each router
@@ -28,6 +29,7 @@ const Routers = () => {
             <Route path="shop" element={<Shop />} />
             <Route path="shop/:id" element={<ProductDetails />} />
             <Route path="cart" element={<Cart />} />
+            <Route path="wishlist" element={<WishList />} />
 
             <Route path="/*" element={<ProtectedRoute />}>
                 <Route path="profile" element={<ProfileUser />} />

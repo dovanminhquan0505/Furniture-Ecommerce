@@ -12,7 +12,3 @@ td i {
 td, th {
     color: var(--primary-color);
 }
-
-.pdt {
-    padding-top: 35px !important;
-}

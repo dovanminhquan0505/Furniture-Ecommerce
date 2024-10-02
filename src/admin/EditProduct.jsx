@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Container, Row, Col, Form, FormGroup } from "reactstrap";
+import { Container, Row, Col, Form, FormGroup, Spinner } from "reactstrap";
 import { motion } from "framer-motion";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db, storage } from "../firebase.config";
@@ -121,7 +121,14 @@ const EditProduct = () => {
                 <Row className="justify-content-center">
                     <Col lg="8">
                         {loading ? (
-                            <h4 className="text-center fw-bold">Loading...</h4>
+                            <Container
+                            className="d-flex justify-content-center align-items-center"
+                            style={{ height: "100vh" }}
+                        >
+                            <Spinner animation="border" role="status">
+                                <span className="visually-hidden">Loading...</span>
+                            </Spinner>
+                        </Container>
                         ) : (
                             <div className="create-product-form">
                                 <h4 className="mb-4">Edit Product</h4>

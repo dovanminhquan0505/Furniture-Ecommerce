@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Helmet from "../components/Helmet/Helmet";
-import { Container, Row, Col } from "reactstrap";
+import { Container, Row, Col, Spinner } from "reactstrap";
 import { motion } from "framer-motion";
 import CommonSection from "../components/UI/CommonSection";
 import { useNavigate, useParams } from "react-router-dom";
@@ -22,8 +22,7 @@ const PlaceOrder = () => {
     const [loading, setLoading] = useState(false);
     const [isFetchingOrder, setIsFetchingOrder] = useState(true);
     const navigate = useNavigate();
-    const { isAdmin, isLoading : adminLoading } = useAdmin();
-    const { currentUser } = useAuth();
+    const { isAdmin, isLoading: adminLoading } = useAdmin();
     const [orderDetails, setOrderDetails] = useState(null);
     const [showPaypal, setShowPaypal] = useState(false);
 
@@ -136,12 +135,21 @@ const PlaceOrder = () => {
     };
 
     if (adminLoading || isFetchingOrder) {
-        return <div className="fw-bold text-center">Loading....</div>;
+        <Container
+            className="d-flex justify-content-center align-items-center"
+            style={{ height: "100vh" }}
+        >
+            <Spinner animation="border" role="status">
+                <span className="visually-hidden">Loading...</span>
+            </Spinner>
+        </Container>;
     }
 
     const shouldShowPaypal = !orderDetails.isPaid && showPaypal;
-    const shouldShowConfirmOrderBtn = !isAdmin && !orderDetails.isPaid && !showPaypal;
-    const shouldShowConfirmDeliverBtn = isAdmin && orderDetails.isPaid && !orderDetails.isDelivered;
+    const shouldShowConfirmOrderBtn =
+        !isAdmin && !orderDetails.isPaid && !showPaypal;
+    const shouldShowConfirmDeliverBtn =
+        isAdmin && orderDetails.isPaid && !orderDetails.isDelivered;
 
     return (
         <Helmet title=" Place Order">
@@ -326,9 +334,19 @@ const PlaceOrder = () => {
                                 )}
 
                                 {loading && (
-                                    <h4 className="fw-bold text-center">
-                                        Processing...
-                                    </h4>
+                                    <Container
+                                        className="d-flex justify-content-center align-items-center"
+                                        style={{ height: "100vh" }}
+                                    >
+                                        <Spinner
+                                            animation="border"
+                                            role="status"
+                                        >
+                                            <span className="visually-hidden">
+                                                Loading...
+                                            </span>
+                                        </Spinner>
+                                    </Container>
                                 )}
                             </div>
                         </Col>

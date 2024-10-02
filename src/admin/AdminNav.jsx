@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { Container, Row } from "reactstrap";
+import { Container, Row, Spinner } from "reactstrap";
 import useAuth from "../custom-hooks/useAuth";
 import "../styles/admin-nav.css";
 import { NavLink } from "react-router-dom";
@@ -13,7 +13,7 @@ import { toast } from "react-toastify";
 const admin_nav = [
     {
         display: "Profile",
-        path: "/admin/profile"
+        path: "/admin/profile",
     },
     {
         display: "Dashboard",
@@ -42,7 +42,14 @@ const AdminNav = () => {
     const profileActionRef = useRef();
 
     if (isLoading) {
-        return <div className="fw-bold text-center">Loading...</div>;
+        <Container
+            className="d-flex justify-content-center align-items-center"
+            style={{ height: "100vh" }}
+        >
+            <Spinner animation="border" role="status">
+                <span className="visually-hidden">Loading...</span>
+            </Spinner>
+        </Container>;
     }
 
     if (!isAdmin) {

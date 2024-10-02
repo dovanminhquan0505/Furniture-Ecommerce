@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Container, Row, Col, Form, FormGroup } from "reactstrap";
+import { Container, Row, Col, Form, FormGroup, Spinner } from "reactstrap";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { db, storage } from "../firebase.config";
@@ -71,14 +71,23 @@ const AddProducts = () => {
             toast.error("Something went wrong!");
         }
     };
-    
+
     return (
         <section>
             <Container>
                 <Row className="justify-content-center">
                     <Col lg="8">
                         {loading ? (
-                            <h4 className="text-center fw-bold">Loading...</h4>
+                            <Container
+                                className="d-flex justify-content-center align-items-center"
+                                style={{ height: "100vh" }}
+                            >
+                                <Spinner animation="border" role="status">
+                                    <span className="visually-hidden">
+                                        Loading...
+                                    </span>
+                                </Spinner>
+                            </Container>
                         ) : (
                             <div className="create-product-form">
                                 <h4 className="mb-4">Create Product</h4>
@@ -95,7 +104,7 @@ const AddProducts = () => {
                                             required
                                         />
                                     </FormGroup>
-    
+
                                     <FormGroup className="form__group">
                                         <span>Short Description</span>
                                         <input
@@ -103,12 +112,14 @@ const AddProducts = () => {
                                             placeholder="Sample short desc"
                                             value={enterShortDesc}
                                             onChange={(e) =>
-                                                setEnterShortDesc(e.target.value)
+                                                setEnterShortDesc(
+                                                    e.target.value
+                                                )
                                             }
                                             required
                                         />
                                     </FormGroup>
-    
+
                                     <FormGroup className="form__group">
                                         <span>Description</span>
                                         <input
@@ -116,12 +127,14 @@ const AddProducts = () => {
                                             placeholder="Description...."
                                             value={enterDescription}
                                             onChange={(e) =>
-                                                setEnterDescription(e.target.value)
+                                                setEnterDescription(
+                                                    e.target.value
+                                                )
                                             }
                                             required
                                         />
                                     </FormGroup>
-    
+
                                     <div className="d-flex align-items-center">
                                         <FormGroup className="form__group">
                                             <span>Price</span>
@@ -130,12 +143,14 @@ const AddProducts = () => {
                                                 placeholder="$100"
                                                 value={enterPrice}
                                                 onChange={(e) =>
-                                                    setEnterPrice(e.target.value)
+                                                    setEnterPrice(
+                                                        e.target.value
+                                                    )
                                                 }
                                                 required
                                             />
                                         </FormGroup>
-    
+
                                         <FormGroup className="form__group">
                                             <span>Category</span>
                                             <select
@@ -149,17 +164,23 @@ const AddProducts = () => {
                                                 required
                                             >
                                                 <option>Select Category</option>
-                                                <option value="chair">Chair</option>
-                                                <option value="sofa">Sofa</option>
+                                                <option value="chair">
+                                                    Chair
+                                                </option>
+                                                <option value="sofa">
+                                                    Sofa
+                                                </option>
                                                 <option value="bed">Bed</option>
-                                                <option value="table">Table</option>
+                                                <option value="table">
+                                                    Table
+                                                </option>
                                                 <option value="television">
                                                     Television
                                                 </option>
                                             </select>
                                         </FormGroup>
                                     </div>
-    
+
                                     <div>
                                         <FormGroup className="form__group">
                                             <span>Product Image</span>
@@ -174,7 +195,7 @@ const AddProducts = () => {
                                             />
                                         </FormGroup>
                                     </div>
-    
+
                                     <motion.button
                                         whileTap={{ scale: 1.2 }}
                                         className="buy__btn__product"

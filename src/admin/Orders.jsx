@@ -1,5 +1,5 @@
 import React from "react";
-import { Container, Col, Row } from "reactstrap";
+import { Container, Col, Row, Spinner } from "reactstrap";
 import useGetData from "../custom-hooks/useGetData";
 import { motion } from "framer-motion";
 import { db } from "../firebase.config";
@@ -49,9 +49,14 @@ const Orders = () => {
 
                             <tbody>
                                 {loading ? (
-                                    <h6 className="fw-bold text-center">
-                                        Loading....
-                                    </h6>
+                                    <Container
+                                    className="d-flex justify-content-center align-items-center"
+                                    style={{ height: "100vh" }}
+                                >
+                                    <Spinner animation="border" role="status">
+                                        <span className="visually-hidden">Loading...</span>
+                                    </Spinner>
+                                </Container>
                                 ) : (
                                     ordersData.map((order) => {
                                         const createdAt = order.createdAt

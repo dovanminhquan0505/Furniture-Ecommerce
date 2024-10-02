@@ -1,5 +1,5 @@
 import React from "react";
-import { Container, Row, Col } from "reactstrap";
+import { Container, Row, Col, Spinner } from "reactstrap";
 import useGetData from "../custom-hooks/useGetData";
 import { motion } from "framer-motion";
 import { deleteDoc, doc } from "firebase/firestore";
@@ -17,7 +17,7 @@ const Users = () => {
         toast.success("User deleted successfully!");
     };
     return (
-        <section className={`${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
+        <section className={`${isDarkMode ? "dark-mode" : "light-mode"}`}>
             <Container>
                 <Row>
                     <Col lg="12" className="pt-1">
@@ -33,9 +33,19 @@ const Users = () => {
 
                             <tbody>
                                 {loading ? (
-                                    <h4 className="fw-bold pt-5">
-                                        Loading....
-                                    </h4>
+                                    <Container
+                                        className="d-flex justify-content-center align-items-center"
+                                        style={{ height: "100vh" }}
+                                    >
+                                        <Spinner
+                                            animation="border"
+                                            role="status"
+                                        >
+                                            <span className="visually-hidden">
+                                                Loading...
+                                            </span>
+                                        </Spinner>
+                                    </Container>
                                 ) : (
                                     usersData?.map((user) => (
                                         <tr key={user.uid}>
@@ -46,8 +56,12 @@ const Users = () => {
                                                     alt=""
                                                 />
                                             </td>
-                                            <td data-label="Username">{user.displayName}</td>
-                                            <td data-label="Email">{user.email}</td>
+                                            <td data-label="Username">
+                                                {user.displayName}
+                                            </td>
+                                            <td data-label="Email">
+                                                {user.email}
+                                            </td>
                                             <td data-label="Action">
                                                 <motion.button
                                                     onClick={() => {

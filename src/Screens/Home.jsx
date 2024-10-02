@@ -10,6 +10,7 @@ import ProductsList from "../components/UI/ProductsList";
 import Clock from "../components/UI/Clock";
 import counterImg from "../assets/images/counter-timer-img.png";
 import useGetData from "../custom-hooks/useGetData";
+import { Spinner } from "react-bootstrap";
 
 const Home = () => {
     const { data: products, loading } = useGetData("products");
@@ -98,7 +99,16 @@ const Home = () => {
                             </h2>
                         </Col>
                         {loading ? (
-                            <h4 className="fw-bold">Loading...</h4>
+                            <Container
+                                className="d-flex justify-content-center align-items-center"
+                                style={{ height: "100vh" }}
+                            >
+                                <Spinner animation="border" role="status">
+                                    <span className="visually-hidden">
+                                        Loading...
+                                    </span>
+                                </Spinner>
+                            </Container>
                         ) : (
                             <ProductsList data={trendingProducts} />
                         )}
@@ -113,7 +123,16 @@ const Home = () => {
                             <h2 className="section__title">Best Sales</h2>
                         </Col>
                         {loading ? (
-                            <h4 className="fw-bold">Loading...</h4>
+                            <Container
+                                className="d-flex justify-content-center align-items-center"
+                                style={{ height: "100vh" }}
+                            >
+                                <Spinner animation="border" role="status">
+                                    <span className="visually-hidden">
+                                        Loading...
+                                    </span>
+                                </Spinner>
+                            </Container>
                         ) : (
                             <ProductsList data={bestSalesProducts} />
                         )}
@@ -156,12 +175,30 @@ const Home = () => {
                             <h2 className="section__title">New Arrivals</h2>
                         </Col>
                         {loading ? (
-                            <h4 className="fw-bold">Loading...</h4>
+                            <Container
+                                className="d-flex justify-content-center align-items-center"
+                                style={{ height: "100vh" }}
+                            >
+                                <Spinner animation="border" role="status">
+                                    <span className="visually-hidden">
+                                        Loading...
+                                    </span>
+                                </Spinner>
+                            </Container>
                         ) : (
                             <ProductsList data={bedProducts} />
                         )}
                         {loading ? (
-                            <h4 className="fw-bold">Loading...</h4>
+                            <Container
+                                className="d-flex justify-content-center align-items-center"
+                                style={{ height: "100vh" }}
+                            >
+                                <Spinner animation="border" role="status">
+                                    <span className="visually-hidden">
+                                        Loading...
+                                    </span>
+                                </Spinner>
+                            </Container>
                         ) : (
                             <ProductsList data={televisionProducts} />
                         )}
@@ -178,7 +215,16 @@ const Home = () => {
                             </h2>
                         </Col>
                         {loading ? (
-                            <h4 className="fw-bold">Loading...</h4>
+                            <Container
+                                className="d-flex justify-content-center align-items-center"
+                                style={{ height: "100vh" }}
+                            >
+                                <Spinner animation="border" role="status">
+                                    <span className="visually-hidden">
+                                        Loading...
+                                    </span>
+                                </Spinner>
+                            </Container>
                         ) : (
                             <ProductsList data={popularProducts} />
                         )}

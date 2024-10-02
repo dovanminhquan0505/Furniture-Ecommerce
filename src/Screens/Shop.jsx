@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import CommonSection from "../components/UI/CommonSection";
 import Helmet from "../components/Helmet/Helmet";
-import { Container, Row, Col } from "reactstrap";
+import { Container, Row, Col, Spinner } from "reactstrap";
 import "../styles/shop.css";
 import products from "../assets/data/products";
 import ProductsList from "../components/UI/ProductsList";
@@ -143,7 +143,16 @@ const Shop = () => {
                 <Container>
                     <Row>
                         {loading ? (
-                            <h4 className="fw-bold text-center">Loading....</h4>
+                            <Container
+                                className="d-flex justify-content-center align-items-center"
+                                style={{ height: "100vh" }}
+                            >
+                                <Spinner animation="border" role="status">
+                                    <span className="visually-hidden">
+                                        Loading...
+                                    </span>
+                                </Spinner>
+                            </Container>
                         ) : productsData.length === 0 ? (
                             <h1 className="text-center fs-4">
                                 Products are not found!

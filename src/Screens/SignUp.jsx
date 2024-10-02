@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import "../styles/signup.css";
 import Helmet from "../components/Helmet/Helmet";
-import { Container, Row, Col, Form, FormGroup } from "reactstrap";
+import { Container, Row, Col, Form, FormGroup, Spinner } from "reactstrap";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
@@ -59,15 +59,20 @@ const Signup = () => {
 
             if (user) {
                 //This creates a reference to Firebase Storage where a file (e.g., an image) will be uploaded.
-                const storageRef = ref(storage, `images/${Date.now() + username}`);
+                const storageRef = ref(
+                    storage,
+                    `images/${Date.now() + username}`
+                );
                 //This function uploads the file to the Firebase Storage under the reference created earlier (storageRef).
                 const uploadTask = uploadBytesResumable(storageRef, file);
-                
+
                 // Listen the process of uploading
                 uploadTask.on(
-                    'state_changed',
+                    "state_changed",
                     (snapshot) => {
-                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        const progress =
+                            (snapshot.bytesTransferred / snapshot.totalBytes) *
+                            100;
                         console.log(`Upload is ${progress}% done`);
                     },
                     (error) => {
@@ -76,15 +81,22 @@ const Signup = () => {
                     },
                     async () => {
                         // After uploading finished, update file URL
-                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                        
+                        const downloadURL = await getDownloadURL(
+                            uploadTask.snapshot.ref
+                        );
+
                         // Update information about user's profile
                         await updateProfile(user, {
                             displayName: username,
                             photoURL: downloadURL,
                         });
-                        
-                        const role = email === process.env.REACT_APP_FURNITURE_ECOMMERCE_ADMIN_EMAIL ? "admin" : "user";
+
+                        const role =
+                            email ===
+                            process.env
+                                .REACT_APP_FURNITURE_ECOMMERCE_ADMIN_EMAIL
+                                ? "admin"
+                                : "user";
 
                         // Save the user's information to firebase database
                         await setDoc(doc(db, "users", user.uid), {
@@ -94,7 +106,7 @@ const Signup = () => {
                             photoURL: downloadURL,
                             role: role,
                         });
-    
+
                         setLoading(false);
                         toast.success("Account created successfully!");
                         navigate("/checkout");
@@ -105,7 +117,9 @@ const Signup = () => {
             setLoading(false);
             //Check if user use email existed before
             if (error.code === "auth/email-already-in-use") {
-                toast.error("Email is already in use. Please try another email.");
+                toast.error(
+                    "Email is already in use. Please try another email."
+                );
             } else {
                 toast.error(error.message || "Something went wrong!");
             }
@@ -118,19 +132,34 @@ const Signup = () => {
                 <Container>
                     <Row>
                         {loading ? (
-                            <Col lg="12" className="text-center">
-                                <h5 className="signup-loading">Loading...</h5>
-                            </Col>
+                            <Container
+                                className="d-flex justify-content-center align-items-center"
+                                style={{ height: "100vh" }}
+                            >
+                                <Spinner animation="border" role="status">
+                                    <span className="visually-hidden">
+                                        Loading...
+                                    </span>
+                                </Spinner>
+                            </Container>
                         ) : (
-                            <Col lg="6" className="m-auto text-center signup-col">
+                            <Col
+                                lg="6"
+                                className="m-auto text-center signup-col"
+                            >
                                 <h3 className="signup__title">Register</h3>
-                                <Form className="signup__form" onSubmit={register}>
+                                <Form
+                                    className="signup__form"
+                                    onSubmit={register}
+                                >
                                     <FormGroup className="signup__formGroup">
                                         <input
                                             type="text"
                                             placeholder="Username"
                                             value={username}
-                                            onChange={(e) => setUsername(e.target.value)}
+                                            onChange={(e) =>
+                                                setUsername(e.target.value)
+                                            }
                                             className="signup__input"
                                         />
                                     </FormGroup>
@@ -139,7 +168,9 @@ const Signup = () => {
                                             type="email"
                                             placeholder="Enter your email"
                                             value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
+                                            onChange={(e) =>
+                                                setEmail(e.target.value)
+                                            }
                                             className="signup__input"
                                         />
                                     </FormGroup>
@@ -148,14 +179,18 @@ const Signup = () => {
                                             type="password"
                                             placeholder="Enter your password"
                                             value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
+                                            onChange={(e) =>
+                                                setPassword(e.target.value)
+                                            }
                                             className="signup__input"
                                         />
                                     </FormGroup>
                                     <FormGroup className="signup__formGroup">
                                         <input
                                             type="file"
-                                            onChange={(e) => setFile(e.target.files[0])}
+                                            onChange={(e) =>
+                                                setFile(e.target.files[0])
+                                            }
                                             className="signup__input"
                                         />
                                     </FormGroup>
@@ -170,7 +205,10 @@ const Signup = () => {
 
                                     <p className="signup__text">
                                         Already have an account?
-                                        <Link to="/login" className="signup__link">
+                                        <Link
+                                            to="/login"
+                                            className="signup__link"
+                                        >
                                             Login
                                         </Link>
                                     </p>

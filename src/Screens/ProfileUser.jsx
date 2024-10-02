@@ -40,12 +40,15 @@ import { useNavigate } from "react-router-dom";
 import Helmet from "../components/Helmet/Helmet";
 import { useTheme } from "../components/UI/ThemeContext";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { useDispatch } from "react-redux";
+import { userActions } from "../redux/slices/userSlice";
 
 const ProfileUser = () => {
     const [editing, setEditing] = useState(false);
     const [isDataLoading, setIsDataLoading] = useState(true);
     const [isEmpty, setIsEmpty] = useState(false);
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const inputFileRef = useRef(null);
     const [isAvatarUpLoading, setIsAvatarUpLoading] = useState(false);
     const [activeSection, setActiveSection] = useState(null);
@@ -302,6 +305,9 @@ const ProfileUser = () => {
                 // Update photoURL in Firebase Storage
                 const userDocRef = doc(db, "users", auth.currentUser.uid);
                 await updateDoc(userDocRef, { photoURL: downloadURL });
+
+                // Update Redux state
+                dispatch(userActions.updateUserPhoto(downloadURL));
 
                 toast.success("Avatar uploaded successfully!");
             } catch (error) {

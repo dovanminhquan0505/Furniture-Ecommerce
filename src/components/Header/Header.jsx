@@ -6,7 +6,6 @@ import logo from "../../assets/images/eco-logo.png";
 import userIcon from "../../assets/images/user-icon.png";
 import { useSelector } from "react-redux";
 import { Container, Row } from "reactstrap";
-import useAuth from "../../custom-hooks/useAuth";
 import { signOut } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { toast } from "react-toastify";
@@ -35,11 +34,10 @@ const Header = () => {
     const totalQuantity = useSelector((state) => state.cart?.totalQuantity || 0);
     const totalQuantityWishList = useSelector((state) => state.wishlist?.totalQuantity || 0);
     const profileActionRef = useRef(null);
-
+    const { currentUser } = useSelector((state) => state.user);
     const menuRef = useRef(null);
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { currentUser } = useAuth();
     const { isAdmin } = useAdmin();
 
     const stickyHeaderFunc = () => {

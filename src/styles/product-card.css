@@ -1,55 +1,103 @@
 /* Product Card */
-.product__item{
-    cursor: pointer;
+.product__item {
+    position: relative;
+    overflow: hidden;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
 }
 
-.product__info h3 a{
-    font-size: 1.2rem;
-    color: var(--primary-color);
-    font-weight: 600;
-    margin-top: 15px;
+.product__item:hover {
+    transform: translateY(-10px);
 }
 
-.product__info a:hover {
-    color: inherit;
+.product__img {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 250px; /* Đặt chiều cao cố định cho ảnh */
 }
 
-.product__info span {
-    font-size: 0.9rem;
+.product__img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Đảm bảo ảnh vừa với khung mà không bị méo */
+    transition: transform 0.3s ease;
 }
 
-.product__card-bottom .price {
-    color: var(--primary-color);
-    font-size: 1.3rem;
-    font-weight: 500;
+.product__img:hover img {
+    transform: scale(1.1);
 }
 
-.product__card-bottom span i {
-    font-size: 1.2rem;
-    padding: 5px;
-    background: var(--primary-color);
-    color: #fff;
+.product__overlay {
+    position: absolute;
+    top: 10px; /* Đặt icon ở phía trên cùng bên phải */
+    right: 10px;
+    background-color: rgba(0, 0, 0, 0.5);
     border-radius: 50%;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
-.product__item .product__img img {
-    width: 215px;
-    height: 215px;
-    object-fit: contain;
+.product__img:hover .product__overlay {
+    opacity: 1;
 }
 
-@media only screen and (max-width: 992px) {
-    .product__info h3 a {
-        font-size: 1.1rem;
-    }
+.heart__icon {
+    font-size: 1.5rem;
+    color: white;
+    cursor: pointer;
+    transition: color 0.3s ease;
 }
 
-@media only screen and (max-width: 768px) {
-    .product__info h3 a {
-        font-size: 1rem;
-    }
+.heart__icon:hover {
+    color: red;
+}
 
-    .product__card-bottom span i {
-        font-size: 1rem;
-    }
+.product__info {
+    padding: 16px;
+}
+
+.product__name {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.product__name a {
+    text-decoration: none;
+    color: #333;
+    transition: color 0.3s ease;
+}
+
+.product__name a:hover {
+    color: #ff6347;
+}
+
+.product__card-bottom {
+    border-top: 1px solid #eaeaea;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.price {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #ff6347;
+}
+
+.ri-add-line {
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #333;
+}
+
+.ri-add-line:hover {
+    color: #ff6347;
 }

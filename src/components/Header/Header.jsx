@@ -11,6 +11,9 @@ import { signOut } from "firebase/auth";
 import { auth } from "../../firebase.config";
 import { toast } from "react-toastify";
 import useAdmin from "../../custom-hooks/useAdmin";
+import { useDispatch } from "react-redux";
+import { cartActions } from "../../redux/slices/cartSlice";
+import { wishListActions } from "../../redux/slices/wishListSlice";
 
 const nav__links = [
     {
@@ -29,11 +32,12 @@ const nav__links = [
 
 const Header = () => {
     const headerRef = useRef(null);
-    const totalQuantity = useSelector((state) => state.cart.totalQuantity);
+    const totalQuantity = useSelector((state) => state.cart?.totalQuantity || 0);
+    const totalQuantityWishList = useSelector((state) => state.wishlist?.totalQuantity || 0);
     const profileActionRef = useRef(null);
 
     const menuRef = useRef(null);
-
+    const dispatch = useDispatch();
     const navigate = useNavigate();
     const { currentUser } = useAuth();
     const { isAdmin } = useAdmin();
@@ -56,6 +60,9 @@ const Header = () => {
     const logOut = () => {
         signOut(auth)
             .then(() => {
+                // Delete cart and wishlist when user is logged out
+                dispatch(cartActions.clearCart());
+                dispatch(wishListActions.clearWishList());
                 toast.success("Logged out");
             })
             .catch((error) => {
@@ -82,6 +89,11 @@ const Header = () => {
     const navigateToCart = () => {
         navigate("/cart");
     };
+
+    //Navigate to WishList
+    const navigateToWishList = () => {
+        navigate("/wishlist");
+    }
 
     const toggleProfileActions = () => {
         if (profileActionRef.current) {
@@ -129,9 +141,9 @@ const Header = () => {
                         </div>
 
                         <div className="nav__icons">
-                            <span className="fav__icon">
+                            <span className="fav__icon" onClick={navigateToWishList}>
                                 <i class="ri-heart-line"></i>
-                                <span className="badge">1</span>
+                                <span className="badge">{totalQuantityWishList}</span>
                             </span>
 
                             <span

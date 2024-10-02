@@ -5,8 +5,8 @@ import { Col } from "reactstrap";
 import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { cartActions } from "../../redux/slices/cartSlice";
-//React-Toastify allows you to add notifications to your app with ease.
 import { toast } from "react-toastify";
+import { wishListActions } from "../../redux/slices/wishListSlice";
 
 const ProductCard = ({ item }) => {
     //Add product to cart
@@ -25,6 +25,12 @@ const ProductCard = ({ item }) => {
         toast.success("Product added successfully!");
     };
 
+    // Add product to wish list
+    const addToWishList = () => {
+        dispatch(wishListActions.addToWishList(item));
+        toast.success("Product added to wishlist successfully!");
+    }
+
     return (
         <Col lg="3" md="4" className="mb-2">
             <div className="product__item">
@@ -32,8 +38,17 @@ const ProductCard = ({ item }) => {
                     <motion.img
                         whileHover={{ scale: 0.9 }}
                         src={item.imgUrl}
-                        alt=""
+                        alt={item.productName}
                     />
+
+                    {/* Display overlay when user hover */}
+                    <div className="product__overlay">
+                        <motion.i
+                            className="ri-heart-line heart__icon"
+                            whileTap={{ scale: 1.2 }}
+                            onClick={addToWishList}
+                        ></motion.i>
+                    </div>
                 </div>
                 <div className="p-2 product__info">
                     <h3 className="product__name">

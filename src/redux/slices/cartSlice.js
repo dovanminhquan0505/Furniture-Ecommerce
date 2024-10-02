@@ -77,6 +77,15 @@ const cartSlice = createSlice({
             state.totalTax = Math.round((0.15 * state.totalAmount * 100) / 100);
             state.totalPrice = state.totalShipping + state.totalTax + state.totalAmount;
         },
+
+        clearCart: (state) => {
+            state.cartItems = [];
+            state.totalAmount = 0;
+            state.totalQuantity = 0;
+            state.totalShipping = 0;
+            state.totalTax = 0;
+            state.totalPrice = 0;
+        },
     },
 });
 

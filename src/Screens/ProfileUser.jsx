@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Button, Table, Form } from "react-bootstrap";
+import React, { useEffect, useRef, useState } from "react";
+import { Container, Row, Col, Button, Table, Form, Spinner, Alert } from "react-bootstrap";
 import {
     User,
     Mail,
@@ -27,7 +27,7 @@ import {
     updateDoc,
     where,
 } from "firebase/firestore";
-import { auth, db } from "../firebase.config";
+import { auth, db, storage } from "../firebase.config";
 import { toast } from "react-toastify";
 import {
     onAuthStateChanged,
@@ -39,11 +39,16 @@ import {
 import { useNavigate } from "react-router-dom";
 import Helmet from "../components/Helmet/Helmet";
 import { useTheme } from "../components/UI/ThemeContext";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 const ProfileUser = () => {
-    const navigate = useNavigate();
-    const [activeSection, setActiveSection] = useState(null);
     const [editing, setEditing] = useState(false);
+    const [isDataLoading, setIsDataLoading] = useState(true);
+    const [isEmpty, setIsEmpty] = useState(false);
+    const navigate = useNavigate();
+    const inputFileRef = useRef(null);
+    const [isAvatarUpLoading, setIsAvatarUpLoading] = useState(false);
+    const [activeSection, setActiveSection] = useState(null);
     const [showPassword, setShowPassword] = useState(false);
     const { isDarkMode, toggleDarkMode } = useTheme();
     const [userInfo, setUserInfo] = useState({
@@ -62,6 +67,8 @@ const ProfileUser = () => {
 
     useEffect(() => {
         const fetchUserData = async (user) => {
+            setIsDataLoading(true);
+            setIsEmpty(false);
             try {
                 if (user) {
                     const userDocRef = doc(db, "users", user.uid);
@@ -84,16 +91,25 @@ const ProfileUser = () => {
                         };
                         setUserInfo(newUserInfo);
                         setOriginalUserInfo(newUserInfo);
+
+                        if (Object.keys(userData).length === 0) {
+                            setIsEmpty(true);
+                        }
                     } else {
-                        toast.error("User document not found in Firestore!");
+                        toast.error("User not found");
                     }
+                } else {
+                    toast.error("User document not found in Firestore!");
                 }
             } catch (error) {
                 toast.error("Fetch failed for user: " + error.message);
+            } finally {
+                setIsDataLoading(false);
             }
         };
 
         const fetchOrderData = async (userId) => {
+            setIsDataLoading(true);
             if (!userId) {
                 toast.error("User ID is undefined!");
                 return;
@@ -139,6 +155,8 @@ const ProfileUser = () => {
                     "Failed to get order document from Firestore: " +
                         error.message
                 );
+            } finally {
+                setIsDataLoading(false);
             }
         };
 
@@ -261,6 +279,45 @@ const ProfileUser = () => {
                 toast.error(error.message);
             });
         navigate("/login");
+    };
+
+    const handleAvatarChange = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setIsAvatarUpLoading(true);
+            // Update temporary image in UI
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setUserInfo((prev) => ({ ...prev, photoURL: reader.result }));
+            };
+            reader.readAsDataURL(file);
+
+            // Upload image to Firebase Storage
+            const avatarRef = ref(storage, `avatars/${auth.currentUser.uid}`);
+
+            try {
+                await uploadBytes(avatarRef, file); // Upload file
+                const downloadURL = await getDownloadURL(avatarRef);
+
+                // Update photoURL in Firebase Storage
+                const userDocRef = doc(db, "users", auth.currentUser.uid);
+                await updateDoc(userDocRef, { photoURL: downloadURL });
+
+                toast.success("Avatar uploaded successfully!");
+            } catch (error) {
+                toast.error("Failed to upload avatar: " + error.message);
+            } finally {
+                setIsAvatarUpLoading(false);
+            }
+        }
+    };
+
+    const handleAvatarClick = () => {
+        if (editing) {
+            inputFileRef.current.click();
+        } else {
+            toast.info("You need to be in Edit mode to upload");
+        }
     };
 
     // Render Personal Information
@@ -518,7 +575,9 @@ const ProfileUser = () => {
         <div>
             <h3>Logout</h3>
             <p>Are you sure you want to log out of the user profile?</p>
-            <Button variant="danger" className="mt-3" onClick={handleLogOut}>Logout</Button>
+            <Button variant="danger" className="mt-3" onClick={handleLogOut}>
+                Logout
+            </Button>
         </div>
     );
 
@@ -572,6 +631,27 @@ const ProfileUser = () => {
         },
     ];
 
+    if (isEmpty) {
+        return (
+            <Alert variant="info">
+                No user data available. Please update your profile.
+            </Alert>
+        );
+    }
+
+    if (isDataLoading) {
+        return (
+            <Container
+                className="d-flex justify-content-center align-items-center"
+                style={{ height: "100vh" }}
+            >
+                <Spinner animation="border" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </Spinner>
+            </Container>
+        );
+    }
+
     return (
         <Helmet title=" Profile">
             <Container
@@ -590,7 +670,35 @@ const ProfileUser = () => {
                                         "https://via.placeholder.com/150"
                                     }
                                     alt="Admin Avatar"
+                                    onClick={handleAvatarClick}
+                                    style={{
+                                        cursor: editing ? "pointer" : "default",
+                                        opacity: isAvatarUpLoading ? 0.5 : 1,
+                                    }}
                                 />
+
+                                {editing && (
+                                    <>
+                                        <input
+                                            type="file"
+                                            ref={inputFileRef}
+                                            accept="image/*"
+                                            style={{ display: "none" }}
+                                            onChange={handleAvatarChange}
+                                        />
+                                        <div className="avatar-edit-overlay">
+                                            {isAvatarUpLoading
+                                                ? "Uploading..."
+                                                : "Click to change your avatar"}
+                                        </div>
+                                    </>
+                                )}
+
+                                {isAvatarUpLoading && (
+                                    <div className="avatar-loading-overlay">
+                                        <Spinner animation="border" size="sm" />
+                                    </div>
+                                )}
                             </div>
                             <h1 className="profile-name">
                                 {userInfo.displayName}

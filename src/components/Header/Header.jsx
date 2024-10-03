@@ -96,10 +96,25 @@ const Header = () => {
     const toggleProfileActions = () => {
         if (profileActionRef.current) {
             profileActionRef.current.classList.toggle("active__profileActions");
-        } else {
-            console.warn("profileActionRef is null")
         }
     };
+
+    // Handle auto turn off profile actions when user clicks on outside.
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (profileActionRef.current && !profileActionRef.current.contains(event.target)) {
+                profileActionRef.current.classList.remove("active__profileActions");
+            }
+        };
+    
+        // Add event listener
+        document.addEventListener("mousedown", handleClickOutside);
+    
+        // Cleanup event listener when component is unmounted
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
     return (
         <header className="header" ref={headerRef}>
@@ -226,23 +241,23 @@ const Header = () => {
                                         </div>
                                     ) : (
                                         <div className="d-flex align-items-center justify-content-center flex-column">
-                                            <span className="signup d-flex align-items-center mb-2">
-                                                <Link
-                                                    to="/signup"
-                                                    className="signup__profile"
-                                                >
-                                                    Sign Up
-                                                </Link>
-                                            </span>
-
-                                            <div className="line"></div>
-
-                                            <span className="login d-flex align-items-center">
+                                            <span className="login d-flex align-items-center mb-2">
                                                 <Link
                                                     to="/login"
                                                     className="login__profile"
                                                 >
                                                     Login
+                                                </Link>
+                                            </span>
+
+                                            <div className="line"></div>
+
+                                            <span className="signup d-flex align-items-center">
+                                                <Link
+                                                    to="/signup"
+                                                    className="signup__profile"
+                                                >
+                                                    Sign Up
                                                 </Link>
                                             </span>
                                         </div>

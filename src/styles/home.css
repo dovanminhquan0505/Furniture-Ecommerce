@@ -19,6 +19,10 @@
     font-weight: 500;
 }
 
+.section__title {
+    font-size: 1.7rem;
+}
+
 .section__title-trending {
     margin-bottom: 20px;
 }

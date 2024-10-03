@@ -6,13 +6,13 @@ import CommonSection from "../components/UI/CommonSection";
 import { useNavigate, useParams } from "react-router-dom";
 import "../styles/checkout.css";
 import "../styles/placeorder.css";
-import { useSelector } from "react-redux";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { toast } from "react-toastify";
-import { doc, getDoc, Timestamp, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, Timestamp, updateDoc } from "firebase/firestore";
 import { db } from "../firebase.config";
-import useAuth from "../custom-hooks/useAuth";
 import useAdmin from "../custom-hooks/useAdmin";
+import { cartActions } from "../redux/slices/cartSlice";
+import { useDispatch } from "react-redux";
 
 // Get Paypal Client from your environment
 const clientId = process.env.REACT_APP_PAYPAL_CLIENT_ID;
@@ -25,6 +25,7 @@ const PlaceOrder = () => {
     const { isAdmin, isLoading: adminLoading } = useAdmin();
     const [orderDetails, setOrderDetails] = useState(null);
     const [showPaypal, setShowPaypal] = useState(false);
+    const dispatch = useDispatch();
 
     useEffect(() => {
         if (!orderId) {
@@ -96,6 +97,9 @@ const PlaceOrder = () => {
                 isPaid: true,
                 paidAt: paidAt,
             }));
+
+            // Clear cart and update Redux store
+            dispatch(cartActions.clearCart());
 
             toast.success("Payment successful!");
         } catch (error) {

@@ -85,7 +85,7 @@ const Orders = () => {
                                                 <td data-label="Total Price">${order.totalPrice}</td>
                                                 <td data-label="Paid at">{paidAt}</td>
                                                 <td data-label="Delivered at">{deliveredAt}</td>
-                                                <td data-label="Actions">
+                                                <td data-label="Actions" className="actions__orders">
                                                     <motion.button
                                                         whileTap={{
                                                             scale: 1.1,

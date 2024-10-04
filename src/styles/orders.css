@@ -1,3 +1,8 @@
+table .actions__orders {
+    display: flex;
+    align-items: center;
+}
+
 /* Responsive table on smaller screens */
 @media screen and (max-width: 768px) {
     .table, .table thead, .table tbody, .table th, .table td, .table tr {

@@ -1,6 +1,5 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { Container, Row, Spinner } from "reactstrap";
-import useAuth from "../custom-hooks/useAuth";
 import "../styles/admin-nav.css";
 import { NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -9,6 +8,7 @@ import useAdmin from "../custom-hooks/useAdmin";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
+import { useSelector } from "react-redux";
 
 const admin_nav = [
     {
@@ -37,9 +37,26 @@ const admin_nav = [
 ];
 
 const AdminNav = () => {
-    const { currentUser } = useAuth();
     const { isAdmin, isLoading } = useAdmin();
     const profileActionRef = useRef();
+    const { currentUser } = useSelector((state) => state.user);
+
+    // Handle auto turn off profile actions when user clicks on outside.
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (profileActionRef.current && !profileActionRef.current.contains(event.target)) {
+                profileActionRef.current.classList.remove("active__profileActions");
+            }
+        };
+    
+        // Add event listener
+        document.addEventListener("mousedown", handleClickOutside);
+    
+        // Cleanup event listener when component is unmounted
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
     if (isLoading) {
         <Container

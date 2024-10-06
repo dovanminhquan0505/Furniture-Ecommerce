@@ -4,9 +4,10 @@ import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col, Form, FormGroup, Spinner } from "reactstrap";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase.config";
+import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { auth, googleProvider } from "../firebase.config";
 import { toast } from "react-toastify";
+import logoGoogle from "../assets/images/logoGoogle.jpg";
 
 const Login = () => {
     const [email, setEmail] = useState("");
@@ -60,10 +61,39 @@ const Login = () => {
                     toast.error("Invalid Login Information!");
                     break;
                 default:
-                    toast.error(error.message); // Thông báo lỗi chung
+                    toast.error(error.message); // General error message
             }
         }
     };
+
+    // Sign In for Google account.
+    const signInWithGoogle = async () => {
+        setLoading(true);
+        try {
+            const result = await signInWithPopup(auth, googleProvider);
+            const user = result.user;
+            console.log(user);
+            setLoading(false);
+            toast.success("Successfully logged in with Google!");
+            navigate("/checkout");
+        } catch (error) {
+            setLoading(false);
+            toast.error(error.message); // General error message
+        }
+    };
+
+    if (loading) {
+        return (
+            <Container
+                className="d-flex justify-content-center align-items-center"
+                style={{ height: "100vh" }}
+            >
+                <Spinner animation="border" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </Spinner>
+            </Container>
+        );
+    }
 
     return (
         <Helmet title=" Login">
@@ -117,6 +147,26 @@ const Login = () => {
                                     >
                                         Login
                                     </motion.button>
+
+                                    <div className="login__section">
+                                        Or Login With
+                                    </div>
+
+                                    {/* Google Sign In button */}
+                                    <motion.button
+                                        whileTap={{ scale: 1.1 }}
+                                        type="button"
+                                        className="google-login-btn"
+                                        onClick={signInWithGoogle}
+                                    >
+                                        <img
+                                            src={logoGoogle}
+                                            alt="Google Logo"
+                                            className="google-logo"
+                                        />
+                                        <span>Sign in with Google</span>
+                                    </motion.button>
+
                                     <p className="login-text">
                                         Don't have an account?
                                         <Link

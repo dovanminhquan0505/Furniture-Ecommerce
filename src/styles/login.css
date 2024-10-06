@@ -69,9 +69,10 @@
 }
 
 .login-link {
-    color: #5a67d8;
+    color: #333;
     text-decoration: none;
     font-weight: 600;
+    margin-left: 2px;
 }
 
 .login-link:hover {
@@ -81,4 +82,62 @@
 .login-loading {
     font-size: 1.2rem;
     color: #5a67d8;
+}
+
+/* Adjust the divider */
+.login__section {
+    position: relative;
+    text-align: center;
+    margin: 20px 0;
+    color: #5f6368;
+    font-size: 14px;
+}
+
+.login__section::before,
+.login__section::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background-color: #dadce0;
+}
+
+.login__section::before {
+    left: 0;
+}
+
+.login__section::after {
+    right: 0;
+}
+
+/* Google Login */
+.google-login-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 10px;
+    background-color: #ffffff;
+    border: 1px solid #aeadad;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.google-login-btn:hover {
+    background-color: #f8f9fa;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.google-logo {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+}
+
+.google-login-btn span {
+    color: #3c4043;
+    font-size: 14px;
+    font-weight: 600;
 }

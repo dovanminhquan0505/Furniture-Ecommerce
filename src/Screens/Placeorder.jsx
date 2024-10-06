@@ -8,7 +8,7 @@ import "../styles/checkout.css";
 import "../styles/placeorder.css";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { toast } from "react-toastify";
-import { collection, doc, getDoc, Timestamp, updateDoc } from "firebase/firestore";
+import { doc, getDoc, Timestamp, updateDoc } from "firebase/firestore";
 import { db } from "../firebase.config";
 import useAdmin from "../custom-hooks/useAdmin";
 import { cartActions } from "../redux/slices/cartSlice";

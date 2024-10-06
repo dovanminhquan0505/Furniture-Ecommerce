@@ -19,6 +19,7 @@ import {
 } from "firebase/firestore";
 import useGetData from "../custom-hooks/useGetData";
 import useAdmin from "../custom-hooks/useAdmin";
+import useAuth from "../custom-hooks/useAuth";
 
 const ProductDetails = () => {
     const [tab, setTab] = useState("desc");
@@ -32,6 +33,7 @@ const ProductDetails = () => {
     const { data: products } = useGetData("products");
     const docRef = doc(db, "products", id);
     const { isAdmin, isLoading } = useAdmin();
+    const { currentUser } = useAuth();
 
     useEffect(() => {
         const unsubscribe = onSnapshot(docRef, (doc) => {
@@ -98,6 +100,7 @@ const ProductDetails = () => {
             message: reviewUserMessage,
             rating: rating,
             createdAt: new Date().toISOString(),
+            likes: [],
         };
 
         try {
@@ -127,6 +130,47 @@ const ProductDetails = () => {
             toast.error("Failed to delete review. Please try again");
         }
     };
+
+    // Handle like reviews
+    const toggleLikeReviews = async (review) => {
+        if (!currentUser) {
+            toast.error("Please log in to like reviews.");
+            return;
+        }
+
+        const userId = currentUser.uid;
+
+        try {
+            const updatedReviews = reviews.map((item) => {
+                if (item === review) {
+                    const likes = item.likes || [];
+                    const userLikeIndex = likes.indexOf(userId);
+                    if (userLikeIndex > -1) {
+                        // User already liked, so remove the like
+                        likes.splice(userLikeIndex, 1);
+                        toast.info("You unliked this review!");
+                    } else {
+                        // User hasn't liked, so add the like
+                        likes.push(userId);
+                        toast.success("You liked this review!");
+                    }
+                    return { ...item, likes };
+                }
+                return item;
+            });
+
+            await updateDoc(docRef, { reviews: updatedReviews });
+
+            // Update local state
+            setProduct((prevProduct) => ({
+                ...prevProduct,
+                reviews: updatedReviews,
+            }));
+        } catch (error) {
+            console.error("Error updating likes:", error);
+            toast.error("Failed to update likes. Please try again.");
+        }
+    }
 
     const addToCart = () => {
         dispatch(
@@ -275,51 +319,99 @@ const ProductDetails = () => {
                                     <div className="review__wrapper">
                                         <ul>
                                             {Array.isArray(reviews) &&
-                                                reviews.map((item, index) => (
-                                                    <li
-                                                        key={index}
-                                                        className="review__item mb-4"
-                                                    >
-                                                        <div className="review__content">
-                                                            <h6>
-                                                                {item.userName}
-                                                            </h6>
-                                                            <span className="stars">
-                                                                {item.rating}{" "}
-                                                                <i class="ri-star-s-fill"></i>
-                                                            </span>
-                                                            <p>
-                                                                {item.message}
-                                                            </p>
+                                                reviews.map((item, index) => {
+                                                    return (
+                                                        <li
+                                                            key={index}
+                                                            className="review__item mb-4"
+                                                        >
+                                                            <div className="review__content">
+                                                                <h6 className="mt-2">
+                                                                    {item.userName}
+                                                                </h6>
+                                                                <div
+                                                                    className="stars"
+                                                                    style={{
+                                                                        display: "flex",
+                                                                        alignItems: "center",
+                                                                        gap: "10px",
+                                                                    }}
+                                                                >
+                                                                    <span className="rating__stars">
+                                                                        {[
+                                                                            1, 2, 3, 4, 5,
+                                                                        ].map(
+                                                                            (star) => (
+                                                                                <i
+                                                                                    key={star}
+                                                                                    className={`ri-star-${
+                                                                                        star <=
+                                                                                        item.rating
+                                                                                            ? "fill"
+                                                                                            : "line"
+                                                                                    }`}
+                                                                                    style={{
+                                                                                        color:
+                                                                                            star <=
+                                                                                            item.rating
+                                                                                                ? "#FFD700"
+                                                                                                : "gray",
+                                                                                    }}
+                                                                                ></i>
+                                                                            )
+                                                                        )}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
 
                                                             {/* Time Reviews */}
                                                             {item.createdAt && (
                                                                 <small className="text-muted">
-                                                                    Time:{" "}
+                                                                    Time:
                                                                     {formatTime(
                                                                         item.createdAt
                                                                     )}
                                                                 </small>
                                                             )}
-                                                        </div>
 
-                                                        {/* Delete icon for admin only */}
-                                                        {!isLoading &&
-                                                            isAdmin && (
-                                                                <span
-                                                                    className="delete-review-btn"
-                                                                    onClick={() =>
-                                                                        deleteReviews(
-                                                                            item
-                                                                        )
-                                                                    }
-                                                                    title="Delete review"
+                                                            <p className="review__comment">
+                                                                {item.message}
+                                                            </p>
+
+                                                            <div className="review__actions">
+                                                                <motion.span
+                                                                    whileTap={{scale: 1.2}} 
+                                                                    onClick={() => toggleLikeReviews(item)}
+                                                                    className="actions__like"
                                                                 >
-                                                                    <i className="ri-delete-bin-line"></i>
-                                                                </span>
-                                                            )}
-                                                    </li>
-                                                ))}
+                                                                    {item.likes && item.likes.includes(currentUser?.uid) ? "Dislike" : "Like"}
+                                                                    ({item.likes ? item.likes.length : 0})
+                                                                </motion.span>
+                                                                <motion.span 
+                                                                    whileTap={{scale: 1.1}}
+                                                                >
+                                                                    Comment
+                                                                </motion.span>
+                                                            </div>
+
+                                                            {/* Delete icon for admin only */}
+                                                            {!isLoading &&
+                                                                isAdmin && (
+                                                                    <span
+                                                                        className="delete-review-btn"
+                                                                        onClick={() =>
+                                                                            deleteReviews(
+                                                                                item
+                                                                            )
+                                                                        }
+                                                                        title="Delete review"
+                                                                    >
+                                                                        <i className="ri-delete-bin-line"></i>
+                                                                    </span>
+                                                                )}
+                                                        </li>
+                                                    );
+                                                })}
                                         </ul>
 
                                         <div className="review__form">

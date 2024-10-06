@@ -177,6 +177,43 @@
     padding-right: 40px;
 }
 
+.review__item .review__comment {
+    font-size: 1.2rem;
+}
+
+.review__item .review__actions{
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.review__item .review__actions span {
+    font-size: 0.9rem;
+    color: #636363;
+}
+
+.review__item .review__actions span:hover {
+    color: #333;
+}
+
+.review__item .review__actions .actions__like {
+    margin-right: 20px;
+    margin-bottom: 2px;
+}
+
+.rating__stars {
+    display: inline-flex;
+    color: #FFD700;
+    font-size: 0.9rem;
+}
+
+.review__content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .delete-review-btn {
     position: absolute;
     top: 0;

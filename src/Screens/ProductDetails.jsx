@@ -34,6 +34,10 @@ const ProductDetails = () => {
     const docRef = doc(db, "products", id);
     const { isAdmin, isLoading } = useAdmin();
     const { currentUser } = useAuth();
+    // Set Reviews Comment State
+    const [replyingTo, setReplyingTo] = useState(null);
+    const [replyMessage, setReplyMessage] = useState("");
+    const [replyUserName, setReplyUserName] = useState("");
 
     useEffect(() => {
         const unsubscribe = onSnapshot(docRef, (doc) => {
@@ -171,6 +175,45 @@ const ProductDetails = () => {
             toast.error("Failed to update likes. Please try again.");
         }
     }
+    
+    // Handle reply click events
+    const handleReplyClick = (reviewIndex) => {
+        setReplyingTo(reviewIndex);
+        setReplyMessage("");
+        setReplyUserName("");
+    }
+
+    // Handle submit reply comment
+    const handleReplySubmit = async (reviewIndex) => {
+        if(!replyMessage.trim() || !replyUserName.trim()) {
+            toast.error("Please fill in both name and message fields.")
+            return;
+        }
+
+        const replyObject = {
+            userName: replyUserName,
+            message: replyMessage,
+            createdAt: new Date().toISOString(),
+        };
+
+        try {
+            const updateReviews = [...reviews];
+            if(!updateReviews[reviewIndex].replies) {
+                updateReviews[reviewIndex].replies = [];
+            }
+            updateReviews[reviewIndex].replies.push(replyObject);
+
+            await updateDoc(docRef, { reviews: updateReviews });
+
+            setReplyingTo(null);
+            setReplyMessage("");
+            setReplyUserName("");
+            toast.success("Reply sent successfully!");
+        } catch (error) {
+            console.error("Error adding reply:", error);
+            toast.error("Failed to add reply. Please try again.");
+        }
+    } 
 
     const addToCart = () => {
         dispatch(
@@ -389,10 +432,52 @@ const ProductDetails = () => {
                                                                 </motion.span>
                                                                 <motion.span 
                                                                     whileTap={{scale: 1.1}}
+                                                                    onClick={() => handleReplyClick(index)}
                                                                 >
                                                                     Comment
                                                                 </motion.span>
                                                             </div>
+
+                                                            {/* Display existing replies */}
+                                                            {item.replies && item.replies.length > 0 && (
+                                                                <ul className="replies-list">
+                                                                {item.replies.map((reply, replyIndex) => (
+                                                                    <li key={replyIndex} className="reply-item">
+                                                                        <h6>{reply.userName}</h6>
+                                                                        <p>{reply.message}</p>
+                                                                        <small className="text-muted">
+                                                                            {formatTime(reply.createdAt)}
+                                                                        </small>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                            )}
+
+                                                            {/* Reply form */}
+                                                            {replyingTo === index && (
+                                                                <div className="reply-form">
+                                                                    <input
+                                                                        type="text"
+                                                                        placeholder="Your name"
+                                                                        value={replyUserName}
+                                                                        onChange={(e) => setReplyUserName(e.target.value)}
+                                                                        required
+                                                                    />
+                                                                    <textarea
+                                                                        placeholder="Your reply"
+                                                                        value={replyMessage}
+                                                                        onChange={(e) => setReplyMessage(e.target.value)}
+                                                                        required
+                                                                    ></textarea>
+                                                                    <motion.button
+                                                                        whileTap={{ scale: 1.2 }}
+                                                                        onClick={() => handleReplySubmit(index)}
+                                                                        className="buy__btn"
+                                                                    >
+                                                                        Send Reply
+                                                                    </motion.button>
+                                                                </div>
+                                                            )}
 
                                                             {/* Delete icon for admin only */}
                                                             {!isLoading &&

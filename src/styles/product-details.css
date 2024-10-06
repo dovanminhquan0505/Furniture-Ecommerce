@@ -287,6 +287,120 @@
     color: var(--primary-color);
 }
 
+/* Reply Comment */
+.replies-list {
+    margin-top: 15px;
+    padding-left: 20px;
+    list-style-type: none;
+}
+
+.reply-item {
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 10px var(--shadow-color);
+}
+
+.reply-item h6 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: var(--primary-color);
+}
+
+.reply-item p {
+    font-size: 0.95rem;
+    margin-bottom: 5px;
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.reply-item small {
+    font-size: 0.8rem;
+    color: var(--light-text-color);
+}
+
+.reply-form {
+    margin-top: 15px;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 2px 10px var(--shadow-color);
+}
+
+.reply-form input,
+.reply-form textarea {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.reply-form input:focus,
+.reply-form textarea:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.reply-form textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.reply-form button {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.reply-form button:hover {
+    background-color: var(--primary-color);
+}
+
+/* Responsive adjustments for new styles */
+@media only screen and (max-width: 768px) {
+    .reply-item {
+        padding: 12px;
+    }
+
+    .reply-form {
+        padding: 12px;
+    }
+}
+
+@media only screen and (max-width: 576px) {
+    .replies-list {
+        padding-left: 10px;
+    }
+
+    .reply-item {
+        padding: 10px;
+    }
+
+    .reply-form {
+        padding: 10px;
+    }
+
+    .reply-form input,
+    .reply-form textarea {
+        padding: 8px;
+    }
+
+    .reply-form button {
+        padding: 8px 12px;
+    }
+}
+
 @media only screen and (max-width: 768px) {
     .product__details h2 {
         font-size: 2rem;

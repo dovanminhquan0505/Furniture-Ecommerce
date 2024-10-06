@@ -172,6 +172,24 @@
     margin-right: 0.2rem;
 }
 
+.review__item {
+    position: relative;
+    padding-right: 40px;
+}
+
+.delete-review-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: none;
+    border: none;
+    color: #787777 !important;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 5px;
+    transition: all 0.3s ease;
+}
+
 /* Review Form */
 .review__form {
     background-color: #fff;

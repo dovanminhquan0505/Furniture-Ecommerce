@@ -69,9 +69,10 @@
 }
 
 .signup__link {
-    color: #5a67d8;
+    color: #333;
     text-decoration: none;
     font-weight: 600;
+    margin-left: 2px;
 }
 
 .signup__link:hover {

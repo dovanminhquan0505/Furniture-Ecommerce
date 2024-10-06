@@ -5,9 +5,10 @@ import { Container, Row, Col, Form, FormGroup, Spinner } from "reactstrap";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
-import { auth, googleProvider } from "../firebase.config";
+import { auth, db, googleProvider } from "../firebase.config";
 import { toast } from "react-toastify";
 import logoGoogle from "../assets/images/logoGoogle.jpg";
+import { doc, setDoc } from "firebase/firestore";
 
 const Login = () => {
     const [email, setEmail] = useState("");
@@ -75,12 +76,38 @@ const Login = () => {
             console.log(user);
             setLoading(false);
             toast.success("Successfully logged in with Google!");
+
+            // Add user information to Firestore account
+            await addUserToFireStore(user);
+
             navigate("/checkout");
         } catch (error) {
             setLoading(false);
             toast.error(error.message); // General error message
         }
     };
+
+    // Handle add user to Users collection
+    const addUserToFireStore = async (user) => {
+        const userRef = doc(db, "users", user.uid);
+        const userData = {
+            displayName: user.displayName || user.email,
+            email: user.email,
+            photoURL: user.photoURL,
+            role: "user",
+            uid: user.uid, 
+            loginStatus: "Google"
+        };
+
+        try {
+            // Add or update user information
+            await setDoc(userRef, userData, { merge: true });
+            toast.success("User info added to Firestore!");
+        } catch (error) {
+            console.error("Error adding user info to Firestore: ", error);
+            toast.error("Failed to add user info.");
+        }
+    }
 
     if (loading) {
         return (

@@ -20,6 +20,7 @@ import {
 import useGetData from "../custom-hooks/useGetData";
 import useAdmin from "../custom-hooks/useAdmin";
 import useAuth from "../custom-hooks/useAuth";
+import productsData from "../assets/data/products";
 
 const ProductDetails = () => {
     const [tab, setTab] = useState("desc");
@@ -47,23 +48,17 @@ const ProductDetails = () => {
                 const productData = doc.data();
                 setProduct(productData);
 
-                // Calculate average rating
-                if (
-                    Array.isArray(productData.reviews) &&
-                    productData.reviews.length > 0
-                ) {
-                    const avgRating =
-                        productData.reviews.reduce(
-                            (sum, review) => sum + review.rating,
-                            0
-                        ) / productData.reviews.length;
-                    setProduct((prev) => ({
-                        ...prev,
-                        avgRating: avgRating.toFixed(1),
-                    }));
+                if (Array.isArray(productData.reviews) && productData.reviews.length > 0) {
+                    const avgRating = productData.reviews.reduce((sum, review) => sum + review.rating, 0) / productData.reviews.length;
+                    setProduct(prev => ({ ...prev, avgRating: avgRating.toFixed(1) }));
                 }
             } else {
-                toast.error("Product not found!");
+                const staticProduct = productsData.find(p => p.id === id);
+                if (staticProduct) {
+                    setProduct(staticProduct);
+                } else {
+                    toast.error("Product not found!");
+                }
             }
         });
 

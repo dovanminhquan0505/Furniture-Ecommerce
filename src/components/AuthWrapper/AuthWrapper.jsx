@@ -11,19 +11,33 @@ const AuthWrapper = ({ children }) => {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
+                const userData = {
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: user.displayName,
+                    photoURL: user.photoURL,
+                }
+
                 // User is signed in
                 const userDocRef = doc(db, "users", user.uid);
                 try {
                     const userDoc = await getDoc(userDocRef);
                     if (userDoc.exists()) {
+                        const userFirestoreData = userDoc.data();
+                        const birthDate = userFirestoreData.birthDate?.toDate?.().toISOString() || null;
+
                         // Combine auth user data with Firestore user data
-                        dispatch(userActions.setUser({ ...user, ...userDoc.data() }));
+                        dispatch(userActions.setUser({ 
+                            ...userData, 
+                            ...userFirestoreData, 
+                            birthDate,
+                        }));
                     } else {
-                        dispatch(userActions.setUser(user));
+                        dispatch(userActions.setUser(userData));
                     }
                 } catch (error) {
                     console.error("Error fetching user data:", error);
-                    dispatch(userActions.setUser(user));
+                    dispatch(userActions.setUser(userData));
                 }
             } else {
                 // User is signed out

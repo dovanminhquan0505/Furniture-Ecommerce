@@ -3,90 +3,56 @@ import CommonSection from "../components/UI/CommonSection";
 import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col, Spinner } from "reactstrap";
 import "../styles/shop.css";
-import products from "../assets/data/products";
+import productsData from "../assets/data/products";
 import ProductsList from "../components/UI/ProductsList";
 import useGetData from "../custom-hooks/useGetData";
 
 const Shop = () => {
     //Create products based on firebase data
     const { data: productsFirebase, loading } = useGetData("products");
-    // Create initialProducts based on products data
-    const initialProducts = useMemo(() => {
-        return products;
-    }, []);
-    // Combine initialProducts and products from firebase data to get all products
-    const allProducts = useMemo(() => {
-        return [...initialProducts, ...productsFirebase];
-    }, [initialProducts, productsFirebase]);
-
-    // Create state of productsData
-    const [productsData, setProductsData] = useState([]);
-    // Create state of sort productsData
+    const [products, setProducts] = useState([]);
+    const [filteredProducts, setFilteredProducts] = useState([]);
     const [sortOrder, setSortOrder] = useState("default");
 
     // Save database to local storage
     useEffect(() => {
-        if (!loading) {
-            const storedProducts = JSON.parse(
-                localStorage.getItem("productsData")
-            );
-            if (storedProducts && storedProducts.length > 0) {
-                setProductsData(storedProducts);
-            } else {
-                setProductsData(allProducts);
-                localStorage.setItem(
-                    "productsData",
-                    JSON.stringify(allProducts)
-                );
-            }
-        }
-    }, [loading, allProducts]);
+        const allProducts = [...productsData, ...productsFirebase];
+        setProducts(allProducts);
+        setFilteredProducts(allProducts);
+    }, [productsFirebase]);
 
     // Handle filter products based on category
     const handleFilter = (e) => {
         const filterValue = e.target.value;
-        let filteredProducts;
         if (filterValue === "all") {
-            filteredProducts = allProducts;
+            setFilteredProducts(products);
         } else {
-            filteredProducts = allProducts.filter(
-                (item) => item.category === filterValue
-            );
+            const filtered = products.filter((item) => item.category === filterValue);
+            setFilteredProducts(filtered);
         }
-        setProductsData(filteredProducts);
-        localStorage.setItem("productsData", JSON.stringify(filteredProducts));
+        // localStorage.setItem("productsData", JSON.stringify(filteredProducts));
     };
 
     // Handle search products
     const handleSearch = (e) => {
-        const searchTerm = e.target.value;
-        const searchedProducts = allProducts.filter(
-            (item) =>
-                item.productName &&
-                item.productName
-                    .toLowerCase()
-                    .includes(searchTerm.toLowerCase())
+        const searchTerm = e.target.value.toLowerCase();
+        const searchedProducts = products.filter((item) =>
+            item.productName && item.productName.toLowerCase().includes(searchTerm)
         );
-        setProductsData(searchedProducts);
-        localStorage.setItem("productsData", JSON.stringify(searchedProducts));
+        setFilteredProducts(searchedProducts);
     };
 
     // Handle sort products based on product name
     const handleSort = (e) => {
         const sortValue = e.target.value;
         setSortOrder(sortValue);
-        let sortedProducts = [...productsData];
+        let sortedProducts = [...filteredProducts];
         if (sortValue === "ascending") {
-            sortedProducts.sort((a, b) =>
-                a.productName.localeCompare(b.productName)
-            );
+            sortedProducts.sort((a, b) => a.productName.localeCompare(b.productName));
         } else if (sortValue === "descending") {
-            sortedProducts.sort((a, b) =>
-                b.productName.localeCompare(a.productName)
-            );
+            sortedProducts.sort((a, b) => b.productName.localeCompare(a.productName));
         }
-        setProductsData(sortedProducts);
-        localStorage.setItem("productsData", JSON.stringify(sortedProducts));
+        setFilteredProducts(sortedProducts);
     };
 
     return (
@@ -158,7 +124,7 @@ const Shop = () => {
                                 Products are not found!
                             </h1>
                         ) : (
-                            <ProductsList data={productsData} />
+                            <ProductsList data={filteredProducts} />
                         )}
                     </Row>
                 </Container>

@@ -175,10 +175,54 @@ const ProductDetails = () => {
             toast.error("Failed to update likes. Please try again.");
         }
     }
+
+    // Handle like replies
+    const toggleLikeReplies = async (reviewIndex, replyIndex) => {
+        if (!currentUser) {
+            toast.error("Please log in to like replies.");
+            return;
+        }
+
+        const userId = currentUser.uid;
+
+        try {
+            const updatedReviews = [...reviews];
+            const targetReply = updatedReviews[reviewIndex].replies[replyIndex];
+
+            if(!targetReply.likes) {
+                targetReply.likes = [];
+            }
+
+            const userLikeIndex = targetReply.likes.indexOf(userId);
+            if (userLikeIndex > -1) {
+                targetReply.likes.splice(userLikeIndex, 1);
+                toast.info("You unliked this reply!");
+            } else {
+                targetReply.likes.push(userId);
+                toast.success("You liked this reply!");
+            }
+
+            await updateDoc(docRef, { reviews: updatedReviews });
+
+            setProduct((prevProduct) => ({
+                ...prevProduct,
+                reviews: updatedReviews,
+            }));
+        } catch (error) {
+            console.error("Error updating likes for reply:", error);
+            toast.error("Failed to update likes. Please try again.");
+        }
+    }
     
     // Handle reply click events
-    const handleReplyClick = (reviewIndex) => {
-        setReplyingTo(reviewIndex);
+    const handleReplyClick = (reviewIndex, replyIndex = null) => {
+        if (replyingTo === reviewIndex) {
+            // Nếu đang mở reply cho review này, đóng nó lại
+            setReplyingTo(null);
+        } else {
+            // Mở reply mới
+            setReplyingTo(reviewIndex);
+        }
         setReplyMessage("");
         setReplyUserName("");
     }
@@ -194,6 +238,7 @@ const ProductDetails = () => {
             userName: replyUserName,
             message: replyMessage,
             createdAt: new Date().toISOString(),
+            likes: [],
         };
 
         try {
@@ -410,7 +455,6 @@ const ProductDetails = () => {
                                                             {/* Time Reviews */}
                                                             {item.createdAt && (
                                                                 <small className="text-muted">
-                                                                    Time:
                                                                     {formatTime(
                                                                         item.createdAt
                                                                     )}
@@ -448,6 +492,22 @@ const ProductDetails = () => {
                                                                         <small className="text-muted">
                                                                             {formatTime(reply.createdAt)}
                                                                         </small>
+                                                                        <div className="review__actions">
+                                                                            <motion.span
+                                                                                whileTap={{scale: 1.2}} 
+                                                                                onClick={() => toggleLikeReplies(index, replyIndex)}
+                                                                                className="actions__like"
+                                                                            >
+                                                                                {reply.likes && reply.likes.includes(currentUser?.uid) ? "Dislike" : "Like"}
+                                                                                ({reply.likes ? reply.likes.length : 0})
+                                                                            </motion.span>
+                                                                            <motion.span 
+                                                                                whileTap={{scale: 1.1}}
+                                                                                onClick={() => handleReplyClick(index)}
+                                                                            >
+                                                                                Comment
+                                                                            </motion.span>
+                                                                        </div>
                                                                     </li>
                                                                 ))}
                                                             </ul>

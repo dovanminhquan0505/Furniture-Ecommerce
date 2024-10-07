@@ -32,6 +32,7 @@ const ProductDetails = () => {
     const { id } = useParams();
     const [product, setProduct] = useState({});
     const { data: products } = useGetData("products");
+    const [isStaticProduct, setIsStaticProduct] = useState(false);
     const docRef = doc(db, "products", id);
     const { isAdmin, isLoading } = useAdmin();
     const { currentUser } = useAuth();
@@ -47,6 +48,7 @@ const ProductDetails = () => {
             if (doc.exists()) {
                 const productData = doc.data();
                 setProduct(productData);
+                setIsStaticProduct(false);
 
                 if (Array.isArray(productData.reviews) && productData.reviews.length > 0) {
                     const avgRating = productData.reviews.reduce((sum, review) => sum + review.rating, 0) / productData.reviews.length;
@@ -56,6 +58,7 @@ const ProductDetails = () => {
                 const staticProduct = productsData.find(p => p.id === id);
                 if (staticProduct) {
                     setProduct(staticProduct);
+                    setIsStaticProduct(true);
                 } else {
                     toast.error("Product not found!");
                 }
@@ -144,35 +147,57 @@ const ProductDetails = () => {
         const userId = currentUser.uid;
 
         try {
-            const updatedReviews = reviews.map((item) => {
+            let updatedReviews;
+            if (isStaticProduct) {
+              // Handle for static products
+              updatedReviews = product.reviews.map((item) => {
                 if (item === review) {
-                    const likes = item.likes || [];
-                    const userLikeIndex = likes.indexOf(userId);
-                    if (userLikeIndex > -1) {
-                        // User already liked, so remove the like
-                        likes.splice(userLikeIndex, 1);
-                        toast.info("You unliked this review!");
-                    } else {
-                        // User hasn't liked, so add the like
-                        likes.push(userId);
-                        toast.success("You liked this review!");
-                    }
-                    return { ...item, likes };
+                  const likes = item.likes || [];
+                  const userLikeIndex = likes.indexOf(userId);
+                  if (userLikeIndex > -1) {
+                    likes.splice(userLikeIndex, 1);
+                    toast.info("You have disliked this review");
+                  } else {
+                    likes.push(userId);
+                    toast.success("You have liked this review");
+                  }
+                  return { ...item, likes };
                 }
                 return item;
-            });
-
-            await updateDoc(docRef, { reviews: updatedReviews });
-
-            // Update local state
-            setProduct((prevProduct) => ({
+              });
+              setProduct(prevProduct => ({
                 ...prevProduct,
-                reviews: updatedReviews,
+                reviews: updatedReviews
+              }));
+            } else {
+              // Handle for products from Firestore.
+              updatedReviews = reviews.map((item) => {
+                if (item === review) {
+                  const likes = item.likes || [];
+                  const userLikeIndex = likes.indexOf(userId);
+                  if (userLikeIndex > -1) {
+                    likes.splice(userLikeIndex, 1);
+                    toast.info("You have disliked this review!");
+                  } else {
+                    likes.push(userId);
+                    toast.success("You have liked this review!");
+                  }
+                  return { ...item, likes };
+                }
+                return item;
+              });
+              await updateDoc(docRef, { reviews: updatedReviews });
+            }
+      
+            // Update local state.
+            setProduct(prevProduct => ({
+              ...prevProduct,
+              reviews: updatedReviews,
             }));
-        } catch (error) {
+          } catch (error) {
             console.error("Error updating likes:", error);
-            toast.error("Failed to update likes. Please try again.");
-        }
+            toast.error("Can't update like for product:", error.message);
+          }
     }
 
     // Handle like replies

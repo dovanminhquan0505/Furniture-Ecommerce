@@ -15,8 +15,9 @@ const product = [
             "Lorem ipsum dolor sit amet consectetur adipisicing elit. Optio nostrum accusantium iste, voluptas cumque provident! Consequatur officiis animi rem tempore voluptate cumque hic similique aperiam ut consectetur distinctio repudiandae quia quam quos, quas illo, iusto, necessitatibus odio veniam exercitationem quis voluptatibus debitis laboriosam! Esse debitis obcaecati blanditiis at impedit quibusdam!",
         reviews: [
             {
+                userName: "Hoàng",
                 rating: 4.7,
-                message: "Lorem ipsum dolor sit amet consectetur adipisicing elit.",
+                message: "Create some products like this product pls.",
             },
         ],
         avgRating: 4.5,
@@ -33,8 +34,9 @@ const product = [
             "Lorem ipsum dolor sit amet consectetur adipisicing elit. Optio nostrum accusantium iste, voluptas cumque provident! Consequatur officiis animi rem tempore voluptate cumque hic similique aperiam ut consectetur distinctio repudiandae quia quam quos, quas illo, iusto, necessitatibus odio veniam exercitationem quis voluptatibus debitis laboriosam! Esse debitis obcaecati blanditiis at impedit quibusdam!",
         reviews: [
             {
-                rating: 4.7,
-                message: "Lorem ipsum dolor sit amet consectetur adipisicing elit.",
+                userName: "Long",
+                rating: 3.5,
+                message: "I think shop need to improve some products.",
             },
         ],
         avgRating: 4.5,
@@ -51,8 +53,9 @@ const product = [
             "Lorem ipsum dolor sit amet consectetur adipisicing elit. Optio nostrum accusantium iste, voluptas cumque provident! Consequatur officiis animi rem tempore voluptate cumque hic similique aperiam ut consectetur distinctio repudiandae quia quam quos, quas illo, iusto, necessitatibus odio veniam exercitationem quis voluptatibus debitis laboriosam! Esse debitis obcaecati blanditiis at impedit quibusdam!",
         reviews: [
             {
+                userName: "Xuân",
                 rating: 4.5,
-                message: "Lorem ipsum dolor sit amet consectetur adipisicing elit.",
+                message: "I like this product so much.",
             },
         ],
         avgRating: 4.5,

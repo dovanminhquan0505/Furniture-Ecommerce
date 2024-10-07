@@ -38,13 +38,14 @@ const Users = () => {
                                         style={{ height: "100vh" }}
                                     >
                                         <Spinner
-                                            animation="border"
-                                            role="status"
-                                        >
-                                            <span className="visually-hidden">
-                                                Loading...
-                                            </span>
-                                        </Spinner>
+                                            style={{
+                                                width: "3rem",
+                                                height: "3rem",
+                                            }}
+                                        />
+                                        <span className="visually-hidden">
+                                            Loading...
+                                        </span>
                                     </Container>
                                 ) : (
                                     usersData?.map((user) => (

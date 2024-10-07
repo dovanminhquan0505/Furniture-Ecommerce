@@ -122,13 +122,16 @@ const EditProduct = () => {
                     <Col lg="8">
                         {loading ? (
                             <Container
-                            className="d-flex justify-content-center align-items-center"
-                            style={{ height: "100vh" }}
-                        >
-                            <Spinner animation="border" role="status">
-                                <span className="visually-hidden">Loading...</span>
-                            </Spinner>
-                        </Container>
+                                className="d-flex justify-content-center align-items-center"
+                                style={{ height: "100vh" }}
+                            >
+                                <Spinner
+                                    style={{ width: "3rem", height: "3rem" }}
+                                />
+                                <span className="visually-hidden">
+                                    Loading...
+                                </span>
+                            </Container>
                         ) : (
                             <div className="create-product-form">
                                 <h4 className="mb-4">Edit Product</h4>
@@ -214,13 +217,16 @@ const EditProduct = () => {
                                             {productDetails.imgUrl && (
                                                 <div>
                                                     <img
-                                                        src={productDetails.imgUrl}
+                                                        src={
+                                                            productDetails.imgUrl
+                                                        }
                                                         alt="Current Product"
                                                         style={{
                                                             width: "100px",
                                                             height: "100px",
                                                             objectFit: "cover",
-                                                            marginBottom: "10px",
+                                                            marginBottom:
+                                                                "10px",
                                                         }}
                                                     />
                                                 </div>

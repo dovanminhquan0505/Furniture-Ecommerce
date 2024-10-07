@@ -100,15 +100,12 @@ const Home = () => {
                         </Col>
                         {loading ? (
                             <Container
-                                className="d-flex justify-content-center align-items-center"
-                                style={{ height: "100vh" }}
-                            >
-                                <Spinner animation="border" role="status">
-                                    <span className="visually-hidden">
-                                        Loading...
-                                    </span>
-                                </Spinner>
-                            </Container>
+                            className="d-flex justify-content-center align-items-center"
+                            style={{ height: "100vh" }}
+                        >
+                            <Spinner style={{ width: '3rem', height: '3rem' }} />
+                            <span className="visually-hidden">Loading...</span>
+                        </Container>
                         ) : (
                             <ProductsList data={trendingProducts} />
                         )}
@@ -124,15 +121,12 @@ const Home = () => {
                         </Col>
                         {loading ? (
                             <Container
-                                className="d-flex justify-content-center align-items-center"
-                                style={{ height: "100vh" }}
-                            >
-                                <Spinner animation="border" role="status">
-                                    <span className="visually-hidden">
-                                        Loading...
-                                    </span>
-                                </Spinner>
-                            </Container>
+                            className="d-flex justify-content-center align-items-center"
+                            style={{ height: "100vh" }}
+                        >
+                            <Spinner style={{ width: '3rem', height: '3rem' }} />
+                            <span className="visually-hidden">Loading...</span>
+                        </Container>
                         ) : (
                             <ProductsList data={bestSalesProducts} />
                         )}
@@ -176,29 +170,23 @@ const Home = () => {
                         </Col>
                         {loading ? (
                             <Container
-                                className="d-flex justify-content-center align-items-center"
-                                style={{ height: "100vh" }}
-                            >
-                                <Spinner animation="border" role="status">
-                                    <span className="visually-hidden">
-                                        Loading...
-                                    </span>
-                                </Spinner>
-                            </Container>
+                            className="d-flex justify-content-center align-items-center"
+                            style={{ height: "100vh" }}
+                        >
+                            <Spinner style={{ width: '3rem', height: '3rem' }} />
+                            <span className="visually-hidden">Loading...</span>
+                        </Container>
                         ) : (
                             <ProductsList data={bedProducts} />
                         )}
                         {loading ? (
                             <Container
-                                className="d-flex justify-content-center align-items-center"
-                                style={{ height: "100vh" }}
-                            >
-                                <Spinner animation="border" role="status">
-                                    <span className="visually-hidden">
-                                        Loading...
-                                    </span>
-                                </Spinner>
-                            </Container>
+                            className="d-flex justify-content-center align-items-center"
+                            style={{ height: "100vh" }}
+                        >
+                            <Spinner style={{ width: '3rem', height: '3rem' }} />
+                            <span className="visually-hidden">Loading...</span>
+                        </Container>
                         ) : (
                             <ProductsList data={televisionProducts} />
                         )}
@@ -216,15 +204,12 @@ const Home = () => {
                         </Col>
                         {loading ? (
                             <Container
-                                className="d-flex justify-content-center align-items-center"
-                                style={{ height: "100vh" }}
-                            >
-                                <Spinner animation="border" role="status">
-                                    <span className="visually-hidden">
-                                        Loading...
-                                    </span>
-                                </Spinner>
-                            </Container>
+                            className="d-flex justify-content-center align-items-center"
+                            style={{ height: "100vh" }}
+                        >
+                            <Spinner style={{ width: '3rem', height: '3rem' }} />
+                            <span className="visually-hidden">Loading...</span>
+                        </Container>
                         ) : (
                             <ProductsList data={popularProducts} />
                         )}

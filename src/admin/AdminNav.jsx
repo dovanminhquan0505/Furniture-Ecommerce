@@ -44,14 +44,19 @@ const AdminNav = () => {
     // Handle auto turn off profile actions when user clicks on outside.
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (profileActionRef.current && !profileActionRef.current.contains(event.target)) {
-                profileActionRef.current.classList.remove("active__profileActions");
+            if (
+                profileActionRef.current &&
+                !profileActionRef.current.contains(event.target)
+            ) {
+                profileActionRef.current.classList.remove(
+                    "active__profileActions"
+                );
             }
         };
-    
+
         // Add event listener
         document.addEventListener("mousedown", handleClickOutside);
-    
+
         // Cleanup event listener when component is unmounted
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
@@ -63,9 +68,8 @@ const AdminNav = () => {
             className="d-flex justify-content-center align-items-center"
             style={{ height: "100vh" }}
         >
-            <Spinner animation="border" role="status">
-                <span className="visually-hidden">Loading...</span>
-            </Spinner>
+            <Spinner style={{ width: "3rem", height: "3rem" }} />
+            <span className="visually-hidden">Loading...</span>
         </Container>;
     }
 

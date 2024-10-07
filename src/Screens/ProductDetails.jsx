@@ -91,6 +91,10 @@ const ProductDetails = () => {
     //Handle Send experiences of users
     const submitHandler = async (e) => {
         e.preventDefault();
+        if (!currentUser) {
+            toast.error("Please log in to send reviews.");
+            return;
+        }
 
         const reviewUserName = reviewUser.current.value;
         const reviewUserMessage = reviewMessage.current.value;
@@ -264,6 +268,11 @@ const ProductDetails = () => {
     const handleReplySubmit = async (reviewIndex) => {
         if(!replyMessage.trim() || !replyUserName.trim()) {
             toast.error("Please fill in both name and message fields.")
+            return;
+        }
+
+        if (!currentUser) {
+            toast.error("Please log in to comment reviews.");
             return;
         }
 

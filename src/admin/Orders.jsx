@@ -22,15 +22,15 @@ const Orders = () => {
         } catch (error) {
             toast.error("Failed to delete order:" + error.message);
         }
-    }
+    };
 
     // Handle edit orders
     const editOrder = (orderId) => {
         navigate(`/placeorder/${orderId}`);
-    }
+    };
 
     return (
-        <section className={`${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
+        <section className={`${isDarkMode ? "dark-mode" : "light-mode"}`}>
             <Container>
                 <Row>
                     <Col lg="12">
@@ -50,13 +50,19 @@ const Orders = () => {
                             <tbody>
                                 {loading ? (
                                     <Container
-                                    className="d-flex justify-content-center align-items-center"
-                                    style={{ height: "100vh" }}
-                                >
-                                    <Spinner animation="border" role="status">
-                                        <span className="visually-hidden">Loading...</span>
-                                    </Spinner>
-                                </Container>
+                                        className="d-flex justify-content-center align-items-center"
+                                        style={{ height: "100vh" }}
+                                    >
+                                        <Spinner
+                                            style={{
+                                                width: "3rem",
+                                                height: "3rem",
+                                            }}
+                                        />
+                                        <span className="visually-hidden">
+                                            Loading...
+                                        </span>
+                                    </Container>
                                 ) : (
                                     ordersData.map((order) => {
                                         const createdAt = order.createdAt
@@ -81,17 +87,30 @@ const Orders = () => {
                                                 <td data-label="User">
                                                     {order.billingInfo?.name}
                                                 </td>
-                                                <td data-label="Date">{createdAt}</td>
-                                                <td data-label="Total Price">${order.totalPrice}</td>
-                                                <td data-label="Paid at">{paidAt}</td>
-                                                <td data-label="Delivered at">{deliveredAt}</td>
-                                                <td data-label="Actions" className="actions__orders">
+                                                <td data-label="Date">
+                                                    {createdAt}
+                                                </td>
+                                                <td data-label="Total Price">
+                                                    ${order.totalPrice}
+                                                </td>
+                                                <td data-label="Paid at">
+                                                    {paidAt}
+                                                </td>
+                                                <td data-label="Delivered at">
+                                                    {deliveredAt}
+                                                </td>
+                                                <td
+                                                    data-label="Actions"
+                                                    className="actions__orders"
+                                                >
                                                     <motion.button
                                                         whileTap={{
                                                             scale: 1.1,
                                                         }}
                                                         className="btn btn-primary"
-                                                        onClick={() => editOrder(order.id)}
+                                                        onClick={() =>
+                                                            editOrder(order.id)
+                                                        }
                                                     >
                                                         Edit
                                                     </motion.button>
@@ -100,7 +119,11 @@ const Orders = () => {
                                                             scale: 1.1,
                                                         }}
                                                         className="btn btn-danger"
-                                                        onClick={() => deleteOrder(order.id)}
+                                                        onClick={() =>
+                                                            deleteOrder(
+                                                                order.id
+                                                            )
+                                                        }
                                                     >
                                                         Delete
                                                     </motion.button>

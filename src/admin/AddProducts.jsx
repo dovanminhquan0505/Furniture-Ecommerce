@@ -79,15 +79,12 @@ const AddProducts = () => {
                     <Col lg="8">
                         {loading ? (
                             <Container
-                                className="d-flex justify-content-center align-items-center"
-                                style={{ height: "100vh" }}
-                            >
-                                <Spinner animation="border" role="status">
-                                    <span className="visually-hidden">
-                                        Loading...
-                                    </span>
-                                </Spinner>
-                            </Container>
+                            className="d-flex justify-content-center align-items-center"
+                            style={{ height: "100vh" }}
+                        >
+                            <Spinner style={{ width: '3rem', height: '3rem' }} />
+                            <span className="visually-hidden">Loading...</span>
+                        </Container>
                         ) : (
                             <div className="create-product-form">
                                 <h4 className="mb-4">Create Product</h4>

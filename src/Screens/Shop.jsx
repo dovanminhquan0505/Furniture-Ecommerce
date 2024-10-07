@@ -110,15 +110,12 @@ const Shop = () => {
                     <Row>
                         {loading ? (
                             <Container
-                                className="d-flex justify-content-center align-items-center"
-                                style={{ height: "100vh" }}
-                            >
-                                <Spinner animation="border" role="status">
-                                    <span className="visually-hidden">
-                                        Loading...
-                                    </span>
-                                </Spinner>
-                            </Container>
+                            className="d-flex justify-content-center align-items-center"
+                            style={{ height: "100vh" }}
+                        >
+                            <Spinner style={{ width: '3rem', height: '3rem' }} />
+                            <span className="visually-hidden">Loading...</span>
+                        </Container>
                         ) : productsData.length === 0 ? (
                             <h1 className="text-center fs-4">
                                 Products are not found!

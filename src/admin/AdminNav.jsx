@@ -104,16 +104,16 @@ const AdminNav = () => {
                             <div className="search__box">
                                 <input type="text" placeholder="Search..." />
                                 <span>
-                                    <i class="ri-search-line"></i>
+                                    <i className="ri-search-line"></i>
                                 </span>
                             </div>
 
                             <div className="admin__nav-top-right">
                                 <span>
-                                    <i class="ri-notification-2-line"></i>
+                                    <i className="ri-notification-2-line"></i>
                                 </span>
                                 <span>
-                                    <i class="ri-settings-3-line"></i>
+                                    <i className="ri-settings-3-line"></i>
                                 </span>
                                 <div className="profile">
                                     <motion.img

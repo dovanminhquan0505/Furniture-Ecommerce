@@ -32,8 +32,8 @@ const ProductDetails = () => {
     const { id } = useParams();
     const [product, setProduct] = useState({});
     const { data: products } = useGetData("products");
-    const [isStaticProduct, setIsStaticProduct] = useState(false);
     const docRef = doc(db, "products", id);
+    const [isStaticProduct, setIsStaticProduct] = useState(false);
     const { isAdmin, isLoading } = useAdmin();
     const { currentUser } = useAuth();
     // Set Reviews Comment State
@@ -44,6 +44,7 @@ const ProductDetails = () => {
     const [expandedReplies, setExpandedReplies] = useState({});
 
     useEffect(() => {
+        const docRef = doc(db, "products", id);
         const unsubscribe = onSnapshot(docRef, (doc) => {
             if (doc.exists()) {
                 const productData = doc.data();
@@ -332,9 +333,8 @@ const ProductDetails = () => {
                 className="d-flex justify-content-center align-items-center"
                 style={{ height: "100vh" }}
             >
-                <Spinner animation="border" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                </Spinner>
+                <Spinner style={{ width: '3rem', height: '3rem' }} />
+                <span className="visually-hidden">Loading...</span>
             </Container>
         );
     }

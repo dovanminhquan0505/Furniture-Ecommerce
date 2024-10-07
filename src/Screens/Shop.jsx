@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import CommonSection from "../components/UI/CommonSection";
 import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col, Spinner } from "reactstrap";
@@ -97,7 +97,7 @@ const Shop = () => {
                                     onChange={handleSearch}
                                 />
                                 <span>
-                                    <i class="ri-search-line"></i>
+                                    <i className="ri-search-line"></i>
                                 </span>
                             </div>
                         </Col>

@@ -155,7 +155,7 @@ const Header = () => {
 
                         <div className="nav__icons">
                             <span className="fav__icon" onClick={navigateToWishList}>
-                                <i class="ri-heart-line"></i>
+                                <i className="ri-heart-line"></i>
                                 <span className="badge">{totalQuantityWishList}</span>
                             </span>
 
@@ -163,7 +163,7 @@ const Header = () => {
                                 className="cart__icon"
                                 onClick={navigateToCart}
                             >
-                                <i class="ri-shopping-cart-line"></i>
+                                <i className="ri-shopping-cart-line"></i>
                                 <span className="badge">{totalQuantity}</span>
                             </span>
 
@@ -267,7 +267,7 @@ const Header = () => {
 
                             <div className="mobile__menu">
                                 <span onClick={menuToggle}>
-                                    <i class="ri-menu-line"></i>
+                                    <i className="ri-menu-line"></i>
                                 </span>
                             </div>
                         </div>

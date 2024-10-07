@@ -38,6 +38,8 @@ const ProductDetails = () => {
     const [replyingTo, setReplyingTo] = useState(null);
     const [replyMessage, setReplyMessage] = useState("");
     const [replyUserName, setReplyUserName] = useState("");
+    const [reviewSubmitted, setReviewSubmitted] = useState(false);
+    const [expandedReplies, setExpandedReplies] = useState({});
 
     useEffect(() => {
         const unsubscribe = onSnapshot(docRef, (doc) => {
@@ -118,6 +120,8 @@ const ProductDetails = () => {
             reviewUser.current.value = "";
             reviewMessage.current.value = "";
             setRating(null);
+
+            setReviewSubmitted(true);
         } catch (error) {
             toast.error("Failed to send review. Please try again");
         }
@@ -213,14 +217,22 @@ const ProductDetails = () => {
             toast.error("Failed to update likes. Please try again.");
         }
     }
+
+    // Handle display all comments or disappear it when user clicks on again.
+    const toggleShowReplies = (reviewIndex) => {
+        setExpandedReplies(prev => ({
+            ...prev,
+            [reviewIndex]: !prev[reviewIndex],
+        }));
+    };
     
     // Handle reply click events
     const handleReplyClick = (reviewIndex, replyIndex = null) => {
         if (replyingTo === reviewIndex) {
-            // Nếu đang mở reply cho review này, đóng nó lại
+            // If reply is open for current review, close it
             setReplyingTo(null);
         } else {
-            // Mở reply mới
+            // Open new reply for current review
             setReplyingTo(reviewIndex);
         }
         setReplyMessage("");
@@ -274,10 +286,13 @@ const ProductDetails = () => {
         toast.success("Product added successfully!");
     };
 
-    //when a user switches between products, they start from the top of the page.
+    //when a user send new reviews for product, they start from the top of the page.
     useEffect(() => {
-        window.scrollTo(0, 0);
-    }, [product]);
+        if (reviewSubmitted) {
+            window.scrollTo(0, 0);
+            setReviewSubmitted(false); 
+        }
+    }, [reviewSubmitted]);
 
     // Time format
     const formatTime = (dateString) => {
@@ -305,7 +320,7 @@ const ProductDetails = () => {
     }
 
     return (
-        <Helmet title={productName}>
+        <Helmet title={` ${productName}`}>
             <CommonSection title={productName} />
 
             <section className="pt-0">
@@ -482,8 +497,20 @@ const ProductDetails = () => {
                                                                 </motion.span>
                                                             </div>
 
-                                                            {/* Display existing replies */}
+                                                            {/* Show replies */}
                                                             {item.replies && item.replies.length > 0 && (
+                                                                <motion.span 
+                                                                    id={`toggle__replies-${index}`}
+                                                                    whileTap={{scale: 1}}
+                                                                    className={`toggle__replies ${expandedReplies[index] ? 'expanded' : ''}`}
+                                                                    onClick={() => toggleShowReplies(index)}
+                                                                >
+                                                                    {expandedReplies[index] ? 'Hide' : 'Show'} {item.replies.length} {item.replies.length > 1 ? "replies" : "reply"}
+                                                                </motion.span>
+                                                            )}
+
+                                                            {/* Display existing replies */}
+                                                            {item.replies && item.replies.length > 0 && expandedReplies[index] && (
                                                                 <ul className="replies-list">
                                                                 {item.replies.map((reply, replyIndex) => (
                                                                     <li key={replyIndex} className="reply-item">
@@ -571,7 +598,7 @@ const ProductDetails = () => {
                                                     />
                                                 </div>
 
-                                                <div className="form__group d-flex align-items-center gap-5 rating__group">
+                                                <div className="form__group rating__group">
                                                     {[1, 2, 3, 4, 5].map(
                                                         (star) => (
                                                             <motion.span
@@ -580,9 +607,7 @@ const ProductDetails = () => {
                                                                     scale: 1.2,
                                                                 }}
                                                                 onClick={() =>
-                                                                    setRating(
-                                                                        star
-                                                                    )
+                                                                    setRating(star)
                                                                 }
                                                                 style={{
                                                                     cursor: "pointer",
@@ -592,8 +617,9 @@ const ProductDetails = () => {
                                                                             ? "orange"
                                                                             : "gray",
                                                                 }}
+                                                                className="star__rating-item"
                                                             >
-                                                                {star}{" "}
+                                                                {star}
                                                                 <i className="ri-star-s-fill"></i>
                                                             </motion.span>
                                                         )

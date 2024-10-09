@@ -63,7 +63,7 @@ const PendingOrders = () => {
     };
 
     return (
-        <Helmet>
+        <Helmet title=" Pending Orders">
             <Container className="pending-orders mt-5">
                 <h2 className="text-center mb-4">Pending Orders</h2>
                 {loading ? (

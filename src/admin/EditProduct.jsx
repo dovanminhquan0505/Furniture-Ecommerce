@@ -7,6 +7,7 @@ import { db, storage } from "../firebase.config";
 import { toast } from "react-toastify";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import "../styles/Add-EditProduct.css";
+import Helmet from "../components/Helmet/Helmet";
 
 const EditProduct = () => {
     const { productId } = useParams();
@@ -116,143 +117,157 @@ const EditProduct = () => {
     };
 
     return (
-        <section>
-            <Container>
-                <Row className="justify-content-center">
-                    <Col lg="8">
-                        {loading ? (
-                            <Container
-                                className="d-flex justify-content-center align-items-center"
-                                style={{ height: "100vh" }}
-                            >
-                                <Spinner
-                                    style={{ width: "3rem", height: "3rem" }}
-                                />
-                                <span className="visually-hidden">
-                                    Loading...
-                                </span>
-                            </Container>
-                        ) : (
-                            <div className="create-product-form">
-                                <h4 className="mb-4">Edit Product</h4>
-                                <Form onSubmit={updateProduct}>
-                                    <FormGroup className="form__group">
-                                        <span>Product title</span>
-                                        <input
-                                            type="text"
-                                            name="productName"
-                                            value={productDetails.productName}
-                                            onChange={handleInputChange}
-                                            required
-                                        />
-                                    </FormGroup>
-
-                                    <FormGroup className="form__group">
-                                        <span>Short Description</span>
-                                        <input
-                                            type="text"
-                                            name="shortDesc"
-                                            value={productDetails.shortDesc}
-                                            onChange={handleInputChange}
-                                            required
-                                        />
-                                    </FormGroup>
-
-                                    <FormGroup className="form__group">
-                                        <span>Description</span>
-                                        <input
-                                            type="text"
-                                            name="description"
-                                            value={productDetails.description}
-                                            onChange={handleInputChange}
-                                            required
-                                        />
-                                    </FormGroup>
-
-                                    <div className="d-flex align-items-center">
+        <Helmet title=" Edit-product">
+            <section>
+                <Container>
+                    <Row className="justify-content-center">
+                        <Col lg="8">
+                            {loading ? (
+                                <Container
+                                    className="d-flex justify-content-center align-items-center"
+                                    style={{ height: "100vh" }}
+                                >
+                                    <Spinner
+                                        style={{
+                                            width: "3rem",
+                                            height: "3rem",
+                                        }}
+                                    />
+                                    <span className="visually-hidden">
+                                        Loading...
+                                    </span>
+                                </Container>
+                            ) : (
+                                <div className="create-product-form">
+                                    <h4 className="mb-4">Edit Product</h4>
+                                    <Form onSubmit={updateProduct}>
                                         <FormGroup className="form__group">
-                                            <span>Price</span>
+                                            <span>Product title</span>
                                             <input
-                                                type="number"
-                                                name="price"
-                                                value={productDetails.price}
+                                                type="text"
+                                                name="productName"
+                                                value={
+                                                    productDetails.productName
+                                                }
                                                 onChange={handleInputChange}
                                                 required
                                             />
                                         </FormGroup>
 
                                         <FormGroup className="form__group">
-                                            <span>Category</span>
-                                            <select
-                                                className="p-2"
-                                                name="category"
-                                                value={productDetails.category}
+                                            <span>Short Description</span>
+                                            <input
+                                                type="text"
+                                                name="shortDesc"
+                                                value={productDetails.shortDesc}
                                                 onChange={handleInputChange}
                                                 required
-                                            >
-                                                <option value="">
-                                                    Select Category
-                                                </option>
-                                                <option value="chair">
-                                                    Chair
-                                                </option>
-                                                <option value="sofa">
-                                                    Sofa
-                                                </option>
-                                                <option value="bed">Bed</option>
-                                                <option value="table">
-                                                    Table
-                                                </option>
-                                                <option value="television">
-                                                    Television
-                                                </option>
-                                            </select>
-                                        </FormGroup>
-                                    </div>
-
-                                    <div>
-                                        <FormGroup className="form__group">
-                                            <span>Product Image</span>
-
-                                            {productDetails.imgUrl && (
-                                                <div>
-                                                    <img
-                                                        src={
-                                                            productDetails.imgUrl
-                                                        }
-                                                        alt="Current Product"
-                                                        style={{
-                                                            width: "100px",
-                                                            height: "100px",
-                                                            objectFit: "cover",
-                                                            marginBottom:
-                                                                "10px",
-                                                        }}
-                                                    />
-                                                </div>
-                                            )}
-
-                                            <input
-                                                type="file"
-                                                onChange={handleImageChange}
                                             />
                                         </FormGroup>
-                                    </div>
 
-                                    <motion.button
-                                        whileTap={{ scale: 1.2 }}
-                                        className="buy__btn__product"
-                                        type="submit"
-                                    >
-                                        Update Product
-                                    </motion.button>
-                                </Form>
-                            </div>
-                        )}
-                    </Col>
-                </Row>
-            </Container>
-        </section>
+                                        <FormGroup className="form__group">
+                                            <span>Description</span>
+                                            <input
+                                                type="text"
+                                                name="description"
+                                                value={
+                                                    productDetails.description
+                                                }
+                                                onChange={handleInputChange}
+                                                required
+                                            />
+                                        </FormGroup>
+
+                                        <div className="d-flex align-items-center">
+                                            <FormGroup className="form__group">
+                                                <span>Price</span>
+                                                <input
+                                                    type="number"
+                                                    name="price"
+                                                    value={productDetails.price}
+                                                    onChange={handleInputChange}
+                                                    required
+                                                />
+                                            </FormGroup>
+
+                                            <FormGroup className="form__group">
+                                                <span>Category</span>
+                                                <select
+                                                    className="p-2"
+                                                    name="category"
+                                                    value={
+                                                        productDetails.category
+                                                    }
+                                                    onChange={handleInputChange}
+                                                    required
+                                                >
+                                                    <option value="">
+                                                        Select Category
+                                                    </option>
+                                                    <option value="chair">
+                                                        Chair
+                                                    </option>
+                                                    <option value="sofa">
+                                                        Sofa
+                                                    </option>
+                                                    <option value="bed">
+                                                        Bed
+                                                    </option>
+                                                    <option value="table">
+                                                        Table
+                                                    </option>
+                                                    <option value="television">
+                                                        Television
+                                                    </option>
+                                                </select>
+                                            </FormGroup>
+                                        </div>
+
+                                        <div>
+                                            <FormGroup className="form__group">
+                                                <span>Product Image</span>
+
+                                                {productDetails.imgUrl && (
+                                                    <div>
+                                                        <img
+                                                            src={
+                                                                productDetails.imgUrl
+                                                            }
+                                                            alt="Current Product"
+                                                            style={{
+                                                                width: "100px",
+                                                                height: "100px",
+                                                                objectFit:
+                                                                    "cover",
+                                                                marginBottom:
+                                                                    "10px",
+                                                            }}
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                <input
+                                                    type="file"
+                                                    onChange={handleImageChange}
+                                                />
+                                            </FormGroup>
+                                        </div>
+
+                                        <motion.button
+                                            whileTap={{ scale: 1.2 }}
+                                            className="buy__btn__product"
+                                            type="submit"
+                                        >
+                                            Update Product
+                                        </motion.button>
+                                    </Form>
+                                </div>
+                            )}
+                        </Col>
+                    </Row>
+                </Container>
+            </section>
+        </Helmet>
     );
 };
 

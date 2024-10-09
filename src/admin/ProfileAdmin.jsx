@@ -38,6 +38,7 @@ import { useTheme } from "../components/UI/ThemeContext";
 import { useNavigate } from "react-router-dom";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import useAdmin from "../custom-hooks/useAdmin";
+import Helmet from "../components/Helmet/Helmet";
 
 const ProfileAdmin = () => {
     const [editing, setEditing] = useState(false);
@@ -518,7 +519,7 @@ const ProfileAdmin = () => {
                 className="d-flex justify-content-center align-items-center"
                 style={{ height: "100vh" }}
             >
-                <Spinner style={{ width: '3rem', height: '3rem' }} />
+                <Spinner style={{ width: "3rem", height: "3rem" }} />
                 <span className="visually-hidden">Loading...</span>
             </Container>
         );
@@ -529,86 +530,90 @@ const ProfileAdmin = () => {
     }
 
     return (
-        <Container
-            fluid
-            className={`profile__personal ${
-                isDarkMode ? "dark-mode" : "light-mode"
-            }`}
-        >
-            <Row>
-                <Col md={12} className="sidebar">
-                    <div className="profile-header">
-                        <div className="profile-avatar">
-                            <img
-                                src={
-                                    adminInfo.photoURL ||
-                                    "https://via.placeholder.com/150"
-                                }
-                                alt="Admin Avatar"
-                                onClick={handleAvatarClick}
-                                style={{
-                                    cursor: editing ? "pointer" : "default",
-                                    opacity: isAvatarUpLoading ? 0.5 : 1,
-                                }}
-                            />
-                            {editing && (
-                                <>
-                                    <input
-                                        type="file"
-                                        ref={inputFileRef}
-                                        accept="image/*"
-                                        style={{ display: "none" }}
-                                        onChange={handleAvatarChange}
-                                    />
-                                    <div className="avatar-edit-overlay">
-                                        {isAvatarUpLoading
-                                            ? "Uploading..."
-                                            : "Click to change your avatar"}
+        <Helmet title=" Profile">
+            <Container
+                fluid
+                className={`profile__personal ${
+                    isDarkMode ? "dark-mode" : "light-mode"
+                }`}
+            >
+                <Row>
+                    <Col md={12} className="sidebar">
+                        <div className="profile-header">
+                            <div className="profile-avatar">
+                                <img
+                                    src={
+                                        adminInfo.photoURL ||
+                                        "https://via.placeholder.com/150"
+                                    }
+                                    alt="Admin Avatar"
+                                    onClick={handleAvatarClick}
+                                    style={{
+                                        cursor: editing ? "pointer" : "default",
+                                        opacity: isAvatarUpLoading ? 0.5 : 1,
+                                    }}
+                                />
+                                {editing && (
+                                    <>
+                                        <input
+                                            type="file"
+                                            ref={inputFileRef}
+                                            accept="image/*"
+                                            style={{ display: "none" }}
+                                            onChange={handleAvatarChange}
+                                        />
+                                        <div className="avatar-edit-overlay">
+                                            {isAvatarUpLoading
+                                                ? "Uploading..."
+                                                : "Click to change your avatar"}
+                                        </div>
+                                    </>
+                                )}
+
+                                {isAvatarUpLoading && (
+                                    <div className="avatar-loading-overlay">
+                                        <Spinner animation="border" size="sm" />
                                     </div>
-                                </>
-                            )}
-
-                            {isAvatarUpLoading && (
-                                <div className="avatar-loading-overlay">
-                                    <Spinner animation="border" size="sm" />
-                                </div>
-                            )}
-                        </div>
-                        <h1 className="profile-name">
-                            {adminInfo.displayName}
-                        </h1>
-                        <p className="profile-role">{adminInfo.role}</p>
-                    </div>
-
-                    <div className="sidebar-content">
-                        <div className="menu-section">
-                            <h2>Account Settings</h2>
-                            {menuItems.map((item, index) => (
-                                <div
-                                    key={index}
-                                    className={`menu-item ${
-                                        activeSection === index ? "active" : ""
-                                    }`}
-                                    onClick={() => setActiveSection(index)}
-                                >
-                                    {item.icon}
-                                    <span>{item.text}</span>
-                                    <ChevronRight size={20} />
-                                </div>
-                            ))}
+                                )}
+                            </div>
+                            <h1 className="profile-name">
+                                {adminInfo.displayName}
+                            </h1>
+                            <p className="profile-role">{adminInfo.role}</p>
                         </div>
 
-                        <div className="main-content">
-                            {activeSection !== null && (
-                                <div className="content-area">
-                                    {menuItems[activeSection].content}
-                                </div>
-                            )}
+                        <div className="sidebar-content">
+                            <div className="menu-section">
+                                <h2>Account Settings</h2>
+                                {menuItems.map((item, index) => (
+                                    <div
+                                        key={index}
+                                        className={`menu-item ${
+                                            activeSection === index
+                                                ? "active"
+                                                : ""
+                                        }`}
+                                        onClick={() => setActiveSection(index)}
+                                    >
+                                        {item.icon}
+                                        <span>{item.text}</span>
+                                        <ChevronRight size={20} />
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="main-content">
+                                {activeSection !== null && (
+                                    <div className="content-area">
+                                        {menuItems[activeSection].content}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                </Col>
-            </Row>
-        </Container>
+                    </Col>
+                </Row>
+            </Container>
+        </Helmet>
     );
 };
 

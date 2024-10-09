@@ -7,6 +7,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { collection, addDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import "../styles/Add-EditProduct.css";
+import Helmet from "../components/Helmet/Helmet";
 
 const AddProducts = () => {
     const [enterTitle, setEnterTitle] = useState("");
@@ -73,74 +74,38 @@ const AddProducts = () => {
     };
 
     return (
-        <section>
-            <Container>
-                <Row className="justify-content-center">
-                    <Col lg="8">
-                        {loading ? (
-                            <Container
-                            className="d-flex justify-content-center align-items-center"
-                            style={{ height: "100vh" }}
-                        >
-                            <Spinner style={{ width: '3rem', height: '3rem' }} />
-                            <span className="visually-hidden">Loading...</span>
-                        </Container>
-                        ) : (
-                            <div className="create-product-form">
-                                <h4 className="mb-4">Create Product</h4>
-                                <Form onSubmit={createProduct}>
-                                    <FormGroup className="form__group">
-                                        <span>Product title</span>
-                                        <input
-                                            type="text"
-                                            placeholder="Double sofa"
-                                            value={enterTitle}
-                                            onChange={(e) =>
-                                                setEnterTitle(e.target.value)
-                                            }
-                                            required
-                                        />
-                                    </FormGroup>
-
-                                    <FormGroup className="form__group">
-                                        <span>Short Description</span>
-                                        <input
-                                            type="text"
-                                            placeholder="Sample short desc"
-                                            value={enterShortDesc}
-                                            onChange={(e) =>
-                                                setEnterShortDesc(
-                                                    e.target.value
-                                                )
-                                            }
-                                            required
-                                        />
-                                    </FormGroup>
-
-                                    <FormGroup className="form__group">
-                                        <span>Description</span>
-                                        <input
-                                            type="text"
-                                            placeholder="Description...."
-                                            value={enterDescription}
-                                            onChange={(e) =>
-                                                setEnterDescription(
-                                                    e.target.value
-                                                )
-                                            }
-                                            required
-                                        />
-                                    </FormGroup>
-
-                                    <div className="d-flex align-items-center">
+        <Helmet title=" Create-product">
+            <section>
+                <Container>
+                    <Row className="justify-content-center">
+                        <Col lg="8">
+                            {loading ? (
+                                <Container
+                                    className="d-flex justify-content-center align-items-center"
+                                    style={{ height: "100vh" }}
+                                >
+                                    <Spinner
+                                        style={{
+                                            width: "3rem",
+                                            height: "3rem",
+                                        }}
+                                    />
+                                    <span className="visually-hidden">
+                                        Loading...
+                                    </span>
+                                </Container>
+                            ) : (
+                                <div className="create-product-form">
+                                    <h4 className="mb-4">Create Product</h4>
+                                    <Form onSubmit={createProduct}>
                                         <FormGroup className="form__group">
-                                            <span>Price</span>
+                                            <span>Product title</span>
                                             <input
-                                                type="number"
-                                                placeholder="$100"
-                                                value={enterPrice}
+                                                type="text"
+                                                placeholder="Double sofa"
+                                                value={enterTitle}
                                                 onChange={(e) =>
-                                                    setEnterPrice(
+                                                    setEnterTitle(
                                                         e.target.value
                                                     )
                                                 }
@@ -149,64 +114,115 @@ const AddProducts = () => {
                                         </FormGroup>
 
                                         <FormGroup className="form__group">
-                                            <span>Category</span>
-                                            <select
-                                                className="p-2"
-                                                value={enterCategory}
-                                                onChange={(e) =>
-                                                    setEnterCategory(
-                                                        e.target.value
-                                                    )
-                                                }
-                                                required
-                                            >
-                                                <option>Select Category</option>
-                                                <option value="chair">
-                                                    Chair
-                                                </option>
-                                                <option value="sofa">
-                                                    Sofa
-                                                </option>
-                                                <option value="bed">Bed</option>
-                                                <option value="table">
-                                                    Table
-                                                </option>
-                                                <option value="television">
-                                                    Television
-                                                </option>
-                                            </select>
-                                        </FormGroup>
-                                    </div>
-
-                                    <div>
-                                        <FormGroup className="form__group">
-                                            <span>Product Image</span>
+                                            <span>Short Description</span>
                                             <input
-                                                type="file"
+                                                type="text"
+                                                placeholder="Sample short desc"
+                                                value={enterShortDesc}
                                                 onChange={(e) =>
-                                                    setEnterProductImg(
-                                                        e.target.files[0]
+                                                    setEnterShortDesc(
+                                                        e.target.value
                                                     )
                                                 }
                                                 required
                                             />
                                         </FormGroup>
-                                    </div>
 
-                                    <motion.button
-                                        whileTap={{ scale: 1.2 }}
-                                        className="buy__btn__product"
-                                        type="submit"
-                                    >
-                                        Create Product
-                                    </motion.button>
-                                </Form>
-                            </div>
-                        )}
-                    </Col>
-                </Row>
-            </Container>
-        </section>
+                                        <FormGroup className="form__group">
+                                            <span>Description</span>
+                                            <input
+                                                type="text"
+                                                placeholder="Description...."
+                                                value={enterDescription}
+                                                onChange={(e) =>
+                                                    setEnterDescription(
+                                                        e.target.value
+                                                    )
+                                                }
+                                                required
+                                            />
+                                        </FormGroup>
+
+                                        <div className="d-flex align-items-center">
+                                            <FormGroup className="form__group">
+                                                <span>Price</span>
+                                                <input
+                                                    type="number"
+                                                    placeholder="$100"
+                                                    value={enterPrice}
+                                                    onChange={(e) =>
+                                                        setEnterPrice(
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    required
+                                                />
+                                            </FormGroup>
+
+                                            <FormGroup className="form__group">
+                                                <span>Category</span>
+                                                <select
+                                                    className="p-2"
+                                                    value={enterCategory}
+                                                    onChange={(e) =>
+                                                        setEnterCategory(
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    required
+                                                >
+                                                    <option>
+                                                        Select Category
+                                                    </option>
+                                                    <option value="chair">
+                                                        Chair
+                                                    </option>
+                                                    <option value="sofa">
+                                                        Sofa
+                                                    </option>
+                                                    <option value="bed">
+                                                        Bed
+                                                    </option>
+                                                    <option value="table">
+                                                        Table
+                                                    </option>
+                                                    <option value="television">
+                                                        Television
+                                                    </option>
+                                                </select>
+                                            </FormGroup>
+                                        </div>
+
+                                        <div>
+                                            <FormGroup className="form__group">
+                                                <span>Product Image</span>
+                                                <input
+                                                    type="file"
+                                                    onChange={(e) =>
+                                                        setEnterProductImg(
+                                                            e.target.files[0]
+                                                        )
+                                                    }
+                                                    required
+                                                />
+                                            </FormGroup>
+                                        </div>
+
+                                        <motion.button
+                                            whileTap={{ scale: 1.2 }}
+                                            className="buy__btn__product"
+                                            type="submit"
+                                        >
+                                            Create Product
+                                        </motion.button>
+                                    </Form>
+                                </div>
+                            )}
+                        </Col>
+                    </Row>
+                </Container>
+            </section>
+        </Helmet>
     );
 };
 

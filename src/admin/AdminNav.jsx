@@ -21,7 +21,7 @@ const admin_nav = [
     },
 
     {
-        display: "All-Products",
+        display: "Products",
         path: "/admin/all-products",
     },
 

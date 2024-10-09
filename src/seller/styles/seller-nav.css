@@ -1,0 +1,132 @@
+/* Seller Nav */
+.seller__nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #dce1e2;
+    padding: 15px 30px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.logo__seller {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.logo__seller-text {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333; 
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: color 0.3s ease;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.logo__seller-text:hover {
+    color: #444; 
+    opacity: 0.8;
+}
+
+
+.seller__nav__list {
+    display: flex;
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+.seller__nav__item {
+    margin-right: 25px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.seller__nav__item a {
+    text-decoration: none;
+    color: #333;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.seller__nav__item::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -8px;
+    width: 0;
+    height: 3px;
+    background-color: #ff6600;
+    transition: width 0.3s ease, left 0.3s ease;
+}
+
+.seller__nav__item.active::after {
+    width: 100%;
+}
+
+.seller__nav__item:hover::after {
+    width: 100%;
+}
+
+.seller__nav__item.active a {
+    color: #ff6600;
+}
+
+/* Seller Actions */
+.seller__nav__actions {
+    display: flex;
+    align-items: center;
+}
+
+.seller__nav__notification {
+    position: relative;
+    margin-right: 20px;
+    cursor: pointer;
+}
+
+.seller__nav__notification:hover {
+    color: #ff6600;
+}
+
+.seller__nav__notification__badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 10px;
+    height: 10px;
+    background-color: #ff6600;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+
+.seller__nav__avatar {
+    width: 40px;
+    height: 40px;
+    background-color: #f0f0f0;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.seller__nav__avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.seller__nav__avatar:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: scale(1.05);
+}

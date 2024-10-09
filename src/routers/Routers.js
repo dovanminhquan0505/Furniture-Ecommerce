@@ -21,6 +21,7 @@ import ProfileUser from "../Screens/ProfileUser";
 import WishList from "../Screens/WishList";
 import LoginSeller from "../seller/login-seller";
 import SignupSeller from "../seller/signup-seller";
+import DashboardSeller from "../seller/dashboard-seller";
 
 const Routers = () => {
     //Link URL to views for each router
@@ -42,6 +43,7 @@ const Routers = () => {
             <Route path="/seller/*" element={<ProtectedRoute />}>
                 <Route path="login" element={<LoginSeller />} />
                 <Route path="signup" element={<SignupSeller />} />
+                <Route path="dashboard" element={<DashboardSeller />} />
             </Route>
 
             <Route path="/admin/*" element={<ProtectedAdminRoute />}>

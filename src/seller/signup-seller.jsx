@@ -25,10 +25,18 @@ const SignupSeller = () => {
         businessType: "",
         address: "",
         city: "",
+        storeEmail: "",
     });
+
+    // Status of using personal email or new email
+    const [usePersonalEmail, setUsePersonalEmail] = useState(true);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleCheckboxChange = () => {
+        setUsePersonalEmail(!usePersonalEmail);
     };
 
     const handleSubmit = (e) => {
@@ -71,17 +79,46 @@ const SignupSeller = () => {
                                     required
                                 />
                             </FormGroup>
-                            <FormGroup className="form__group">
-                                <Label for="email">Email</Label>
-                                <Input
-                                    type="email"
-                                    name="email"
-                                    id="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    required
-                                />
+
+                            {/* Only show personal email if checkbox is not selected */}
+                            {usePersonalEmail ? (
+                                <FormGroup className="form__group">
+                                    <Label for="email">Email</Label>
+                                    <Input
+                                        type="email"
+                                        name="email"
+                                        id="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        required
+                                        readOnly={usePersonalEmail ? true : false} 
+                                    />
+                                </FormGroup>
+                            ) : (
+                                <FormGroup className="form__group">
+                                    <Label for="newEmail">Email</Label>
+                                    <Input
+                                        type="email"
+                                        name="storeEmail"
+                                        id="storeEmail"
+                                        value={formData.storeEmail}
+                                        onChange={handleChange}
+                                        required
+                                    />
+                                </FormGroup>
+                            )}
+
+                            <FormGroup check className="custom__checkbox">
+                                <Label check>
+                                    <Input
+                                        type="checkbox"
+                                        checked={!usePersonalEmail}
+                                        onChange={handleCheckboxChange}
+                                    />
+                                    Use a new store email
+                                </Label>
                             </FormGroup>
+
                             <FormGroup className="form__group">
                                 <Label for="password">Password</Label>
                                 <Input
@@ -151,7 +188,7 @@ const SignupSeller = () => {
                                     <option value="business">Business</option>
                                 </Input>
                             </FormGroup>
-                            <FormGroup className="form__group">
+                            <FormGroup className="form__group__address">
                                 <Label for="address">Address</Label>
                                 <Input
                                     type="text"
@@ -180,7 +217,7 @@ const SignupSeller = () => {
                         type="submit"
                         className="signup__seller__submit__btn"
                     >
-                        Sign Up
+                        Register
                     </Button>
 
                     <p className="signup__text">

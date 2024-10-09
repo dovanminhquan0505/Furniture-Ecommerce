@@ -70,7 +70,7 @@ const LoginSeller = () => {
                                         to="/seller/signup"
                                         className="login__seller__link"
                                     >
-                                        Create an account
+                                        Create a seller account
                                     </Link>
                                 </p>
                             </Form>

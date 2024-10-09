@@ -29,11 +29,21 @@
     margin-bottom: 1.75rem;
 }
 
+.signup__seller__form .form__group__address {
+    margin-top: 2.2rem;
+}
+
 .signup__seller__form label {
     font-weight: 600;
     color: #4a5568;
     display: block;
     margin-bottom: 0.5rem;
+}
+
+.form__group input[readonly] {
+    background-color: #f0f0f0; 
+    color: #aaa; 
+    cursor: not-allowed;
 }
 
 .signup__seller__form input,
@@ -58,6 +68,27 @@
     border-color: #5a67d8;
     outline: 0;
     box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.1);
+}
+
+.custom__checkbox {
+    display: flex;
+    align-items: center;
+    margin-top: -12px;
+}
+
+.custom__checkbox input[type="checkbox"] {
+    width: 20px; 
+    height: 20px;
+    transform: scale(0.6); 
+    transform-origin: left; 
+    cursor: pointer; 
+    margin-top: -2.5px;
+    border: 1px solid #8e8a8a;
+}
+
+.custom__checkbox label {
+    font-size: 0.9rem;
+    line-height: 1.5
 }
 
 .signup__seller__submit__btn {

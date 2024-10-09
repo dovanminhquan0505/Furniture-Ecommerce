@@ -15,8 +15,8 @@ import "../seller/styles/signupseller.css";
 import { Link, useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase.config";
 import { toast } from "react-toastify";
-import { doc, setDoc } from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { collection, doc, getDocs, query, setDoc, where } from "firebase/firestore";
+import bcrypt from "bcryptjs";
 
 const SignupSeller = () => {
     const navigate = useNavigate();
@@ -36,9 +36,6 @@ const SignupSeller = () => {
         storeEmail: "",
     });
 
-    // Status of using personal email or new email
-    const [usePersonalEmail, setUsePersonalEmail] = useState(true);
-
     useEffect(() => {
         const user = auth.currentUser;
         if (user) {
@@ -53,8 +50,16 @@ const SignupSeller = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleCheckboxChange = () => {
-        setUsePersonalEmail(!usePersonalEmail);
+    const checkExistingEmail = async (email) => {
+        const pendingQuery = query(collection(db, "pendingOrders"), where("email", "==", email));
+        const sellersQuery = query(collection(db, "sellers"), where("email", "==", email));
+
+        const [pendingSnapshot, approvedSnapshot] = await Promise.all([
+            getDocs(pendingQuery),
+            getDocs(sellersQuery)
+        ]);
+
+        return !pendingSnapshot.empty || !approvedSnapshot.empty;
     };
 
     const handleSubmit = async (e) => {
@@ -63,25 +68,28 @@ const SignupSeller = () => {
 
         if (formData.password !== formData.confirmPassword) {
             toast.error("Passwords do not match");
+            setLoading(false);
             return;
         }
 
-        // Save data into firestore database
         try {
-            const emailToUse = usePersonalEmail
-                ? formData.email
-                : formData.storeEmail;
+            // Check if email already exists
+            const emailExists = await checkExistingEmail(formData.email);
+            if (emailExists) {
+                toast.error("An account with this email already exists or is pending approval.");
+                setLoading(false);
+                return;
+            }
 
-            const userCredential = await createUserWithEmailAndPassword(
-                auth,
-                emailToUse,
-                formData.password
-            );
+            // Generate a salt and hash the password
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(formData.password, salt);
 
-            const user = userCredential.user;
+            // Generate a unique ID for the pending order
+            const pendingOrderId = doc(collection(db, "pendingOrders")).id;
 
-            // Lưu thông tin người dùng vào Firestore
-            await setDoc(doc(db, "pendingOrders", user.uid), {
+            // Save data into firestore database
+            await setDoc(doc(db, "pendingOrders", pendingOrderId), {
                 fullName: formData.fullName,
                 phoneNumber: formData.phoneNumber,
                 email: formData.email,
@@ -90,32 +98,22 @@ const SignupSeller = () => {
                 businessType: formData.businessType,
                 address: formData.address,
                 city: formData.city,
-                storeEmail: formData.storeEmail || formData.email,
+                storeEmail: formData.storeEmail,
+                hashedPassword: hashedPassword, // Store the hashed password
                 status: "pending",
                 createdAt: new Date(),
             });
 
             setLoading(false);
             toast.success(
-                "Seller registration successful! Awaiting admin approval."
+                "Seller registration submitted successfully! Awaiting admin approval."
             );
-            navigate("/seller/dashboard");
+            navigate("/seller/login");
         } catch (error) {
             toast.error("Failed to submit registration. Please try again.");
+            setLoading(false);
         }
     };
-
-    if (loading) {
-        return (
-            <Container
-                className="d-flex justify-content-center align-items-center"
-                style={{ height: "100vh" }}
-            >
-                <Spinner style={{ width: "3rem", height: "3rem" }} />
-                <span className="visually-hidden">Loading...</span>
-            </Container>
-        );
-    }
 
     return (
         <Helmet title="SignUp">
@@ -124,7 +122,7 @@ const SignupSeller = () => {
                     className="d-flex justify-content-center align-items-center"
                     style={{ height: "100vh" }}
                 >
-                    <Spinner style={{ width: '3rem', height: '3rem' }} />
+                    <Spinner style={{ width: "3rem", height: "3rem" }} />
                     <span className="visually-hidden">Loading...</span>
                 </Container>
             ) : (
@@ -132,7 +130,10 @@ const SignupSeller = () => {
                     <h2 className="signup__seller__title">
                         Register for a Seller account
                     </h2>
-                    <Form onSubmit={handleSubmit} className="signup__seller__form">
+                    <Form
+                        onSubmit={handleSubmit}
+                        className="signup__seller__form"
+                    >
                         <Row>
                             <Col md={6}>
                                 <h4 className="signup__seller__subtitle">
@@ -160,48 +161,19 @@ const SignupSeller = () => {
                                         required
                                     />
                                 </FormGroup>
-    
-                                {/* Only show personal email if checkbox is not selected */}
-                                {usePersonalEmail ? (
-                                    <FormGroup className="form__group">
-                                        <Label for="email">Email</Label>
-                                        <Input
-                                            type="email"
-                                            name="email"
-                                            id="email"
-                                            value={formData.email}
-                                            onChange={handleChange}
-                                            required
-                                            readOnly={
-                                                usePersonalEmail ? true : false
-                                            }
-                                        />
-                                    </FormGroup>
-                                ) : (
-                                    <FormGroup className="form__group">
-                                        <Label for="newEmail">Email</Label>
-                                        <Input
-                                            type="email"
-                                            name="storeEmail"
-                                            id="storeEmail"
-                                            value={formData.storeEmail}
-                                            onChange={handleChange}
-                                            required
-                                        />
-                                    </FormGroup>
-                                )}
-    
-                                <FormGroup check className="custom__checkbox">
-                                    <Label check>
-                                        <Input
-                                            type="checkbox"
-                                            checked={!usePersonalEmail}
-                                            onChange={handleCheckboxChange}
-                                        />
-                                        Use a new store email
-                                    </Label>
+
+                                <FormGroup className="form__group">
+                                    <Label for="newEmail">Store Email</Label>
+                                    <Input
+                                        type="email"
+                                        name="storeEmail"
+                                        id="storeEmail"
+                                        value={formData.storeEmail}
+                                        onChange={handleChange}
+                                        required
+                                    />
                                 </FormGroup>
-    
+
                                 <FormGroup className="form__group">
                                     <Label for="password">Password</Label>
                                     <Input
@@ -255,7 +227,9 @@ const SignupSeller = () => {
                                     />
                                 </FormGroup>
                                 <FormGroup className="form__group">
-                                    <Label for="businessType">Business Type</Label>
+                                    <Label for="businessType">
+                                        Business Type
+                                    </Label>
                                     <Input
                                         type="select"
                                         name="businessType"
@@ -267,11 +241,15 @@ const SignupSeller = () => {
                                         <option value="">
                                             Select business type
                                         </option>
-                                        <option value="personal">Individual</option>
-                                        <option value="business">Business</option>
+                                        <option value="personal">
+                                            Individual
+                                        </option>
+                                        <option value="business">
+                                            Business
+                                        </option>
                                     </Input>
                                 </FormGroup>
-                                <FormGroup className="form__group__address">
+                                <FormGroup className="form__group">
                                     <Label for="address">Address</Label>
                                     <Input
                                         type="text"
@@ -302,7 +280,7 @@ const SignupSeller = () => {
                         >
                             Register
                         </Button>
-    
+
                         <p className="signup__text">
                             Already have an account?
                             <Link to="/seller/login" className="signup__link">

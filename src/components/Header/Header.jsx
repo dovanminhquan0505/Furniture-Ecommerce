@@ -154,7 +154,7 @@ const Header = () => {
                         </div>
 
                         <div className="nav__right">
-                            <Link to="/seller/login" className="become-seller-link">
+                            <Link to="/seller/signup" className="become-seller-link">
                                 Become Multimart Seller
                             </Link>
 

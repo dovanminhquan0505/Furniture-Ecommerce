@@ -22,6 +22,7 @@ import WishList from "../Screens/WishList";
 import LoginSeller from "../seller/login-seller";
 import SignupSeller from "../seller/signup-seller";
 import DashboardSeller from "../seller/dashboard-seller";
+import PendingOrders from "../admin/PendingOrders";
 
 const Routers = () => {
     //Link URL to views for each router
@@ -53,6 +54,7 @@ const Routers = () => {
                 <Route path="add-product" element={<AddProducts />} />
                 <Route path="users" element={<Users />} />
                 <Route path="orders" element={<Orders />} />
+                <Route path="pending-orders" element={<PendingOrders />} />
                 <Route path="profile" element={<ProfileAdmin />} />
             </Route>
             <Route path="login" element={<Login />} />

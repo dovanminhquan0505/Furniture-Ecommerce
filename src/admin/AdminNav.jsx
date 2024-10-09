@@ -34,6 +34,10 @@ const admin_nav = [
         display: "Users",
         path: "/admin/users",
     },
+    {
+        display: "Pending Orders",
+        path: "/admin/pending-orders",
+    },
 ];
 
 const AdminNav = () => {

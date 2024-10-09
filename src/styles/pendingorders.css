@@ -1,0 +1,31 @@
+/* Pending Orders */
+.pending-orders {
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+}
+
+.pending-orders h2 {
+    margin-bottom: 20px;
+}
+
+.pending-orders ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.pending-orders li {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    background-color: #fff;
+}
+
+.pending-orders h3 {
+    margin: 0 0 10px 0;
+}
+
+.pending-orders p {
+    margin: 5px 0;
+}

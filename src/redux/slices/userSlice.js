@@ -7,7 +7,21 @@ const userSlice = createSlice({
     },
     reducers: {
         setUser: (state, action) => {
-            state.currentUser = action.payload;
+            const userPayload = action.payload;
+
+            if (userPayload) {
+                const createdAt =
+                    userPayload.createdAt && userPayload.createdAt.toDate
+                        ? userPayload.createdAt.toDate().toISOString()
+                        : null; 
+
+                state.currentUser = {
+                    ...userPayload,
+                    createdAt,
+                };
+            } else {
+                state.currentUser = null;
+            }
         },
 
         updateUserPhoto: (state, action) => {

@@ -1,31 +1,58 @@
 /* Pending Orders */
 .pending-orders {
     padding: 20px;
-    background-color: #f9f9f9;
-    border-radius: 5px;
+    background-color: #f4f7fc;
+    border-radius: 10px;
 }
 
 .pending-orders h2 {
-    margin-bottom: 20px;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 40px;
+    text-align: center;
 }
 
-.pending-orders ul {
-    list-style-type: none;
-    padding: 0;
-}
-
-.pending-orders li {
-    border: 1px solid #ddd;
-    padding: 15px;
-    margin-bottom: 10px;
-    border-radius: 5px;
+.order-card {
     background-color: #fff;
+    border: 1px solid #e0e6ed;
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.pending-orders h3 {
-    margin: 0 0 10px 0;
+.order-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
-.pending-orders p {
-    margin: 5px 0;
+.order-card h3 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #5a67d8;
+}
+
+.order-card p {
+    font-size: 1rem;
+    margin: 0 0 10px;
+    color: #555;
+}
+
+.order-card p strong {
+    color: #333;
+    font-weight: 600;
+}
+
+.order-card .btn {
+    width: 48%;
+    font-weight: 600;
+    transition: background-color 0.3s ease;
+}
+
+.order-card .btn-success:hover {
+    background-color: #218838;
+}
+
+.order-card .btn-danger:hover {
+    background-color: #c82333;
 }

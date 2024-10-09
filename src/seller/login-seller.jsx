@@ -1,8 +1,23 @@
-import React from "react";
+import React, { useState } from "react";
+import {
+    Container,
+    Row,
+    Col,
+    Form,
+    FormGroup,
+    Input,
+    Label,
+    Button,
+} from "reactstrap";
 import "../seller/styles/loginseller.css";
+import Helmet from "../components/Helmet/Helmet";
 
 const LoginSeller = () => {
-    return <div>login-seller</div>;
+    return (
+        <Helmet title=" Login">
+
+        </Helmet>
+    )
 };
 
 export default LoginSeller;

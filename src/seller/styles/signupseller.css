@@ -1,0 +1,135 @@
+/* Signup seller */
+.signup__seller__container {
+    max-width: 1000px;
+    margin: 3rem auto;
+    padding: 2.5rem;
+    background-color: #ffffff;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.signup__seller__title {
+    color: #2d3748;
+    margin-bottom: 2.5rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 2.25rem;
+}
+
+.signup__seller__subtitle {
+    color: #4a5568;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+    font-size: 1.5rem;
+    border-bottom: 2px solid #5a67d8;
+    padding-bottom: 0.5rem;
+}
+
+.signup__seller__form .form__group {
+    margin-bottom: 1.75rem;
+}
+
+.signup__seller__form label {
+    font-weight: 600;
+    color: #4a5568;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.signup__seller__form input,
+.signup__seller__form select,
+.signup__seller__form textarea {
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    padding: 0.75rem;
+    width: 100%;
+    font-size: 1rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.signup__seller__form textarea {
+    height: 49.6px;
+    resize: vertical;
+}
+
+.signup__seller__form input:focus,
+.signup__seller__form select:focus,
+.signup__seller__form textarea:focus {
+    border-color: #5a67d8;
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.1);
+}
+
+.signup__seller__submit__btn {
+    background-color: #5a67d8;
+    border: none;
+    color: white;
+    padding: 1rem 1.5rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.signup__seller__submit__btn:hover {
+    background-color: #4c51bf;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(90, 103, 216, 0.2);
+}
+
+.signup__text {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 1rem;
+    color: #4a5568;
+}
+
+.signup__link {
+    color: #000;
+    font-weight: 600;
+    margin-left: 0.5rem;
+    text-decoration: none;
+    transition: color 0.2s ease-in-out;
+}
+
+.signup__link:hover {
+    color: #5c5b5b;
+    text-decoration: underline;
+}
+
+.signup__seller__form .row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -15px;
+    margin-left: -15px;
+}
+
+.signup__seller__form .col-md-6 {
+    flex: 0 0 50%;
+    max-width: 50%;
+    padding-right: 15px;
+    padding-left: 15px;
+}
+
+@media (max-width: 768px) {
+    .signup__seller__container {
+        padding: 1.5rem;
+        margin: 1.5rem auto;
+    }
+
+    .signup__seller__title {
+        font-size: 1.75rem;
+    }
+
+    .signup__seller__subtitle {
+        font-size: 1.25rem;
+    }
+
+    .signup__seller__form .col-md-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}

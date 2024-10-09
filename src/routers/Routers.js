@@ -19,6 +19,8 @@ import EditProduct from "../admin/EditProduct";
 import ProfileAdmin from "../admin/ProfileAdmin";
 import ProfileUser from "../Screens/ProfileUser";
 import WishList from "../Screens/WishList";
+import LoginSeller from "../seller/login-seller";
+import SignupSeller from "../seller/signup-seller";
 
 const Routers = () => {
     //Link URL to views for each router
@@ -35,6 +37,11 @@ const Routers = () => {
                 <Route path="profile" element={<ProfileUser />} />
                 <Route path="checkout" element={<Checkout />} />
                 <Route path="placeorder/:orderId" element={<Placeorder />} />
+            </Route>
+
+            <Route path="/seller/*" element={<ProtectedRoute />}>
+                <Route path="login" element={<LoginSeller />} />
+                <Route path="signup" element={<SignupSeller />} />
             </Route>
 
             <Route path="/admin/*" element={<ProtectedAdminRoute />}>

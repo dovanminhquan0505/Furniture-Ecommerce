@@ -2,6 +2,8 @@
     width: 100%;
     height: 70px;
     line-height: 70px;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .nav__wrapper {
@@ -18,8 +20,8 @@
 }
 
 .logo img {
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 2rem;
+    height: 2rem;
     margin-bottom: 5px;
 }
 
@@ -29,11 +31,18 @@
     color: var(--primary-color);
 }
 
+.navigation {
+    flex: 1;
+    text-align: center;
+}
+
 .menu {
     display: flex;
     align-items: center;
+    justify-content: center;
     column-gap: 2.7rem;
     padding-bottom: 0;
+    margin-top: 5px;
 }
 
 .nav__item a {
@@ -42,29 +51,44 @@
     cursor: pointer;
 }
 
+.nav__right {
+    display: flex;
+    align-items: center;
+    column-gap: 1.5rem;
+}
+
+.become-seller-link {
+    color: #000;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: color 0.3s ease;
+    margin-bottom: 5px;
+}
+
+.become-seller-link:hover {
+    color: #706f6f;
+}
+
 .nav__icons {
     display: flex;
     align-items: center;
     column-gap: 1.2rem;
 }
 
-.nav__icons span i {
-    font-size: 1.4rem;
+.nav__icons .cart__icon,
+.nav__icons .fav__icon {
+    position: relative;
+    font-size: 1.3rem;
     color: var(--primary-color);
     cursor: pointer;
 }
 
-.cart__icon,
-.fav__icon {
-    position: relative;
-}
-
 .badge {
     position: absolute;
-    top: 26%;
-    right: -35%;
-    width: 13px;
-    height: 13px;
+    top: 25%;
+    right: -50%;
+    width: 15px;
+    height: 15px;
     content: "";
     background: var(--primary-color);
     color: #fff;
@@ -72,17 +96,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.5rem;
+    font-size: 0.7rem;
     font-weight: 600;
     z-index: 10;
 }
 
 .nav__icons .profile img {
-    border-radius: 50%;
-    overflow: hidden;
     width: 40px;
     height: 40px;
     cursor: pointer;
+    border-radius: 50%;
     object-fit: cover;
     margin-bottom: 10px;
 }
@@ -239,5 +262,14 @@
         width: 100%;
         height: 60px;
         line-height: 60px;
+    }
+
+    .seller__btn {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+
+    .seller__icon {
+        font-size: 16px;
     }
 }

@@ -153,6 +153,11 @@ const Header = () => {
                             </ul>
                         </div>
 
+                        <div className="nav__right">
+                            <Link to="/seller/login" className="become-seller-link">
+                                Become Multimart Seller
+                            </Link>
+
                         <div className="nav__icons">
                             <span className="fav__icon" onClick={navigateToWishList}>
                                 <i className="ri-heart-line"></i>
@@ -270,6 +275,7 @@ const Header = () => {
                                     <i className="ri-menu-line"></i>
                                 </span>
                             </div>
+                        </div>
                         </div>
                     </div>
                 </Row>

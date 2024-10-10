@@ -55,13 +55,14 @@
     color: #333;
     font-weight: 600;
     transition: color 0.3s ease;
+    margin-left: 10px;
 }
 
 .seller__nav__item::after {
     content: '';
     position: absolute;
-    left: 0;
-    bottom: -8px;
+    left: 7px;
+    bottom: -7px;
     width: 0;
     height: 3px;
     background-color: #ff6600;
@@ -69,7 +70,7 @@
 }
 
 .seller__nav__item.active::after {
-    width: 100%;
+    width: 96%;
 }
 
 .seller__nav__item:hover::after {
@@ -84,7 +85,7 @@
 .seller__nav__actions {
     display: flex;
     align-items: center;
-    column-gap: 1rem;
+    column-gap: 0.5rem;
 }
 
 .seller__nav__notification {
@@ -118,11 +119,6 @@
     cursor: pointer;
     overflow: hidden;
     transition: all 0.3s ease;
-}
-
-.seller__avatar img {
-    width: 100%;
-    height: 100%;
     object-fit: cover;
 }
 

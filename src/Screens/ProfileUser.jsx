@@ -213,7 +213,7 @@ const ProfileUser = () => {
 
     const handleDeleteOrder = async (orderId) => {
         try {
-            const orderDocRef = doc(db, "orders", orderId);
+            const orderDocRef = doc(db, "totalOrders", orderId);
             await deleteDoc(orderDocRef);
 
             // Update state list of orders after deleting order

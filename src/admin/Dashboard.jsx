@@ -21,7 +21,7 @@ import Helmet from "../components/Helmet/Helmet";
 const Dashboard = () => {
     const { data: products } = useGetData("products");
     const { data: users } = useGetData("users");
-    const { data: orders } = useGetData("orders");
+    const { data: orders } = useGetData("totalOrders");
     const { data: sellers } = useGetData("sellers");
     const { isDarkMode } = useTheme();
 

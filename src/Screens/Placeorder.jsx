@@ -190,8 +190,9 @@ const PlaceOrder = () => {
         }
 
         try {
-            const orderRef = doc(db, "totalOrders", orderId);
-            await updateDoc(orderRef, {
+            const subOrderRef = doc(db, "subOrders", orderId);
+
+            await updateDoc(subOrderRef, {
                 isDelivered: true,
                 deliveredAt: Timestamp.fromDate(new Date()),
             });

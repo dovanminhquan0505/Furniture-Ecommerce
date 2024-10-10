@@ -1,0 +1,183 @@
+.orders__section {
+    padding: 40px 0;
+    background-color: #f8f9fa;
+    min-height: 100vh;
+    transition: background-color 0.3s ease;
+}
+
+.orders__section.dark-mode {
+    background-color: #1a1a1a;
+    color: #f8f9fa;
+}
+
+.orders__container {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    transition: all 0.3s ease;
+}
+
+.dark-mode .orders__container {
+    background-color: #2a2a2a;
+    box-shadow: 0 4px 6px rgba(255, 255, 255, 0.1);
+}
+
+.orders__title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.dark-mode .orders__title {
+    color: #f8f9fa;
+}
+
+.orders__table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.orders__table th,
+.orders__table td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+    text-align: center;
+}
+
+.dark-mode .orders__table th,
+.dark-mode .orders__table td {
+    border-bottom: 1px solid #444;
+    color: #fff;
+}
+
+.orders__table th {
+    background-color: #f1f3f5;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.9rem;
+    color: #495057;
+    text-align: center;
+}
+
+.dark-mode .orders__table th {
+    background-color: #3a3a3a;
+    color: #f8f9fa;
+}
+
+.orders__table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.orders__table tbody tr:hover {
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+
+.dark-mode .orders__table tbody tr:hover {
+    background-color: #3a3a3a;
+}
+
+.badge__seller {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.orders__status__pending {
+    background-color: #fff0c2;
+    color: #a68b00;
+}
+
+.orders__status__paid {
+    background-color: #c8e6c9;
+    color: #388e3c;
+}
+
+.orders__status__delivered {
+    background-color: #bbdefb;
+    color: #1976d2;
+}
+
+/* Hover effect for better visibility */
+.badge__seller:hover {
+    opacity: 0.9;
+}
+
+/* Dark mode adjustments */
+.dark-mode .orders__status__pending {
+    background-color: #533f03;
+    color: #ffeeba;
+    border-color: #533f03;
+}
+
+.dark-mode .orders__status__paid {
+    background-color: #0f401b;
+    color: #d4edda;
+    border-color: #0f401b;
+}
+
+.dark-mode .orders__status__delivered {
+    background-color: #002752;
+    color: #cce5ff;
+    border-color: #002752;
+}
+
+.btn__seller {
+    height: 54px;
+    font-size: 0.8rem;
+    padding: 8px 16px;
+    border-radius: 50px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+}
+
+.btn__seller-success {
+    background-color: #333333;
+    color: white;
+    border: none;
+}
+
+.btn__seller-success:hover {
+    background-color: #706c6c;
+}
+
+.btn__seller-delete {
+    background-color: #ef5350;
+    color: white;
+    border: none;
+}
+
+.btn__seller-delete:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+@media (max-width: 768px) {
+    .orders__container {
+        padding: 20px;
+    }
+
+    .orders__title {
+        font-size: 2rem;
+    }
+
+    .orders__table th,
+    .orders__table td {
+        padding: 10px;
+    }
+}

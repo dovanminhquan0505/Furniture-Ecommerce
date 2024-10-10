@@ -22,6 +22,7 @@ const Dashboard = () => {
     const { data: products } = useGetData("products");
     const { data: users } = useGetData("users");
     const { data: orders } = useGetData("orders");
+    const { data: sellers } = useGetData("sellers");
     const { isDarkMode } = useTheme();
 
     // Calculate total revenue from paid orders only
@@ -68,8 +69,8 @@ const Dashboard = () => {
                         <Row>
                             <Col lg="3">
                                 <div className="orders__box">
-                                    <h5>Orders</h5>
-                                    <span>{orders.length}</span>
+                                    <h5>Sellers</h5>
+                                    <span>{sellers.length}</span>
                                 </div>
                             </Col>
                             <Col lg="3">

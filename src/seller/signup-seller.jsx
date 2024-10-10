@@ -108,7 +108,7 @@ const SignupSeller = () => {
             toast.success(
                 "Seller registration submitted successfully! Awaiting admin approval."
             );
-            navigate("/seller/login");
+            navigate("/seller/dashboard");
         } catch (error) {
             toast.error("Failed to submit registration. Please try again.");
             setLoading(false);

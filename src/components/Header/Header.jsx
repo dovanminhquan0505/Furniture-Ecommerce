@@ -31,8 +31,12 @@ const nav__links = [
 
 const Header = () => {
     const headerRef = useRef(null);
-    const totalQuantity = useSelector((state) => state.cart?.totalQuantity || 0);
-    const totalQuantityWishList = useSelector((state) => state.wishlist?.totalQuantity || 0);
+    const totalQuantity = useSelector(
+        (state) => state.cart?.totalQuantity || 0
+    );
+    const totalQuantityWishList = useSelector(
+        (state) => state.wishlist?.totalQuantity || 0
+    );
     const profileActionRef = useRef(null);
     const { currentUser } = useSelector((state) => state.user);
     const menuRef = useRef(null);
@@ -91,7 +95,7 @@ const Header = () => {
     //Navigate to WishList
     const navigateToWishList = () => {
         navigate("/wishlist");
-    }
+    };
 
     const toggleProfileActions = () => {
         if (profileActionRef.current) {
@@ -102,14 +106,19 @@ const Header = () => {
     // Handle auto turn off profile actions when user clicks on outside.
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (profileActionRef.current && !profileActionRef.current.contains(event.target)) {
-                profileActionRef.current.classList.remove("active__profileActions");
+            if (
+                profileActionRef.current &&
+                !profileActionRef.current.contains(event.target)
+            ) {
+                profileActionRef.current.classList.remove(
+                    "active__profileActions"
+                );
             }
         };
-    
+
         // Add event listener
         document.addEventListener("mousedown", handleClickOutside);
-    
+
         // Cleanup event listener when component is unmounted
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
@@ -154,128 +163,149 @@ const Header = () => {
                         </div>
 
                         <div className="nav__right">
-                            <Link to="/seller/signup" className="become-seller-link">
-                                Become Multimart Seller
-                            </Link>
+                            {!isAdmin && (
+                                <>
+                                    <Link
+                                        to="/seller/dashboard"
+                                        className="become-seller-link"
+                                    >
+                                        Sellers Channel
+                                    </Link>
 
-                        <div className="nav__icons">
-                            <span className="fav__icon" onClick={navigateToWishList}>
-                                <i className="ri-heart-line"></i>
-                                <span className="badge">{totalQuantityWishList}</span>
-                            </span>
+                                    <Link
+                                        to="/seller/signup"
+                                        className="become-seller-link"
+                                    >
+                                        Become Multimart Seller
+                                    </Link>
+                                </>
+                            )}
 
-                            <span
-                                className="cart__icon"
-                                onClick={navigateToCart}
-                            >
-                                <i className="ri-shopping-cart-line"></i>
-                                <span className="badge">{totalQuantity}</span>
-                            </span>
-
-                            <div className="profile">
-                                <motion.img
-                                    whileTap={{ scale: 1.2 }}
-                                    src={
-                                        currentUser
-                                            ? currentUser.photoURL
-                                            : userIcon
-                                    }
-                                    alt=""
-                                    onClick={toggleProfileActions}
-                                />
-
-                                <div
-                                    className="profile__actions"
-                                    ref={profileActionRef}
-                                    onClick={toggleProfileActions}
+                            <div className="nav__icons">
+                                <span
+                                    className="fav__icon"
+                                    onClick={navigateToWishList}
                                 >
-                                    {currentUser ? ( //Check user exists
-                                        <div className="d-flex align-items-center justify-content-center flex-column">
-                                            {!isAdmin && (
-                                                <>
-                                                    <span className="admin__profile d-flex align-items-center">
-                                                        <Link
-                                                            to="/profile"
-                                                            className="adminPersonal__profile"
-                                                        >
-                                                            Profile
-                                                        </Link>
-                                                    </span>
+                                    <i className="ri-heart-line"></i>
+                                    <span className="badge">
+                                        {totalQuantityWishList}
+                                    </span>
+                                </span>
 
-                                                    <div className="line mb-2 mt-2"></div>
-                                                </>
-                                            )}
+                                <span
+                                    className="cart__icon"
+                                    onClick={navigateToCart}
+                                >
+                                    <i className="ri-shopping-cart-line"></i>
+                                    <span className="badge">
+                                        {totalQuantity}
+                                    </span>
+                                </span>
 
-                                            {isAdmin && ( //Check admin exists
-                                                <>
-                                                    <span className="admin__profile d-flex align-items-center">
-                                                        <Link
-                                                            to="/admin/profile"
-                                                            className="adminPersonal__profile"
-                                                        >
-                                                            Profile
-                                                        </Link>
-                                                    </span>
+                                <div className="profile">
+                                    <motion.img
+                                        whileTap={{ scale: 1.2 }}
+                                        src={
+                                            currentUser
+                                                ? currentUser.photoURL
+                                                : userIcon
+                                        }
+                                        alt=""
+                                        onClick={toggleProfileActions}
+                                    />
 
-                                                    <div className="line mb-2 mt-2"></div>
+                                    <div
+                                        className="profile__actions"
+                                        ref={profileActionRef}
+                                        onClick={toggleProfileActions}
+                                    >
+                                        {currentUser ? ( //Check user exists
+                                            <div className="d-flex align-items-center justify-content-center flex-column">
+                                                {!isAdmin && (
+                                                    <>
+                                                        <span className="admin__profile d-flex align-items-center">
+                                                            <Link
+                                                                to="/profile"
+                                                                className="adminPersonal__profile"
+                                                            >
+                                                                Profile
+                                                            </Link>
+                                                        </span>
 
-                                                    <span className="dashboard d-flex align-items-center">
-                                                        <Link
-                                                            to="/admin/dashboard"
-                                                            className="dashboard__profile"
-                                                        >
-                                                            Dashboard
-                                                        </Link>
-                                                    </span>
+                                                        <div className="line mb-2 mt-2"></div>
+                                                    </>
+                                                )}
 
-                                                    <div className="line mb-2 mt-2"></div>
-                                                </>
-                                            )}
+                                                {isAdmin && ( //Check admin exists
+                                                    <>
+                                                        <span className="admin__profile d-flex align-items-center">
+                                                            <Link
+                                                                to="/admin/profile"
+                                                                className="adminPersonal__profile"
+                                                            >
+                                                                Profile
+                                                            </Link>
+                                                        </span>
 
-                                            <span
-                                                className="logout d-flex align-items-center"
-                                                onClick={logOut}
-                                            >
-                                                <Link
-                                                    to="/login"
-                                                    className="logout__profile"
+                                                        <div className="line mb-2 mt-2"></div>
+
+                                                        <span className="dashboard d-flex align-items-center">
+                                                            <Link
+                                                                to="/admin/dashboard"
+                                                                className="dashboard__profile"
+                                                            >
+                                                                Dashboard
+                                                            </Link>
+                                                        </span>
+
+                                                        <div className="line mb-2 mt-2"></div>
+                                                    </>
+                                                )}
+
+                                                <span
+                                                    className="logout d-flex align-items-center"
+                                                    onClick={logOut}
                                                 >
-                                                    Log out
-                                                </Link>
-                                            </span>
-                                        </div>
-                                    ) : (
-                                        <div className="d-flex align-items-center justify-content-center flex-column">
-                                            <span className="login d-flex align-items-center mb-2">
-                                                <Link
-                                                    to="/login"
-                                                    className="login__profile"
-                                                >
-                                                    Login
-                                                </Link>
-                                            </span>
+                                                    <Link
+                                                        to="/login"
+                                                        className="logout__profile"
+                                                    >
+                                                        Log out
+                                                    </Link>
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <div className="d-flex align-items-center justify-content-center flex-column">
+                                                <span className="login d-flex align-items-center mb-2">
+                                                    <Link
+                                                        to="/login"
+                                                        className="login__profile"
+                                                    >
+                                                        Login
+                                                    </Link>
+                                                </span>
 
-                                            <div className="line"></div>
+                                                <div className="line"></div>
 
-                                            <span className="signup d-flex align-items-center">
-                                                <Link
-                                                    to="/signup"
-                                                    className="signup__profile"
-                                                >
-                                                    Sign Up
-                                                </Link>
-                                            </span>
-                                        </div>
-                                    )}
+                                                <span className="signup d-flex align-items-center">
+                                                    <Link
+                                                        to="/signup"
+                                                        className="signup__profile"
+                                                    >
+                                                        Sign Up
+                                                    </Link>
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="mobile__menu">
+                                    <span onClick={menuToggle}>
+                                        <i className="ri-menu-line"></i>
+                                    </span>
                                 </div>
                             </div>
-
-                            <div className="mobile__menu">
-                                <span onClick={menuToggle}>
-                                    <i className="ri-menu-line"></i>
-                                </span>
-                            </div>
-                        </div>
                         </div>
                     </div>
                 </Row>

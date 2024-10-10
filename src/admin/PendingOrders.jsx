@@ -1,9 +1,8 @@
 import React from "react";
 import "../styles/pendingorders.css";
-import { deleteDoc, doc, setDoc } from "firebase/firestore";
-import { auth, db } from "../firebase.config";
+import { collection, deleteDoc, doc, getDocs, query, setDoc, updateDoc, where } from "firebase/firestore";
+import { db } from "../firebase.config";
 import { toast } from "react-toastify";
-import { createUserWithEmailAndPassword } from "firebase/auth";
 import { Button, Col, Container, Row, Spinner } from "reactstrap";
 import useGetData from "../custom-hooks/useGetData";
 import Helmet from "../components/Helmet/Helmet";
@@ -13,19 +12,11 @@ const PendingOrders = () => {
 
     const handleApprove = async (order) => {
         try {
-            const adminUser = auth.currentUser;
+            // Generate a unique ID for the seller
+            const sellerId = doc(collection(db, "sellers")).id;
 
-            // Tạo người dùng trong Firebase Authentication
-            const userCredential = await createUserWithEmailAndPassword(
-                auth,
-                order.storeEmail,
-                order.hashedPassword
-            );
-
-            const user = userCredential.user;
-
-            // Cập nhật thông tin đơn hàng đã phê duyệt vào collection sellers
-            await setDoc(doc(db, "sellers", user.uid), {
+            // Update approved order information to collection sellers
+            await setDoc(doc(db, "sellers", sellerId), {
                 fullName: order.fullName,
                 phoneNumber: order.phoneNumber,
                 email: order.email,
@@ -41,13 +32,29 @@ const PendingOrders = () => {
                 approvedAt: new Date(),
             });
 
-            await deleteDoc(doc(db, "pendingOrders", order.id));
+            // Find the user document by email
+            const usersRef = collection(db, "users");
+            const q = query(usersRef, where("email", "==", order.email));
+            const querySnapshot = await getDocs(q);
 
-            await auth.updateCurrentUser(adminUser);
+            if (!querySnapshot.empty) {
+                // Get the first (and should be only) document
+                const userDoc = querySnapshot.docs[0];
+                
+                // Update the user document
+                await updateDoc(doc(db, "users", userDoc.id), {
+                    status: "seller",
+                    sellerId: sellerId
+                });
+            } else {
+                console.error("User document not found for email:", order.email);
+                throw new Error("User not found");
+            }
+
+            await deleteDoc(doc(db, "pendingOrders", order.id));
 
             toast.success("Seller account approved and created successfully!");
         } catch (error) {
-            console.error("Error approving seller account:", error);
             toast.error("Error approving seller account: " + error.message);
         }
     };

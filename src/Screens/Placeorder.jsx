@@ -8,7 +8,16 @@ import "../styles/checkout.css";
 import "../styles/placeorder.css";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { toast } from "react-toastify";
-import { doc, getDoc, Timestamp, updateDoc } from "firebase/firestore";
+import {
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    query,
+    Timestamp,
+    updateDoc,
+    where,
+} from "firebase/firestore";
 import { db } from "../firebase.config";
 import { cartActions } from "../redux/slices/cartSlice";
 import { useDispatch } from "react-redux";
@@ -29,7 +38,6 @@ const PlaceOrder = () => {
 
     useEffect(() => {
         if (!orderId) {
-            // If there's no orderId, redirect back to checkout
             navigate("/checkout");
         }
 
@@ -37,23 +45,46 @@ const PlaceOrder = () => {
         const fetchOrderDetails = async () => {
             try {
                 setIsFetchingOrder(true);
-                const orderRef = doc(db, "orders", orderId);
-                const orderSnap = await getDoc(orderRef);
-                if (orderSnap.exists()) {
-                    const data = orderSnap.data();
-                    // Convert Firestore Timestamp to Date object
-                    if (data.paidAt && data.paidAt instanceof Timestamp) {
-                        data.paidAt = data.paidAt.toDate();
-                    }
-                    if (
-                        data.deliveredAt &&
-                        data.deliveredAt instanceof Timestamp
-                    ) {
-                        data.deliveredAt = data.deliveredAt.toDate();
+                const totalOrderRef = doc(db, "totalOrders", orderId);
+                const totalOrderSnap = await getDoc(totalOrderRef);
+                if (totalOrderSnap.exists()) {
+                    const totalOrderData = totalOrderSnap.data();
+
+                    if (!totalOrderData.billingInfo) {
+                        totalOrderData.billingInfo = {};
                     }
 
-                    // Store order data in the component's state.
-                    setOrderDetails(data);
+                    // Convert Firestore Timestamp to Date object
+                    if (totalOrderData.paidAt && totalOrderData.paidAt instanceof Timestamp) {
+                        totalOrderData.paidAt = totalOrderData.paidAt.toDate();
+                    }
+                    if (
+                        totalOrderData.deliveredAt &&
+                        totalOrderData.deliveredAt instanceof Timestamp
+                    ) {
+                        totalOrderData.deliveredAt = totalOrderData.deliveredAt.toDate();
+                    }
+
+                    // Fetch sub orders
+                    const subOrdersRef = collection(db, "subOrders");
+                    const q = query(
+                        subOrdersRef,
+                        where("totalOrderId", "==", orderId)
+                    );
+                    const subOrdersSnap = await getDocs(q);
+
+                    const subOrdersData = subOrdersSnap.docs.map((doc) => ({
+                        id: doc.id,
+                        ...doc.data(),
+                    }));
+
+                    setOrderDetails({
+                        totalOrder: {
+                            id: totalOrderSnap.id,
+                            ...totalOrderData,
+                        },
+                        subOrders: subOrdersData,
+                    });
                 } else {
                     toast.error("Order not found");
                     navigate("/checkout");
@@ -68,6 +99,18 @@ const PlaceOrder = () => {
         fetchOrderDetails();
     }, [orderId, navigate]);
 
+    if (sellerLoading || isFetchingOrder) {
+        return (
+            <Container
+                className="d-flex justify-content-center align-items-center"
+                style={{ height: "100vh" }}
+            >
+                <Spinner style={{ width: "3rem", height: "3rem" }} />
+                <span className="visually-hidden">Loading...</span>
+            </Container>
+        );
+    }
+
     if (!orderDetails) {
         return (
             <Container
@@ -81,7 +124,8 @@ const PlaceOrder = () => {
     }
 
     // Get order details
-    const cartItems = orderDetails ? orderDetails.cartItems : [];
+    const { totalOrder, subOrders } = orderDetails;
+    const cartItems = totalOrder.cartItems || [];
 
     const handleConfirmOrder = () => {
         setShowPaypal(true);
@@ -91,7 +135,7 @@ const PlaceOrder = () => {
     const handlePaymentSuccess = async (details) => {
         try {
             setLoading(true);
-            const orderRef = doc(db, "orders", orderId);
+            const orderRef = doc(db, "totalOrders", orderId);
             const paidAt = new Date();
             await updateDoc(orderRef, {
                 isPaid: true,
@@ -106,9 +150,26 @@ const PlaceOrder = () => {
 
             setOrderDetails((prevDetails) => ({
                 ...prevDetails,
-                isPaid: true,
-                paidAt: paidAt,
+                totalOrder: {
+                    ...prevDetails.totalOrder,
+                    isPaid: true,
+                    paidAt: paidAt,
+                },
             }));
+
+            // Update payment status for subOrders
+            const subOrdersRef = collection(db, "subOrders");
+            const q = query(subOrdersRef, where("totalOrderId", "==", orderId));
+            const subOrdersSnap = await getDocs(q);
+
+            const updatePromises = subOrdersSnap.docs.map((doc) =>
+                updateDoc(doc.ref, {
+                    isPaid: true,
+                    paidAt: Timestamp.fromDate(paidAt),
+                })
+            );
+
+            await Promise.all(updatePromises);
 
             // Clear cart and update Redux store
             dispatch(cartActions.clearCart());
@@ -129,18 +190,22 @@ const PlaceOrder = () => {
         }
 
         try {
-            const orderRef = doc(db, "orders", orderId);
+            const orderRef = doc(db, "totalOrders", orderId);
             await updateDoc(orderRef, {
                 isDelivered: true,
                 deliveredAt: Timestamp.fromDate(new Date()),
             });
             setOrderDetails((prev) => ({
                 ...prev,
-                isDelivered: true,
-                deliveredAt: new Date(),
+                totalOrder: {
+                    ...prev.totalOrder,
+                    isDelivered: true,
+                    deliveredAt: new Date(),
+                },
             }));
             toast.success("Order marked as delivered");
         } catch (error) {
+            console.error("Delivery confirmation error:", error);
             toast.error("Error updating order: " + error.message);
         }
     };
@@ -150,26 +215,11 @@ const PlaceOrder = () => {
         return date instanceof Date ? date.toLocaleString() : "N/A";
     };
 
-    if (sellerLoading || isFetchingOrder) {
-        return (
-            <Container
-                className="d-flex justify-content-center align-items-center"
-                style={{ height: "100vh" }}
-            >
-                <Spinner style={{ width: "3rem", height: "3rem" }} />
-                <span className="visually-hidden">Loading...</span>
-            </Container>
-        );
-    }
-
-    const shouldShowPaypal = orderDetails && !orderDetails.isPaid && showPaypal;
+    const shouldShowPaypal = totalOrder && !totalOrder.isPaid && showPaypal;
     const shouldShowConfirmOrderBtn =
-        !isSeller && orderDetails && !orderDetails.isPaid && !showPaypal;
+        !isSeller && totalOrder && !totalOrder.isPaid && !showPaypal;
     const shouldShowConfirmDeliverBtn =
-        isSeller &&
-        orderDetails &&
-        orderDetails.isPaid &&
-        !orderDetails.isDelivered;
+        isSeller && totalOrder && totalOrder.isPaid && !totalOrder.isDelivered;
 
     return (
         <Helmet title=" Place Order">
@@ -185,45 +235,52 @@ const PlaceOrder = () => {
                                 <div className="billing__info">
                                     <p>
                                         <strong>Name: </strong>
-                                        {orderDetails.billingInfo.name}
+                                        {totalOrder.billingInfo?.name ||
+                                            "No name available"}
                                     </p>
                                     <p>
                                         <strong>Email: </strong>
-                                        {orderDetails.billingInfo.email}
+                                        {totalOrder.billingInfo?.email ||
+                                            "No email available"}
                                     </p>
                                     <p>
                                         <strong>Phone: </strong>
-                                        {orderDetails.billingInfo.phone}
+                                        {totalOrder.billingInfo?.phone ||
+                                            "No phone available"}
                                     </p>
                                     <p>
                                         <strong>Address: </strong>
-                                        {orderDetails.billingInfo.address}
+                                        {totalOrder.billingInfo?.address ||
+                                            "No address available"}
                                     </p>
                                     <p>
                                         <strong>City: </strong>
-                                        {orderDetails.billingInfo.city}
+                                        {totalOrder.billingInfo?.city ||
+                                            "No city available"}
                                     </p>
                                     <p>
                                         <strong>Postal Code: </strong>
-                                        {orderDetails.billingInfo.postalCode}
+                                        {totalOrder.billingInfo?.postalCode ||
+                                            "No postal code available"}
                                     </p>
                                     <p>
                                         <strong>Country: </strong>
-                                        {orderDetails.billingInfo.country}
+                                        {totalOrder.billingInfo?.country ||
+                                            "No country available country"}
                                     </p>
                                 </div>
 
                                 <div className="mt-3">
                                     <p
                                         className={
-                                            orderDetails.isDelivered
+                                            totalOrder.isDelivered
                                                 ? "text-success"
                                                 : "text-danger"
                                         }
                                     >
-                                        {orderDetails.isDelivered
+                                        {totalOrder.isDelivered
                                             ? `Delivered at ${formatDate(
-                                                  orderDetails.deliveredAt
+                                                  totalOrder.deliveredAt
                                               )}`
                                             : "Not Delivered"}
                                     </p>
@@ -235,14 +292,14 @@ const PlaceOrder = () => {
                                 <p className="mb-0">Payment Method: Paypal</p>
                                 <p
                                     className={
-                                        orderDetails.isPaid
+                                        totalOrder.isPaid
                                             ? "text-success mt-2"
                                             : "text-danger mt-2"
                                     }
                                 >
-                                    {orderDetails.isPaid
+                                    {totalOrder.isPaid
                                         ? `Paid at ${formatDate(
-                                              orderDetails.paidAt
+                                              totalOrder.paidAt
                                           )}`
                                         : "Not Paid"}
                                 </p>
@@ -283,23 +340,23 @@ const PlaceOrder = () => {
                                 <h6>
                                     Total Qty:
                                     <span>
-                                        {orderDetails.totalQuantity || 0} items
+                                        {totalOrder.totalQuantity || 0} items
                                     </span>
                                 </h6>
                                 <h6>
                                     Subtotal:
-                                    <span>${orderDetails.totalAmount}</span>
+                                    <span>${totalOrder.totalAmount}</span>
                                 </h6>
                                 <h6>
                                     <span>Shipping:</span>
-                                    <span>${orderDetails.totalShipping}</span>
+                                    <span>${totalOrder.totalShipping}</span>
                                 </h6>
                                 <h6>
-                                    Tax: <span>${orderDetails.totalTax} </span>
+                                    Tax: <span>${totalOrder.totalTax} </span>
                                 </h6>
                                 <h4>
                                     Total Cost:
-                                    <span>${orderDetails.totalPrice}</span>
+                                    <span>${totalOrder.totalPrice}</span>
                                 </h4>
 
                                 {shouldShowConfirmOrderBtn && (
@@ -324,7 +381,7 @@ const PlaceOrder = () => {
                                                     purchase_units: [
                                                         {
                                                             amount: {
-                                                                value: orderDetails.totalPrice.toString(),
+                                                                value: totalOrder.totalPrice.toString(),
                                                             },
                                                         },
                                                     ],

@@ -42,12 +42,14 @@ const ProductDetails = () => {
     const [replyUserName, setReplyUserName] = useState("");
     const [reviewSubmitted, setReviewSubmitted] = useState(false);
     const [expandedReplies, setExpandedReplies] = useState({});
+    const [storeName, setStoreName] = useState("");
 
     useEffect(() => {
         const docRef = doc(db, "products", id);
         const unsubscribe = onSnapshot(docRef, (doc) => {
             if (doc.exists()) {
                 const productData = doc.data();
+                console.log("Product data:", productData);
                 setProduct(productData);
                 setIsStaticProduct(false);
 
@@ -69,6 +71,27 @@ const ProductDetails = () => {
         // Clean up the listener on unmount
         return () => unsubscribe();
     }, [id]); // Added id as a dependency to make sure the listener updates when the id changes
+
+    useEffect(() => {
+        const fetchSellerData = async () => {
+            if (product.sellerId) {
+                console.log("Fetching seller data for sellerId:", product.sellerId);
+                const sellerDocRef = doc(db, "sellers", product.sellerId);
+                const unsubscribe = onSnapshot(sellerDocRef, (doc) => {
+                    if (doc.exists()) {
+                        const sellerData = doc.data();
+                        setStoreName(sellerData.storeName);
+                    } else {
+                        console.error("Seller not found!");
+                    }
+                });
+    
+                return () => unsubscribe();
+            }
+        };
+    
+        fetchSellerData();
+    }, [product.sellerId]);
 
     const {
         imgUrl,
@@ -401,6 +424,7 @@ const ProductDetails = () => {
                                     <span>Category: {category}</span>
                                 </div>
                                 <p className="mt-3">{shortDesc}</p>
+                                <p className="mt-3">Store: {storeName || 'Loading...'}</p>
 
                                 <motion.button
                                     whileTap={{ scale: 1.2 }}

@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { auth, db, storage } from "../firebase.config";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import "../styles/Add-EditProduct.css";
 import Helmet from "../components/Helmet/Helmet";
@@ -24,16 +24,28 @@ const AddProducts = () => {
         e.preventDefault();
         setLoading(true);
 
-        //Create Product to the Firebase database
-        try {
-            const docRef = await collection(db, "products");
-            const currentUser = auth.currentUser;
+        const currentUser = auth.currentUser;
 
-            if(!currentUser) {
-                toast.error("You must be logged in to create a product");
+        if (!currentUser) {
+            toast.error("You must be logged in to create a product");
+            setLoading(false);
+            return;
+        }
+
+        // Create Product to the Firebase database
+        try {
+            // Get sellerId from collection "users"
+            const userDocRef = doc(db, "users", currentUser.uid);
+            const userDoc = await getDoc(userDocRef);
+
+            if (!userDoc.exists()) {
+                toast.error("User not found");
                 setLoading(false);
                 return;
             }
+
+            const userData = userDoc.data();
+            const sellerId = userData.sellerId;
 
             const storageRef = ref(
                 storage,
@@ -61,14 +73,14 @@ const AddProducts = () => {
                         uploadTask.snapshot.ref
                     );
                     // Add a new document to Firestore with the URL of the uploaded image
-                    await addDoc(docRef, {
+                    await addDoc(collection(db, "products"), {
                         productName: enterTitle,
                         shortDesc: enterShortDesc,
                         description: enterDescription,
                         category: enterCategory,
                         price: enterPrice,
                         imgUrl: downloadURL,
-                        sellerId: currentUser.uid,
+                        sellerId: sellerId,
                     });
                 }
             );

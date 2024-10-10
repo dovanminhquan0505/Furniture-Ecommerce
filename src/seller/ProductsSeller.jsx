@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Spinner } from "reactstrap";
 import { motion } from "framer-motion";
 import { auth, db } from "../firebase.config";
-import { doc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, deleteDoc, collection, query, where, getDocs, getDoc } from "firebase/firestore";
 import { toast } from "react-toastify";
 import "../styles/all-products.css";
 import { Link, useNavigate } from "react-router-dom";
@@ -14,18 +14,37 @@ const AllProducts = () => {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
+    const [ sellerId, setSellerId ] = useState(null);
 
     useEffect(() => {
-        const fetchProducts = async () => {
+        const fetchSellerData = async () => {
             const currentUser = auth.currentUser;
-            if(!currentUser) {
+            if (!currentUser) {
                 toast.error("You must be logged in to view your products");
                 navigate("/login");
                 return;
             }
 
+            const userDocRef = doc(db, "users", currentUser.uid);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                setSellerId(userData.sellerId);
+            } else {
+                toast.error("User not found");
+                navigate("/register"); 
+            }
+        };
+
+        fetchSellerData();
+    }, [navigate, setSellerId]);
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            if (!sellerId) return;
+
             const productsRef = collection(db, "products");
-            const q = query(productsRef, where("sellerId", "==", currentUser.uid));
+            const q = query(productsRef, where("sellerId", "==", sellerId));
             const querySnapShot = await getDocs(q);
             const products = [];
             querySnapShot.forEach((doc) => {
@@ -33,10 +52,10 @@ const AllProducts = () => {
             });
             setProductsData(products);
             setLoading(false);
-        }
+        };
 
         fetchProducts();
-    }, [navigate])
+    }, [sellerId]);
 
     const deleteProduct = async (id) => {
         await deleteDoc(doc(db, "products", id));

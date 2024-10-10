@@ -1,9 +1,36 @@
-import { collection, getDocs, query, Timestamp, where } from "firebase/firestore";
+import {
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    query,
+    Timestamp,
+    where,
+} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { auth, db } from "../firebase.config";
-import styles from "../seller/styles/dashboard-seller.css";
-import { Card, CardBody, CardText, CardTitle, Col, Container, Row } from "reactstrap";
-import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import "../seller/styles/dashboard-seller.css";
+import {
+    Card,
+    CardBody,
+    CardText,
+    CardTitle,
+    Col,
+    Container,
+    Row,
+    Spinner,
+    Table,
+} from "reactstrap";
+import {
+    CartesianGrid,
+    Line,
+    Tooltip,
+    Legend,
+    ResponsiveContainer
+} from "recharts";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { XAxis, YAxis, LineChart } from "../components/RechartsWrapper/RechartsWrapper";
 
 const DashboardSeller = () => {
     const [stats, setStats] = useState({
@@ -11,139 +38,243 @@ const DashboardSeller = () => {
         weeklyRevenue: 0,
         monthlyRevenue: 0,
         productsSold: 0,
-        profit: 0
+        profit: 0,
     });
     const [revenueData, setRevenueData] = useState([]);
+    const [topProducts, setTopProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [sellerId, setSellerId] = useState(null);
+    const navigate = useNavigate();
 
-    // useEffect(() => {
-    //     const fetchStats = async () => {
-    //         try {
-    //             const currentUser = auth.currentUser;
-    //             if (!currentUser) {
-    //                 setError("No authenticated user found. Please log in.");
-    //                 setLoading(false);
-    //                 return;
-    //             }
+    useEffect(() => {
+        const fetchSellerData = async () => {
+            const currentUser = auth.currentUser;
+            if (!currentUser) {
+                toast.error("You must be logged in to view your products");
+                navigate("/login");
+                return;
+            }
 
-    //             const sellerId = currentUser.uid;
-    //             const ordersRef = collection(db, 'orders');
-    //             const now = Timestamp.now();
-    //             const dayAgo = Timestamp.fromMillis(now.toMillis() - 24 * 60 * 60 * 1000);
-    //             const weekAgo = Timestamp.fromMillis(now.toMillis() - 7 * 24 * 60 * 60 * 1000);
-    //             const monthAgo = Timestamp.fromMillis(now.toMillis() - 30 * 24 * 60 * 60 * 1000);
+            const userDocRef = doc(db, "users", currentUser.uid);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                setSellerId(userData.sellerId);
+            } else {
+                toast.error("User not found");
+                navigate("/register");
+            }
+        };
 
-    //             const q = query(
-    //                 ordersRef,
-    //                 where('sellerId', '==', sellerId),
-    //                 where('createdAt', '>=', monthAgo)
-    //             );
+        fetchSellerData();
+    }, [navigate]);
 
-    //             const querySnapshot = await getDocs(q);
-    //             let dailyRev = 0, weeklyRev = 0, monthlyRev = 0, productsSold = 0, totalProfit = 0;
-    //             const revenueByDay = {};
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (!sellerId) {
+                return;
+            }
 
-    //             querySnapshot.forEach((doc) => {
-    //                 const order = doc.data();
-    //                 const orderDate = order.orderDate.toDate();
-    //                 const revenue = order.totalAmount;
-    //                 const profit = revenue * 0.2; // Assuming 20% profit margin
+            try {
+                setLoading(true);
 
-    //                 monthlyRev += revenue;
-    //                 totalProfit += profit;
-    //                 productsSold += order.items.reduce((acc, item) => acc + item.quantity, 0);
+                const totalOrdersRef = collection(db, "totalOrders");
+                const subOrdersRef = collection(db, "subOrders");
+                const now = Timestamp.now();
+                const dayAgo = Timestamp.fromMillis(
+                    now.toMillis() - 24 * 60 * 60 * 1000
+                );
+                const weekAgo = Timestamp.fromMillis(
+                    now.toMillis() - 7 * 24 * 60 * 60 * 1000
+                );
+                const monthAgo = Timestamp.fromMillis(
+                    now.toMillis() - 30 * 24 * 60 * 60 * 1000
+                );
 
-    //                 if (order.orderDate >= dayAgo) {
-    //                     dailyRev += revenue;
-    //                 }
-    //                 if (order.orderDate >= weekAgo) {
-    //                     weeklyRev += revenue;
-    //                 }
+                const totalOrdersQuery = query(
+                    totalOrdersRef,
+                    where("sellerIds", "array-contains", sellerId),
+                    where("createdAt", ">=", monthAgo)
+                );
 
-    //                 const dateString = orderDate.toISOString().split('T')[0];
-    //                 if (revenueByDay[dateString]) {
-    //                     revenueByDay[dateString] += revenue;
-    //                 } else {
-    //                     revenueByDay[dateString] = revenue;
-    //                 }
-    //             });
+                const subOrdersQuery = query(
+                    subOrdersRef,
+                    where("sellerId", "==", sellerId),
+                    where("createdAt", ">=", monthAgo)
+                );
 
-    //             setStats({
-    //                 dailyRevenue: dailyRev,
-    //                 weeklyRevenue: weeklyRev,
-    //                 monthlyRevenue: monthlyRev,
-    //                 productsSold,
-    //                 profit: totalProfit
-    //             });
+                const [totalOrdersSnapshot, subOrdersSnapshot] =
+                    await Promise.all([
+                        getDocs(totalOrdersQuery),
+                        getDocs(subOrdersQuery),
+                    ]);
 
-    //             const chartData = Object.keys(revenueByDay).map(date => ({
-    //                 date,
-    //                 revenue: revenueByDay[date]
-    //             })).sort((a, b) => new Date(a.date) - new Date(b.date));
+                let dailyRev = 0,
+                    weeklyRev = 0,
+                    monthlyRev = 0,
+                    orderCount = 0,
+                    totalProfit = 0;
+                const revenueByDay = {};
+                const productSales = {};
 
-    //             setRevenueData(chartData);
-    //             setLoading(false);
-    //         } catch (err) {
-    //             console.error("Error fetching stats:", err);
-    //             setError("An error occurred while fetching your data. Please try again later.");
-    //             setLoading(false);
-    //         }
-    //     };
+                totalOrdersSnapshot.forEach((doc) => {
+                    const order = doc.data();
+                    const orderDate = order.createdAt.toDate();
+                    const sellerCount = order.sellerIds.length;
+                    const revenue = order.totalAmount / sellerCount;
+                    const profit = revenue * 0.2; // Assuming 20% profit margin
 
-    //     fetchStats();
-    // }, []);
+                    monthlyRev += revenue;
+                    totalProfit += profit;
+                    orderCount++;
+
+                    if (order.createdAt >= dayAgo) {
+                        dailyRev += revenue;
+                    }
+                    if (order.createdAt >= weekAgo) {
+                        weeklyRev += revenue;
+                    }
+
+                    const dateString = orderDate.toISOString().split("T")[0];
+                    if (revenueByDay[dateString]) {
+                        revenueByDay[dateString] += revenue;
+                    } else {
+                        revenueByDay[dateString] = revenue;
+                    }
+                });
+
+                subOrdersSnapshot.forEach((doc) => {
+                    const subOrder = doc.data();
+                    if (subOrder.product && subOrder.quantity) {
+                        if (productSales[subOrder.product]) {
+                            productSales[subOrder.product] += subOrder.quantity;
+                        } else {
+                            productSales[subOrder.product] = subOrder.quantity;
+                        }
+                    }
+                });
+
+                setStats({
+                    dailyRevenue: dailyRev,
+                    weeklyRevenue: weeklyRev,
+                    monthlyRevenue: monthlyRev,
+                    orderCount,
+                    profit: totalProfit,
+                });
+
+                const chartData = Object.keys(revenueByDay)
+                    .map((date) => ({
+                        date,
+                        revenue: revenueByDay[date],
+                    }))
+                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                setRevenueData(chartData);
+
+                const sortedProducts = Object.entries(productSales)
+                    .sort(([, a], [, b]) => b - a)
+                    .slice(0, 5)
+                    .map(([product, quantity]) => ({ product, quantity }));
+
+                setTopProducts(sortedProducts);
+
+                setLoading(false);
+            } catch (err) {
+                console.error("Error fetching stats:", err);
+                setError(
+                    "An error occurred while fetching your data. Please try again later."
+                );
+                setLoading(false);
+            }
+        };
+
+        fetchStats();
+    }, [sellerId]);
 
     if (loading) {
-        return <div className={styles.loading__message}>Loading dashboard data...</div>;
+        return (
+            <Container
+                className="d-flex justify-content-center align-items-center"
+                style={{ height: "100vh" }}
+            >
+                <Spinner
+                    style={{
+                        width: "3rem",
+                        height: "3rem",
+                    }}
+                />
+                <span className="visually-hidden">Loading...</span>
+            </Container>
+        );
     }
 
     if (error) {
-        return <div className={styles.error__message}>{error}</div>;
+        return <div className="error__message">{error}</div>;
     }
 
     return (
-        <Container className={styles.dashboard__container}>
-            <h2 className={styles.dashboard__title}>Seller Dashboard</h2>
+        <Container className="dashboard__container">
             <Row>
                 <Col md={4}>
-                    <Card className={styles.stats__card}>
+                    <Card className="stats__card">
                         <CardBody>
                             <CardTitle tag="h5">Daily Revenue</CardTitle>
-                            <CardText className={styles.stat__value}>${stats.dailyRevenue.toFixed(2)}</CardText>
+                            <CardText className="stat__value">
+                                ${stats.dailyRevenue.toFixed(2)}
+                            </CardText>
                         </CardBody>
                     </Card>
                 </Col>
                 <Col md={4}>
-                    <Card className={styles.stats__card}>
+                    <Card className="stats__card">
                         <CardBody>
                             <CardTitle tag="h5">Weekly Revenue</CardTitle>
-                            <CardText className={styles.stat__value}>${stats.weeklyRevenue.toFixed(2)}</CardText>
+                            <CardText className="stat__value">
+                                ${stats.weeklyRevenue.toFixed(2)}
+                            </CardText>
                         </CardBody>
                     </Card>
                 </Col>
                 <Col md={4}>
-                    <Card className={styles.stats__card}>
+                    <Card className="stats__card">
                         <CardBody>
                             <CardTitle tag="h5">Monthly Revenue</CardTitle>
-                            <CardText className={styles.stat__value}>${stats.monthlyRevenue.toFixed(2)}</CardText>
+                            <CardText className="stat__value">
+                                ${stats.monthlyRevenue.toFixed(2)}
+                            </CardText>
                         </CardBody>
                     </Card>
                 </Col>
             </Row>
-            <Row className={styles.chart__row}>
+            <Row className="chart__row">
                 <Col md={12}>
-                    <Card className={styles.chart__card}>
+                    <Card className="chart__card">
                         <CardBody>
                             <CardTitle tag="h5">Revenue Trend</CardTitle>
                             <ResponsiveContainer width="100%" height={300}>
                                 <LineChart data={revenueData}>
                                     <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="date" />
-                                    <YAxis />
-                                    <Tooltip />
+                                    <XAxis 
+                                        dataKey="date"
+                                        tick={{fontSize: 12}}
+                                        tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                                    />
+                                    <YAxis
+                                        tick={{fontSize: 12}}
+                                        tickFormatter={(value) => `$${value}`}
+                                    />
+                                    <Tooltip
+                                        formatter={(value) => [`$${value}`, "Revenue"]}
+                                        labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                                    />
                                     <Legend />
-                                    <Line type="monotone" dataKey="revenue" stroke="#8884d8" />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="revenue"
+                                        stroke="#8884d8"
+                                        activeDot={{ r: 8 }}
+                                    />
                                 </LineChart>
                             </ResponsiveContainer>
                         </CardBody>
@@ -152,18 +283,47 @@ const DashboardSeller = () => {
             </Row>
             <Row>
                 <Col md={6}>
-                    <Card className={styles.stats__card}>
+                    <Card className="stats__card">
                         <CardBody>
-                            <CardTitle tag="h5">Products Sold</CardTitle>
-                            <CardText className={styles.stat__value}>{stats.productsSold}</CardText>
+                            <CardTitle tag="h5">Total Orders</CardTitle>
+                            <CardText className="stat__value">
+                                {stats.orderCount}
+                            </CardText>
                         </CardBody>
                     </Card>
                 </Col>
                 <Col md={6}>
-                    <Card className={styles.stats__card}>
+                    <Card className="stats__card">
                         <CardBody>
                             <CardTitle tag="h5">Estimated Profit</CardTitle>
-                            <CardText className={styles.stat__value}>${stats.profit.toFixed(2)}</CardText>
+                            <CardText className="stat__value">
+                                ${stats.profit.toFixed(2)}
+                            </CardText>
+                        </CardBody>
+                    </Card>
+                </Col>
+            </Row>
+            <Row className="top-products__row">
+                <Col md={12}>
+                    <Card className="top-products__card">
+                        <CardBody>
+                            <CardTitle tag="h5">Top 5 Products</CardTitle>
+                            <Table>
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Quantity Sold</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {topProducts.map((product, index) => (
+                                        <tr key={index}>
+                                            <td>{product.product}</td>
+                                            <td>{product.quantity}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </Table>
                         </CardBody>
                     </Card>
                 </Col>

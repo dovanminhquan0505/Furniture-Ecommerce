@@ -34,17 +34,17 @@ const EditProduct = () => {
                     setProductDetails(docSnap.data());
                 } else {
                     toast.error("Product not found!");
-                    navigate("/admin/all-products");
+                    navigate("/seller/all-products");
                 }
             } catch (error) {
                 toast.error("Error fetching product details: " + error.message);
-                navigate("/admin/all-products");
+                navigate("/seller/all-products");
             }
         };
         fetchProductDetails();
     }, [productId, navigate]);
 
-    // Handle input changes when admin changes value
+    // Handle input changes when seller changes value
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setProductDetails((prev) => ({
@@ -59,7 +59,7 @@ const EditProduct = () => {
         setEnterProductImg(file);
     };
 
-    // Handle update value when admin clicks on update product button
+    // Handle update value when seller clicks on update product button
     const updateProduct = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -109,7 +109,7 @@ const EditProduct = () => {
 
             setLoading(false);
             toast.success("Product updated successfully!");
-            navigate("/admin/all-products");
+            navigate("/seller/all-products");
         } catch (error) {
             setLoading(false);
             toast.error("Product upload failed: " + error.message);

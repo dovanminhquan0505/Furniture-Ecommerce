@@ -8,18 +8,16 @@ import Checkout from "../Screens/Checkout";
 import Login from "../Screens/Login";
 import SignUp from "../Screens/SignUp";
 import ProtectedRoute from "./ProtectedRoute";
-import AddProducts from "../admin/AddProducts";
-import AllProducts from "../admin/AllProducts";
+import AddProducts from "../seller/AddProducts";
 import Dashboard from "../admin/Dashboard";
 import Users from "../admin/Users";
 import ProtectedAdminRoute from "./ProtectedAdminRoute";
 import Orders from "../admin/Orders";
 import Placeorder from "../Screens/Placeorder";
-import EditProduct from "../admin/EditProduct";
+import EditProduct from "../seller/EditProduct";
 import ProfileAdmin from "../admin/ProfileAdmin";
 import ProfileUser from "../Screens/ProfileUser";
 import WishList from "../Screens/WishList";
-import LoginSeller from "../seller/login-seller";
 import SignupSeller from "../seller/signup-seller";
 import DashboardSeller from "../seller/dashboard-seller";
 import PendingOrders from "../admin/PendingOrders";
@@ -47,18 +45,16 @@ const Routers = () => {
             </Route>
 
             <Route path="/seller/*" element={<ProtectedSeller />}>
-                <Route path="login" element={<LoginSeller />} />
                 <Route path="dashboard" element={<DashboardSeller />} />
                 <Route path="all-products" element={<ProductsSeller />}/>
+                <Route path="edit-product/:productId" element={<EditProduct />} />
+                <Route path="add-product" element={<AddProducts />} />
                 <Route path="orders" element={<OrdersSeller />}/>
                 <Route path="store-information" element={<StoreInformation />}/>
             </Route>
 
             <Route path="/admin/*" element={<ProtectedAdminRoute />}>
                 <Route path="dashboard" element={<Dashboard />} />
-                <Route path="all-products" element={<AllProducts />} />
-                <Route path="edit-product/:productId" element={<EditProduct />} />
-                <Route path="add-product" element={<AddProducts />} />
                 <Route path="users" element={<Users />} />
                 <Route path="orders" element={<Orders />} />
                 <Route path="pending-orders" element={<PendingOrders />} />

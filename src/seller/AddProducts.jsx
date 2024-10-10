@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Container, Row, Col, Form, FormGroup, Spinner } from "reactstrap";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
-import { db, storage } from "../firebase.config";
+import { auth, db, storage } from "../firebase.config";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { collection, addDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
@@ -27,6 +27,13 @@ const AddProducts = () => {
         //Create Product to the Firebase database
         try {
             const docRef = await collection(db, "products");
+            const currentUser = auth.currentUser;
+
+            if(!currentUser) {
+                toast.error("You must be logged in to create a product");
+                setLoading(false);
+                return;
+            }
 
             const storageRef = ref(
                 storage,
@@ -61,6 +68,7 @@ const AddProducts = () => {
                         category: enterCategory,
                         price: enterPrice,
                         imgUrl: downloadURL,
+                        sellerId: currentUser.uid,
                     });
                 }
             );

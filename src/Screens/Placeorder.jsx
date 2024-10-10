@@ -10,9 +10,9 @@ import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { toast } from "react-toastify";
 import { doc, getDoc, Timestamp, updateDoc } from "firebase/firestore";
 import { db } from "../firebase.config";
-import useAdmin from "../custom-hooks/useAdmin";
 import { cartActions } from "../redux/slices/cartSlice";
 import { useDispatch } from "react-redux";
+import useSeller from "../custom-hooks/useSeller";
 
 // Get Paypal Client from your environment
 const clientId = process.env.REACT_APP_PAYPAL_CLIENT_ID;
@@ -22,7 +22,7 @@ const PlaceOrder = () => {
     const [loading, setLoading] = useState(false);
     const [isFetchingOrder, setIsFetchingOrder] = useState(true);
     const navigate = useNavigate();
-    const { isAdmin, isLoading: adminLoading } = useAdmin();
+    const { isSeller, isLoading: sellerLoading } = useSeller();
     const [orderDetails, setOrderDetails] = useState(null);
     const [showPaypal, setShowPaypal] = useState(false);
     const dispatch = useDispatch();
@@ -74,7 +74,7 @@ const PlaceOrder = () => {
                 className="d-flex justify-content-center align-items-center"
                 style={{ height: "100vh" }}
             >
-                <Spinner style={{ width: '3rem', height: '3rem' }} />
+                <Spinner style={{ width: "3rem", height: "3rem" }} />
                 <span className="visually-hidden">Loading...</span>
             </Container>
         );
@@ -123,8 +123,8 @@ const PlaceOrder = () => {
 
     // Handle Deliver Order, only admin
     const handleDeliveryConfirmation = async () => {
-        if (!isAdmin) {
-            toast.error("Only admins can confirm delivery");
+        if (!isSeller) {
+            toast.error("Only sellers can confirm delivery");
             return;
         }
 
@@ -150,13 +150,13 @@ const PlaceOrder = () => {
         return date instanceof Date ? date.toLocaleString() : "N/A";
     };
 
-    if (adminLoading || isFetchingOrder) {
+    if (sellerLoading || isFetchingOrder) {
         return (
             <Container
                 className="d-flex justify-content-center align-items-center"
                 style={{ height: "100vh" }}
             >
-                <Spinner style={{ width: '3rem', height: '3rem' }} />
+                <Spinner style={{ width: "3rem", height: "3rem" }} />
                 <span className="visually-hidden">Loading...</span>
             </Container>
         );
@@ -164,9 +164,9 @@ const PlaceOrder = () => {
 
     const shouldShowPaypal = orderDetails && !orderDetails.isPaid && showPaypal;
     const shouldShowConfirmOrderBtn =
-        !isAdmin && orderDetails && !orderDetails.isPaid && !showPaypal;
+        !isSeller && orderDetails && !orderDetails.isPaid && !showPaypal;
     const shouldShowConfirmDeliverBtn =
-        isAdmin &&
+        isSeller &&
         orderDetails &&
         orderDetails.isPaid &&
         !orderDetails.isDelivered;
@@ -355,12 +355,19 @@ const PlaceOrder = () => {
 
                                 {loading && (
                                     <Container
-                                    className="d-flex justify-content-center align-items-center"
-                                    style={{ height: "100vh" }}
-                                >
-                                    <Spinner style={{ width: '3rem', height: '3rem' }} />
-                                    <span className="visually-hidden">Loading...</span>
-                                </Container>
+                                        className="d-flex justify-content-center align-items-center"
+                                        style={{ height: "100vh" }}
+                                    >
+                                        <Spinner
+                                            style={{
+                                                width: "3rem",
+                                                height: "3rem",
+                                            }}
+                                        />
+                                        <span className="visually-hidden">
+                                            Loading...
+                                        </span>
+                                    </Container>
                                 )}
                             </div>
                         </Col>

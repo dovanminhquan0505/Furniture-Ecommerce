@@ -12,7 +12,6 @@ import AddProducts from "../seller/AddProducts";
 import Dashboard from "../admin/Dashboard";
 import Users from "../admin/Users";
 import ProtectedAdminRoute from "./ProtectedAdminRoute";
-import Orders from "../admin/Orders";
 import Placeorder from "../Screens/Placeorder";
 import EditProduct from "../seller/EditProduct";
 import ProfileAdmin from "../admin/ProfileAdmin";
@@ -56,7 +55,6 @@ const Routers = () => {
             <Route path="/admin/*" element={<ProtectedAdminRoute />}>
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="users" element={<Users />} />
-                <Route path="orders" element={<Orders />} />
                 <Route path="pending-orders" element={<PendingOrders />} />
                 <Route path="profile" element={<ProfileAdmin />} />
             </Route>

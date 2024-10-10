@@ -20,10 +20,6 @@ const admin_nav = [
         path: "/admin/dashboard",
     },
     {
-        display: "Orders",
-        path: "/admin/orders",
-    },
-    {
         display: "Users",
         path: "/admin/users",
     },

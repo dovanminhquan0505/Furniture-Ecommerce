@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Spinner } from "reactstrap";
-import useGetData from "../custom-hooks/useGetData";
 import { motion } from "framer-motion";
 import { auth, db } from "../firebase.config";
 import { doc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";

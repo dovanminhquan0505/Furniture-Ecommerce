@@ -121,7 +121,7 @@ const ProfileUser = () => {
             try {
                 // Use query to filter orders by userId
                 const ordersQuery = query(
-                    collection(db, "orders"),
+                    collection(db, "totalOrders"),
                     where("userId", "==", userId)
                 );
                 const orderDocs = await getDocs(ordersQuery);

@@ -49,7 +49,6 @@ const ProductDetails = () => {
         const unsubscribe = onSnapshot(docRef, (doc) => {
             if (doc.exists()) {
                 const productData = doc.data();
-                console.log("Product data:", productData);
                 setProduct(productData);
                 setIsStaticProduct(false);
 
@@ -75,7 +74,6 @@ const ProductDetails = () => {
     useEffect(() => {
         const fetchSellerData = async () => {
             if (product.sellerId) {
-                console.log("Fetching seller data for sellerId:", product.sellerId);
                 const sellerDocRef = doc(db, "sellers", product.sellerId);
                 const unsubscribe = onSnapshot(sellerDocRef, (doc) => {
                     if (doc.exists()) {

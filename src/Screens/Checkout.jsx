@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col, FormGroup, Form } from "reactstrap";
 import { motion } from "framer-motion";
@@ -13,13 +13,22 @@ import { db } from "../firebase.config";
 
 const Checkout = () => {
     const { currentUser } = useAuth();
-    const totalQty = useSelector((state) => state.cart.totalQuantity);
-    const totalAmount = useSelector((state) => state.cart.totalAmount);
-    const totalShipping = useSelector((state) => state.cart.totalShipping);
-    const totalTax = useSelector((state) => state.cart.totalTax);
-    const totalPrice = useSelector((state) => state.cart.totalPrice);
-    const cartItems = useSelector((state) => state.cart.cartItems);
+    const cart = useSelector((state) => state.cart);
+    const [orderData, setOrderData] = useState(null);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (cart) {
+            setOrderData({
+                totalQty: cart.totalQuantity || 0,
+                totalAmount: cart.totalAmount || 0,
+                totalShipping: cart.totalShipping || 0,
+                totalTax: cart.totalTax || 0,
+                totalPrice: cart.totalPrice || 0,
+                cartItems: cart.cartItems || [],
+            });
+        }
+    }, [cart]);
 
     // Create state of billing information
     const [billingInfo, setBillingInfo] = useState({
@@ -34,9 +43,7 @@ const Checkout = () => {
 
     // Handle when user get values into input fields
     const handleInputChange = (e) => {
-        // Name is the name attribute of the input tag, value is the value attribute
         const { name, value } = e.target;
-        // Update the state with the new value
         setBillingInfo((prev) => ({
             ...prev,
             [name]: name === "phone" ? value : value,
@@ -46,47 +53,130 @@ const Checkout = () => {
     // Update state when user enters information
     const handlePlaceOrder = async (e) => {
         e.preventDefault();
-    
+
         if (!currentUser) {
-            // Redirect to login if user is not logged in
             navigate("/login");
             return;
         }
-    
-        // Create order data
-        const orderData = {
-            userId: currentUser.uid,
-            billingInfo: {
-                name: billingInfo.name,
-                email: billingInfo.email,
-                phone: billingInfo.phone,
-                address: billingInfo.address,
-                city: billingInfo.city,
-                postalCode: billingInfo.postalCode,
-                country: billingInfo.country,
-            },
-            cartItems: cartItems.map(item => ({
-                ...item,
-                category: item.category || "Unknown",
-            })),
-            totalQuantity: totalQty,
-            totalAmount: totalAmount,
-            totalShipping: totalShipping,
-            totalTax: totalTax,
-            totalPrice: totalPrice,
-            isPaid: false,
-            isDelivered: false,
-            createdAt: new Date(),
-        };
-    
+
+        if (
+            !billingInfo.name ||
+            !billingInfo.email ||
+            !billingInfo.phone ||
+            !billingInfo.address ||
+            !billingInfo.city ||
+            !billingInfo.postalCode ||
+            !billingInfo.country
+        ) {
+            toast.error("Please fill in all billing information");
+            return;
+        }
+
+        if (
+            !orderData ||
+            !Array.isArray(orderData.cartItems) ||
+            orderData.cartItems.length === 0
+        ) {
+            toast.error("Your cart is empty");
+            return;
+        }
+
+        const totalQuantity = orderData.totalQty || 0;
+        const totalAmount = orderData.totalAmount || 0;
+
         try {
+            const totalOrdersData = {
+                userId: currentUser.uid,
+                billingInfo: {
+                    name: billingInfo.name,
+                    email: billingInfo.email,
+                    phone: billingInfo.phone,
+                    address: billingInfo.address,
+                    city: billingInfo.city,
+                    postalCode: billingInfo.postalCode,
+                    country: billingInfo.country,
+                },
+                cartItems: orderData.cartItems.map(item => ({
+                    ...item,
+                    category: item.category || "Unknown",
+                    sellerId: item.sellerId || "Unknown",
+                })),
+                totalQuantity: totalQuantity,
+                totalAmount: totalAmount,
+                totalShipping: orderData.totalShipping,
+                totalTax: orderData.totalTax,
+                totalPrice: orderData.totalPrice,
+                isPaid: false,
+                isDelivered: false,
+                createdAt: new Date(),
+                sellerIds: [
+                    ...new Set(
+                        orderData.cartItems.map(
+                            (item) => item.sellerId || "Unknown"
+                        )
+                    ),
+                ],
+            };
+
+            console.log("Order data:", totalOrdersData);
+
             // Create order and get the orderId
-            const orderRef = await addDoc(collection(db, "orders"), orderData);
+            const orderRef = await addDoc(
+                collection(db, "totalOrders"),
+                totalOrdersData
+            );
             const orderId = orderRef.id;
-    
+
+            // Create sub order
+            const subOrdersPromises = orderData.cartItems.reduce(
+                (acc, item) => {
+                    const sellerId = item.sellerId || "Unknown";
+                    if (!acc[sellerId]) {
+                        acc[sellerId] = {
+                            sellerId: sellerId,
+                            userId: currentUser.uid,
+                            totalOrderId: orderId,
+                            items: [],
+                            totalQuantity: 0,
+                            totalAmount: 0,
+                            isPaid: false,
+                            isDelivered: false,
+                            createdAt: new Date(),
+                        };
+                    }
+
+                    const itemQuantity = item.quantity || 0;
+                    const itemPrice = item.price || 0;
+
+                    acc[sellerId].items.push({
+                        id: item.id,
+                        productName: item.productName,
+                        price: itemPrice,
+                        quantity: itemQuantity,
+                        totalPrice: item.totalPrice,
+                        imgUrl: item.imgUrl,
+                        category: item.category || "Unknown",
+                    });
+                    acc[sellerId].totalQuantity += itemQuantity;
+                    acc[sellerId].totalAmount += itemPrice * itemQuantity;
+                    return acc;
+                },
+                {}
+            );
+
+            const subOrdersRef = collection(db, "subOrders");
+            await Promise.all(
+                Object.values(subOrdersPromises).map((subOrder) =>
+                    addDoc(subOrdersRef, subOrder)
+                )
+            );
+
             // If order created successfully, navigate to place order details
-            navigate(`/placeorder/${orderId}`, { state: { billingInfo, orderId } });
+            navigate(`/placeorder/${orderId}`, {
+                state: { billingInfo, orderId },
+            });
         } catch (error) {
+            console.error(error);
             toast.error("Error creating order: " + (error.message || error));
         }
     };
@@ -180,26 +270,40 @@ const Checkout = () => {
                         <Col lg="4">
                             <div className="checkout__cart">
                                 <h6>
-                                    Total Qty:{" "}
+                                    Total Qty:
                                     <span>
-                                        {Math.abs(totalQty)}{" "}
-                                        {Math.abs(totalQty) <= 1
-                                            ? "item"
-                                            : "items"}
+                                        {orderData ? orderData.totalQty : 0}
+                                        {orderData && orderData.totalQty <= 1
+                                            ? " item"
+                                            : " items"}
                                     </span>
                                 </h6>
                                 <h6>
-                                    Subtotal: <span>${totalAmount}</span>
+                                    Subtotal:{" "}
+                                    <span>
+                                        ${orderData ? orderData.totalAmount : 0}
+                                    </span>
                                 </h6>
                                 <h6>
                                     <span>Shipping:</span>
-                                    <span>${totalShipping}</span>
+                                    <span>
+                                        $
+                                        {orderData
+                                            ? orderData.totalShipping
+                                            : 0}
+                                    </span>
                                 </h6>
                                 <h6>
-                                    Tax: <span>${totalTax} </span>
+                                    Tax:{" "}
+                                    <span>
+                                        ${orderData ? orderData.totalTax : 0}{" "}
+                                    </span>
                                 </h6>
                                 <h4>
-                                    Total Cost: <span>${totalPrice}</span>
+                                    Total Cost:{" "}
+                                    <span>
+                                        ${orderData ? orderData.totalPrice : 0}
+                                    </span>
                                 </h4>
 
                                 <motion.button

@@ -26,6 +26,7 @@ import PendingOrders from "../admin/PendingOrders";
 import ProductsSeller from "../seller/ProductsSeller";
 import OrdersSeller from "../seller/OrdersSeller";
 import StoreInformation from "../seller/StoreInformation";
+import ProtectedSeller from "./ProtectedSeller";
 
 const Routers = () => {
     //Link URL to views for each router
@@ -42,11 +43,11 @@ const Routers = () => {
                 <Route path="profile" element={<ProfileUser />} />
                 <Route path="checkout" element={<Checkout />} />
                 <Route path="placeorder/:orderId" element={<Placeorder />} />
+                <Route path="seller/signup" element={<SignupSeller />} />
             </Route>
 
-            <Route path="/seller/*" element={<ProtectedRoute />}>
+            <Route path="/seller/*" element={<ProtectedSeller />}>
                 <Route path="login" element={<LoginSeller />} />
-                <Route path="signup" element={<SignupSeller />} />
                 <Route path="dashboard" element={<DashboardSeller />} />
                 <Route path="all-products" element={<ProductsSeller />}/>
                 <Route path="orders" element={<OrdersSeller />}/>

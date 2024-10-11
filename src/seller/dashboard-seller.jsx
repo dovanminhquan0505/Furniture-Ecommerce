@@ -26,11 +26,16 @@ import {
     Line,
     Tooltip,
     Legend,
-    ResponsiveContainer
+    ResponsiveContainer,
 } from "recharts";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { XAxis, YAxis, LineChart } from "../components/RechartsWrapper/RechartsWrapper";
+import {
+    XAxis,
+    YAxis,
+    LineChart,
+} from "../components/RechartsWrapper/RechartsWrapper";
+import { format } from "date-fns";
 
 const DashboardSeller = () => {
     const [stats, setStats] = useState({
@@ -129,10 +134,10 @@ const DashboardSeller = () => {
                     totalProfit += profit;
                     orderCount++;
 
-                    if (order.createdAt >= dayAgo) {
+                    if (order.createdAt.toDate() >= dayAgo.toDate()) {
                         dailyRev += revenue;
                     }
-                    if (order.createdAt >= weekAgo) {
+                    if (order.createdAt.toDate() >= weekAgo.toDate()) {
                         weeklyRev += revenue;
                     }
 
@@ -163,14 +168,22 @@ const DashboardSeller = () => {
                     profit: totalProfit,
                 });
 
-                const chartData = Object.keys(revenueByDay)
-                    .map((date) => ({
-                        date,
-                        revenue: revenueByDay[date],
-                    }))
-                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+                const chartData = Object.entries(revenueByDay).map(
+                    ([date, revenue]) => {
+                        const timestamp = new Date(date).getTime();
+                        console.log(`Date: ${date}, Timestamp: ${timestamp}`);
+                        return {
+                            date: timestamp,
+                            revenue: parseFloat(revenue.toFixed(2)),
+                        };
+                    }
+                );
 
-                setRevenueData(chartData);
+                const sortedChartData = chartData.sort(
+                    (a, b) => a.date - b.date
+                );
+                console.log("Sorted chart data:", sortedChartData); // Debug log
+                setRevenueData(sortedChartData);
 
                 const sortedProducts = Object.entries(productSales)
                     .sort(([, a], [, b]) => b - a)
@@ -255,19 +268,9 @@ const DashboardSeller = () => {
                             <ResponsiveContainer width="100%" height={300}>
                                 <LineChart data={revenueData}>
                                     <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis 
-                                        dataKey="date"
-                                        tick={{fontSize: 12}}
-                                        tickFormatter={(value) => new Date(value).toLocaleDateString()}
-                                    />
-                                    <YAxis
-                                        tick={{fontSize: 12}}
-                                        tickFormatter={(value) => `$${value}`}
-                                    />
-                                    <Tooltip
-                                        formatter={(value) => [`$${value}`, "Revenue"]}
-                                        labelFormatter={(label) => new Date(label).toLocaleDateString()}
-                                    />
+                                    <XAxis dataKey="date" />
+                                    <YAxis />
+                                    <Tooltip />
                                     <Legend />
                                     <Line
                                         type="monotone"
@@ -319,7 +322,7 @@ const DashboardSeller = () => {
                                     {topProducts.map((product, index) => (
                                         <tr key={index}>
                                             <td>{product.product}</td>
-                                            <td>{product.quantity}</td>
+                                            <td>{product.totalQuantity}</td>
                                         </tr>
                                     ))}
                                 </tbody>

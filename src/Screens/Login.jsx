@@ -8,7 +8,7 @@ import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { auth, db, googleProvider } from "../firebase.config";
 import { toast } from "react-toastify";
 import logoGoogle from "../assets/images/logoGoogle.jpg";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const Login = () => {
     const [email, setEmail] = useState("");
@@ -41,13 +41,31 @@ const Login = () => {
 
             const user = userCredential.user;
 
-            console.log(user);
+            const userDocRef = doc(db, "users", user.uid);
+            const userDoc = await getDoc(userDocRef);
+
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                if (userData.role === "admin") {
+                    console.log("Admin logged in, navigating to dashboard");
+                    localStorage.setItem('userRole', 'admin');
+                    navigate("/admin/dashboard");
+                } else {
+                    console.log("Regular user logged in, navigating to checkout");
+                    localStorage.setItem('userRole', 'user');
+                    navigate("/checkout");
+                }
+            } else {
+                console.warn("User document not found, treating as regular user");
+                localStorage.setItem('userRole', 'user');
+                navigate("/checkout");
+            }
+
             setLoading(false);
             toast.success("Successfully logged in!");
-            navigate("/checkout");
         } catch (error) {
             setLoading(false);
-            // Check types of error
+            
             switch (error.code) {
                 case "auth/wrong-password":
                     toast.error("Wrong Password!");

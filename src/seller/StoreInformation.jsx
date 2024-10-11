@@ -33,7 +33,9 @@ const StoreInformation = () => {
         storeDescription: "",
     });
 
-    const [originalStoreInfo, setOriginalStoreInfo] = useState({ ...storeInfo });
+    const [originalStoreInfo, setOriginalStoreInfo] = useState({
+        ...storeInfo,
+    });
 
     // Get sellerId for user
     useEffect(() => {
@@ -315,11 +317,12 @@ const StoreInformation = () => {
                                         <option value="">
                                             Choose Business Type
                                         </option>
-                                        <option value="Retail">Retail</option>
-                                        <option value="Wholesale">
-                                            Wholesale
+                                        <option value="personal">
+                                            Individual
                                         </option>
-                                        <option value="Service">Service</option>
+                                        <option value="business">
+                                            Business
+                                        </option>
                                     </Input>
                                 </FormGroup>
                             ) : (

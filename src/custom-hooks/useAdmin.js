@@ -9,6 +9,8 @@ const useAdmin = () => {
     const { currentUser } = useAuth();
 
     useEffect(() => {
+        let timer;
+
         const checkAdminStatus = async () => {
             setIsLoading(true);
             
@@ -32,15 +34,14 @@ const useAdmin = () => {
                 setIsAdmin(false);
             }
             
-            setIsLoading(false);
+            timer = setTimeout(() => setIsLoading(false), 500);
         };
 
-        if (currentUser !== null) {
-            checkAdminStatus();
-        } else {
-            setIsLoading(false);
-            setIsAdmin(false);
-        }
+        checkAdminStatus();
+
+        return () => {
+            if (timer) clearTimeout(timer);
+        };
     }, [currentUser]);
 
     return { isAdmin, isLoading };

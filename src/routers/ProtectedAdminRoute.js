@@ -15,14 +15,16 @@ const ProtectedAdminRoute = () => {
                 style={{ height: "100vh" }}
             >
                 <Spinner animation="border" role="status">
-                    <span className="visually-hidden">Loading...</span>
+                    <span className="visually-hidden">Verifying admin status...</span>
                 </Spinner>
             </Container>
         );
     }
 
-    if (!currentUser || !isAdmin) {
-        return <Navigate to="/home" />;
+    const userRole = localStorage.getItem('userRole');
+
+    if (!currentUser || (userRole !== 'admin' && !isAdmin)) {
+        return <Navigate to="/home" replace />;
     }
 
     return (

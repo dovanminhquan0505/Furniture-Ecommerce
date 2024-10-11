@@ -8,9 +8,10 @@ import "../styles/all-products.css";
 import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "../components/UI/ThemeContext";
 import Helmet from "../components/Helmet/Helmet";
+import { useProducts } from "../contexts/ProductContext";
 
 const AllProducts = () => {
-    const [productsData, setProductsData] = useState([]);
+    const { products, addProduct } = useProducts();
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
@@ -46,21 +47,22 @@ const AllProducts = () => {
             const productsRef = collection(db, "products");
             const q = query(productsRef, where("sellerId", "==", sellerId));
             const querySnapShot = await getDocs(q);
-            const products = [];
+            const fetchedProducts = [];
             querySnapShot.forEach((doc) => {
-                products.push({ id: doc.id, ...doc.data() });
+                fetchedProducts.push({ id: doc.id, ...doc.data() });
             });
-            setProductsData(products);
+            fetchedProducts.forEach(product => addProduct(product)); 
             setLoading(false);
         };
 
         fetchProducts();
-    }, [sellerId]);
+    }, [sellerId, addProduct]);
 
     const deleteProduct = async (id) => {
         await deleteDoc(doc(db, "products", id));
         toast.success("Product deleted successfully!");
-        setProductsData(productsData.filter(product => product.id !== id));
+        const updatedProducts = products.filter(product => product.id !== id);
+        updatedProducts.forEach(product => addProduct(product));
     };
 
     const editProduct = async (productId) => {
@@ -100,13 +102,13 @@ const AllProducts = () => {
                                                 Loading...
                                             </span>
                                         </Container>
-                                    ) : productsData.length === 0 ? (
+                                    ) : products.length === 0 ? (
                                         <tr>
                                             <td colSpan="5" className="text-center fw-bold">No products found</td>
                                         </tr>
                                     ) : (
                                         (
-                                            productsData.map((item) => (
+                                            products.map((item) => (
                                                 <tr key={item.id}>
                                                     <td data-label="Image">
                                                         <img

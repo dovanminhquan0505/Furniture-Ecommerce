@@ -9,6 +9,7 @@ import { Provider } from "react-redux";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { ThemeProvider } from "./components/UI/ThemeContext";
+import { ProductProvider } from "./contexts/ProductContext";
 
 // Use App into Provider, so that all child components inside App will have access to Redux store via connect or useSelector,
 // useDispatch hooks of react-redux.
@@ -18,14 +19,16 @@ root.render(
         <BrowserRouter>
             <Provider store={store}>
                 <ThemeProvider>
-                    <ToastContainer
-                        theme="dark"
-                        position="top-right"
-                        autoClose={3000}
-                        closeOnClick
-                        pauseOnHover
-                    />
-                    <App />
+                    <ProductProvider>
+                        <ToastContainer
+                            theme="dark"
+                            position="top-right"
+                            autoClose={3000}
+                            closeOnClick
+                            pauseOnHover
+                        />
+                        <App />
+                    </ProductProvider>
                 </ThemeProvider>
             </Provider>
         </BrowserRouter>

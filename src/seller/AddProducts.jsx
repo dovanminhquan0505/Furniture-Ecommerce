@@ -8,6 +8,7 @@ import { collection, addDoc, doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import "../styles/Add-EditProduct.css";
 import Helmet from "../components/Helmet/Helmet";
+import { useProducts } from "../contexts/ProductContext";
 
 const AddProducts = () => {
     const [enterTitle, setEnterTitle] = useState("");
@@ -18,6 +19,7 @@ const AddProducts = () => {
     const [enterProductImg, setEnterProductImg] = useState(null);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const { addProduct } = useProducts();
 
     //Create Product
     const createProduct = async (e) => {
@@ -73,7 +75,7 @@ const AddProducts = () => {
                         uploadTask.snapshot.ref
                     );
                     // Add a new document to Firestore with the URL of the uploaded image
-                    await addDoc(collection(db, "products"), {
+                    const docRef = await addDoc(collection(db, "products"), {
                         productName: enterTitle,
                         shortDesc: enterShortDesc,
                         description: enterDescription,
@@ -82,11 +84,23 @@ const AddProducts = () => {
                         imgUrl: downloadURL,
                         sellerId: sellerId,
                     });
+
+                    addProduct({
+                        id: docRef.id,
+                        productName: enterTitle,
+                        shortDesc: enterShortDesc,
+                        description: enterDescription,
+                        category: enterCategory,
+                        price: enterPrice,
+                        imgUrl: downloadURL,
+                        sellerId: sellerId,
+                    });
+
+                    setLoading(false);
+                    toast.success("Product created successfully!");
+                    navigate("/seller/all-products");
                 }
             );
-            setLoading(false);
-            toast.success("Product created successfully!");
-            navigate("/seller/all-products");
         } catch (error) {
             setLoading(false);
             toast.error("Something went wrong!");

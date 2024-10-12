@@ -41,11 +41,16 @@ const PendingOrders = () => {
                 // Get the first (and should be only) document
                 const userDoc = querySnapshot.docs[0];
                 
-                // Update the user document
-                await updateDoc(doc(db, "users", userDoc.id), {
-                    status: "seller",
-                    sellerId: sellerId
-                });
+                try {
+                    await updateDoc(doc(db, "users", userDoc.id), {
+                        status: "seller",
+                        sellerId: sellerId
+                    });
+                    console.log("User document updated successfully");
+                } catch (error) {
+                    console.error("Error updating user document:", error);
+                    throw error; 
+                }
             } else {
                 console.error("User document not found for email:", order.email);
                 throw new Error("User not found");

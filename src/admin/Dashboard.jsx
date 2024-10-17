@@ -87,8 +87,8 @@ const Dashboard = () => {
                             </Col>
                             <Col lg="3">
                                 <div className="revenue__box">
-                                    <h5>Total Sales</h5>
-                                    <span>${totalSales}</span>
+                                    <h5>Orders</h5>
+                                    <span>{orders.length}</span>
                                 </div>
                             </Col>
                         </Row>

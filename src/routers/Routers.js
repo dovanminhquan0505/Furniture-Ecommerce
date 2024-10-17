@@ -24,6 +24,7 @@ import ProductsSeller from "../seller/ProductsSeller";
 import OrdersSeller from "../seller/OrdersSeller";
 import StoreInformation from "../seller/StoreInformation";
 import ProtectedSeller from "./ProtectedSeller";
+import Orders from "../admin/Orders";
 
 const Routers = () => {
     //Link URL to views for each router
@@ -57,6 +58,7 @@ const Routers = () => {
                 <Route path="users" element={<Users />} />
                 <Route path="pending-orders" element={<PendingOrders />} />
                 <Route path="profile" element={<ProfileAdmin />} />
+                <Route path="orders" element={<Orders />} />
             </Route>
             <Route path="login" element={<Login />} />
             <Route path="signup" element={<SignUp />} />

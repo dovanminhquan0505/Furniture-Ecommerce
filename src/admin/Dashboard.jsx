@@ -25,11 +25,6 @@ const Dashboard = () => {
     const { data: sellers } = useGetData("sellers");
     const { isDarkMode } = useTheme();
 
-    // Calculate total revenue from paid orders only
-    const totalSales = orders
-        .filter((order) => order.isPaid !== false) // Filter paid orders
-        .reduce((acc, order) => acc + order.totalPrice, 0); // Cumulative totalPrice of paid orders
-
     // Set Data for line chart
     const lineChartData = orders.map((order) => ({
         date: order.createdAt?.toDate().toLocaleDateString("en-US"),

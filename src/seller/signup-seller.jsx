@@ -15,7 +15,7 @@ import "../seller/styles/signupseller.css";
 import { Link, useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase.config";
 import { toast } from "react-toastify";
-import { collection, doc, getDocs, query, setDoc, where } from "firebase/firestore";
+import { addDoc, collection, doc, getDocs, query, setDoc, where } from "firebase/firestore";
 import bcrypt from "bcryptjs";
 
 const SignupSeller = () => {
@@ -102,7 +102,16 @@ const SignupSeller = () => {
                 hashedPassword: hashedPassword, // Store the hashed password
                 status: "pending",
                 createdAt: new Date(),
+                notification: false,
             });
+
+            // Add notifications for admin
+            await addDoc(collection(db, "adminNotifications"), {
+                type: "newSellerRequest",
+                sellerId: pendingOrderId,
+                createdAt: new Date(),
+                read: false,
+            })
 
             setLoading(false);
             toast.success(

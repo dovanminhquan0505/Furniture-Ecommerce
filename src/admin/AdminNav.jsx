@@ -1,14 +1,16 @@
-import React, { useEffect, useRef } from "react";
-import { Container, Row, Spinner } from "reactstrap";
+import React, { useEffect, useRef, useState } from "react";
+import { Badge, Container, Row, Spinner } from "reactstrap";
 import "../styles/admin-nav.css";
 import { NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import useAdmin from "../custom-hooks/useAdmin";
 import { signOut } from "firebase/auth";
-import { auth } from "../firebase.config";
+import { auth, db } from "../firebase.config";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
+import { collection, getDocs, onSnapshot, query, where } from "firebase/firestore";
+import defaultAvatar from "../assets/images/user-icon.png"
 
 const admin_nav = [
     {
@@ -41,6 +43,34 @@ const AdminNav = () => {
     const { isAdmin, isLoading } = useAdmin();
     const profileActionRef = useRef();
     const { currentUser } = useSelector((state) => state.user);
+    const [pendingRequests, setPendingRequests] = useState([]);
+    const [showNotifications, setShowNotifications] = useState(false);
+
+    useEffect(() => {
+        if (isAdmin) {
+            const q = query(
+                collection(db, "pendingOrders"),
+                where("status", "==", "pending")
+            );
+            const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+                const requests = [];
+                for (const doc of querySnapshot.docs) {
+                    const data = doc.data();
+                    // Fetch user avatar
+                    const userQuery = query(collection(db, "users"), where("email", "==", data.email));
+                    const userSnapshot = await getDocs(userQuery);
+                    let avatarURL = {defaultAvatar}; // Default avatar
+                    if (!userSnapshot.empty) {
+                        avatarURL = userSnapshot.docs[0].data().photoURL || avatarURL;
+                    }
+                    requests.push({ id: doc.id, ...data, avatarURL });
+                }
+                setPendingRequests(requests);
+            });
+
+            return () => unsubscribe();
+        }
+    }, [isAdmin]);
 
     // Handle auto turn off profile actions when user clicks on outside.
     useEffect(() => {
@@ -94,6 +124,10 @@ const AdminNav = () => {
         }
     };
 
+    const toggleNotifications = () => {
+        setShowNotifications(!showNotifications);
+    };
+
     return (
         <>
             <header className="admin__header">
@@ -114,8 +148,27 @@ const AdminNav = () => {
                             </div>
 
                             <div className="admin__nav-top-right">
-                                <span>
+                                <span
+                                    onClick={toggleNotifications}
+                                    style={{
+                                        cursor: "pointer",
+                                        position: "relative",
+                                    }}
+                                >
                                     <i className="ri-notification-2-line"></i>
+                                    {pendingRequests.length > 0 && (
+                                        <Badge
+                                            color="danger"
+                                            pill
+                                            style={{
+                                                position: "absolute",
+                                                top: -5,
+                                                right: -5,
+                                            }}
+                                        >
+                                            {pendingRequests.length}
+                                        </Badge>
+                                    )}
                                 </span>
                                 <span>
                                     <i className="ri-settings-3-line"></i>
@@ -154,6 +207,39 @@ const AdminNav = () => {
                     </Container>
                 </div>
             </header>
+
+            {showNotifications && (
+                <div className="notifications__panel">
+                    <h3 className="notifications__title">New Notifications</h3>
+                    {pendingRequests.length === 0 ? (
+                        <p>Notifications not found</p>
+                    ) : (
+                        <ul className="notifications__list">
+                            {pendingRequests.map((request) => (
+                                <li key={request.id} className="notification__item">
+                                    <Link to="/admin/pending-orders" className="notification__link">
+                                        <div className="notification__content">
+                                            <img src={request.avatarURL} alt="User Avatar" className="notification__avatar" />
+                                            <div className="notification__text">
+                                                <h4 className="notification__title">New seller register requests</h4>
+                                                <p className="notification__details">
+                                                    {request.storeName} - {request.fullName}
+                                                </p>
+                                                <small className="notification__time">
+                                                    {new Date(request.createdAt.toDate()).toLocaleString()}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    <div className="notifications__viewAll">
+                        <Link to="/admin/pending-orders">View all</Link>
+                    </div>
+                </div>
+            )}
 
             <section className="admin__menu p-0">
                 <Container>

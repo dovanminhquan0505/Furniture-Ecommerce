@@ -42,6 +42,7 @@ const admin_nav = [
 const AdminNav = () => {
     const { isAdmin, isLoading } = useAdmin();
     const profileActionRef = useRef();
+    const notificationsRef = useRef();
     const { currentUser } = useSelector((state) => state.user);
     const [pendingRequests, setPendingRequests] = useState([]);
     const [showNotifications, setShowNotifications] = useState(false);
@@ -83,6 +84,13 @@ const AdminNav = () => {
                     "active__profileActions"
                 );
             }
+
+            if (
+                notificationsRef.current &&
+                !notificationsRef.current.contains(event.target)
+            ) {
+                setShowNotifications(false);
+            }
         };
 
         // Add event listener
@@ -122,10 +130,12 @@ const AdminNav = () => {
         if (profileActionRef.current) {
             profileActionRef.current.classList.toggle("active__profileActions");
         }
+        setShowNotifications(false);
     };
 
     const toggleNotifications = () => {
         setShowNotifications(!showNotifications);
+        profileActionRef.current.classList.remove("active__profileActions");
     };
 
     return (
@@ -216,7 +226,7 @@ const AdminNav = () => {
                     ) : (
                         <ul className="notifications__list">
                             {pendingRequests.map((request) => (
-                                <li key={request.id} className="notification__item">
+                                <li key={request.id} className="notification__item" ref={notificationsRef}>
                                     <Link to="/admin/pending-orders" className="notification__link">
                                         <div className="notification__content">
                                             <img src={request.avatarURL} alt="User Avatar" className="notification__avatar" />

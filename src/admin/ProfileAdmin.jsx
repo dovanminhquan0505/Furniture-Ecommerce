@@ -26,7 +26,7 @@ import {
 import "../styles/Profile.css";
 import { auth, db, storage } from "../firebase.config";
 import { toast } from "react-toastify";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import {
     onAuthStateChanged,
     EmailAuthProvider,
@@ -39,21 +39,20 @@ import { useNavigate } from "react-router-dom";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import useAdmin from "../custom-hooks/useAdmin";
 import Helmet from "../components/Helmet/Helmet";
+import defaultAvatar from "../assets/images/user-icon.png"
 
 const ProfileAdmin = () => {
     const [editing, setEditing] = useState(false);
     const inputFileRef = useRef(null);
-
     const [isDataLoading, setIsDataLoading] = useState(true);
     const [isEmpty, setIsEmpty] = useState(false);
-
     const { isAdmin, isLoading } = useAdmin();
     const [isAvatarUpLoading, setIsAvatarUpLoading] = useState(false);
     const [activeSection, setActiveSection] = useState(null);
+    const [pendingRequests, setPendingRequests] = useState([]);
     const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
     const { isDarkMode, toggleDarkMode } = useTheme();
-    //Set information for admin
     const [adminInfo, setAdminInfo] = useState({
         displayName: "",
         birthDate: "",
@@ -63,11 +62,35 @@ const ProfileAdmin = () => {
         role: "",
         photoURL: "",
     });
-
-    // Store original admin info for reset
     const [originalAdminInfo, setOriginalAdminInfo] = useState({
         ...adminInfo,
     });
+
+    useEffect(() => {
+        if (isAdmin) {
+            const q = query(
+                collection(db, "pendingOrders"),
+                where("status", "==", "pending")
+            );
+            const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+                const requests = [];
+                for (const doc of querySnapshot.docs) {
+                    const data = doc.data();
+                    // Fetch user avatar
+                    const userQuery = query(collection(db, "users"), where("email", "==", data.email));
+                    const userSnapshot = await getDocs(userQuery);
+                    let avatarURL = defaultAvatar;
+                    if (!userSnapshot.empty) {
+                        avatarURL = userSnapshot.docs[0].data().photoURL || avatarURL;
+                    }
+                    requests.push({ id: doc.id, ...data, avatarURL });
+                }
+                setPendingRequests(requests);
+            });
+
+            return () => unsubscribe();
+        }
+    }, [isAdmin]);
 
     // Get admin data from firebase
     useEffect(() => {
@@ -433,6 +456,56 @@ const ProfileAdmin = () => {
         </div>
     );
 
+    // Render Notifications
+    const renderNotifications = () => (
+        <div className="notifications-section">
+            <h3>Notifications</h3>
+            
+            <div className="notifications-container">
+                {pendingRequests.length === 0 ? (
+                    <Alert variant="info">No notifications found</Alert>
+                ) : (
+                    <div className="notifications-list">
+                        {pendingRequests.map((request) => (
+                            <div key={request.id} className="notification-item">
+                                <div className="notification-content">
+                                    <div className="notification-avatar">
+                                        <img 
+                                            src={request.avatarURL} 
+                                            alt="User Avatar" 
+                                            className="rounded-circle"
+                                            width="40"
+                                            height="40"
+                                        />
+                                    </div>
+                                    <div className="notification-details">
+                                        <h5>New Seller Registration Request</h5>
+                                        <p>
+                                            Store: {request.storeName}<br/>
+                                            Owner: {request.fullName}
+                                        </p>
+                                        <small className="text-muted">
+                                            {new Date(request.createdAt.toDate()).toLocaleString()}
+                                        </small>
+                                    </div>
+                                </div>
+                                <div className="notification-actions mt-2">
+                                    <Button 
+                                        variant="outline-primary" 
+                                        size="sm"
+                                        onClick={() => navigate('/admin/pending-orders')}
+                                    >
+                                        View Details
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
     // Render Dark Mode
     const renderDarkMode = () => (
         <div>
@@ -474,12 +547,7 @@ const ProfileAdmin = () => {
         {
             icon: <Bell size={20} />,
             text: "Notifications",
-            content: (
-                <div>
-                    <h3>Notification Settings</h3>
-                    <p>Manage your email and push notification preferences.</p>
-                </div>
-            ),
+            content: renderNotifications(),
         },
         {
             icon: <Globe size={20} />,

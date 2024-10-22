@@ -321,6 +321,87 @@ h2 {
     cursor: pointer;
 }
 
+/* Notifications Profile */
+.notifications-section {
+    padding: 20px;
+}
+
+.notifications-container {
+    margin-top: 20px;
+}
+
+.notifications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.notification-item {
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #fff;
+    transition: all 0.3s ease;
+}
+
+.notification-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.notification-content {
+    display: flex;
+    gap: 15px;
+    align-items: flex-start;
+}
+
+.notification-avatar img {
+    object-fit: cover;
+}
+
+.notification-details {
+    flex: 1;
+}
+
+.notification-details h5 {
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.notification-details p {
+    margin: 0 0 5px 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #333;
+}
+
+.notification-details small {
+    font-size: 0.8rem;
+}
+
+.notification-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Dark mode support */
+.dark-mode .notification-item {
+    background-color: #2d3748;
+    border-color: #4a5568;
+}
+
+.dark-mode .notification-details h5 {
+    color: #fff;
+}
+
+.dark-mode .notification-details p {
+    color: #cbd5e0;
+}
+
+.dark-mode .notification-details small {
+    color: #a0aec0 !important;
+}
+
 /* Dark Mode */
 .dark-mode {
     background-color: #6f6d6d;

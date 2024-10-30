@@ -289,13 +289,6 @@ const SignupSeller = () => {
                         >
                             Register
                         </Button>
-
-                        <p className="signup__text">
-                            Already have an account?
-                            <Link to="/seller/login" className="signup__link">
-                                Login
-                            </Link>
-                        </p>
                     </Form>
                 </Container>
             )}

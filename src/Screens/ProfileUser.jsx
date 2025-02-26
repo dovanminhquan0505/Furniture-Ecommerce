@@ -42,6 +42,7 @@ import { useTheme } from "../components/UI/ThemeContext";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useDispatch } from "react-redux";
 import { userActions } from "../redux/slices/userSlice";
+import axios from "axios";
 
 const ProfileUser = () => {
     const [editing, setEditing] = useState(false);
@@ -54,58 +55,29 @@ const ProfileUser = () => {
     const [activeSection, setActiveSection] = useState(null);
     const [showPassword, setShowPassword] = useState(false);
     const { isDarkMode, toggleDarkMode } = useTheme();
-    const [userInfo, setUserInfo] = useState({
-        displayName: "",
-        birthDate: "",
-        email: "",
-        phone: "",
-        address: "",
-        role: "",
-        photoURL: "",
-    });
+    const [userInfo, setUserInfo] = useState(null);
 
     const [orderInfo, setOrderInfo] = useState([]);
 
     const [originalUserInfo, setOriginalUserInfo] = useState({ ...userInfo });
 
     useEffect(() => {
-        const fetchUserData = async (user) => {
+        const fetchUserData = async () => {
             setIsDataLoading(true);
             setIsEmpty(false);
+            const token = localStorage.getItem("authToken");
+            if (!token) {
+                toast.error("Unauthorized! Please log in again.");
+                navigate("/login");
+                return;
+            }
             try {
-                if (user) {
-                    const userDocRef = doc(db, "users", user.uid);
-                    const userDoc = await getDoc(userDocRef);
-
-                    if (userDoc.exists()) {
-                        const userData = userDoc.data();
-                        const newUserInfo = {
-                            displayName: userData.displayName || "",
-                            birthDate: userData.birthDate
-                                ? new Date(userData.birthDate.toDate())
-                                      .toISOString()
-                                      .split("T")[0]
-                                : "",
-                            email: userData.email,
-                            phone: userData.phone || "",
-                            address: userData.address || "",
-                            role: userData.role || "user",
-                            photoURL: userData.photoURL || "",
-                        };
-                        setUserInfo(newUserInfo);
-                        setOriginalUserInfo(newUserInfo);
-
-                        if (Object.keys(userData).length === 0) {
-                            setIsEmpty(true);
-                        }
-                    } else {
-                        toast.error("User not found");
-                    }
-                } else {
-                    toast.error("User document not found in Firestore!");
-                }
+                const response = await axios.get("http://localhost:5000/api/user/profile", {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setUserInfo(response.data);
             } catch (error) {
-                toast.error("Fetch failed for user: " + error.message);
+                toast.error("Failed to fetch user data.");
             } finally {
                 setIsDataLoading(false);
             }
@@ -173,7 +145,7 @@ const ProfileUser = () => {
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [navigate]);
 
     // Handle Edit Profile
     const handleEditUserProfile = async () => {

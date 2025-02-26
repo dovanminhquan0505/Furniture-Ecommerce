@@ -18,6 +18,7 @@
         "@testing-library/react": "^13.4.0",
         "@testing-library/user-event": "^13.5.0",
         "@types/react-scroll": "^1.8.10",
+        "axios": "^1.7.9",
         "bcryptjs": "^2.4.3",
         "bootstrap": "^5.3.3",
         "crypto-browserify": "^3.12.0",

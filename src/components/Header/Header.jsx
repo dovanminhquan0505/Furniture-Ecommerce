@@ -6,13 +6,13 @@ import logo from "../../assets/images/eco-logo.png";
 import userIcon from "../../assets/images/user-icon.png";
 import { useSelector } from "react-redux";
 import { Container, Row } from "reactstrap";
-import { signOut } from "firebase/auth";
-import { auth } from "../../firebase.config";
 import { toast } from "react-toastify";
 import useAdmin from "../../custom-hooks/useAdmin";
 import { useDispatch } from "react-redux";
+import { userActions } from "../../redux/slices/userSlice";
 import { cartActions } from "../../redux/slices/cartSlice";
 import { wishListActions } from "../../redux/slices/wishListSlice";
+import axios from "axios";
 
 const nav__links = [
     {
@@ -59,17 +59,33 @@ const Header = () => {
         });
     };
 
-    const logOut = () => {
-        signOut(auth)
-            .then(() => {
-                // Delete cart and wishlist when user is logged out
-                dispatch(cartActions.clearCart());
-                dispatch(wishListActions.clearWishList());
-                toast.success("Logged out");
-            })
-            .catch((error) => {
-                toast.error(error.message);
+    const logOut = async () => {
+        try {
+            const authToken = localStorage.getItem("authToken");
+
+            if (!authToken) {
+                throw new Error("No auth token found");
+            }
+
+            await axios.post("http://localhost:5000/api/auth/logout", {}, {
+                headers: {
+                    Authorization: `Bearer ${authToken}`,
+                },
+                withCredentials: true,
             });
+    
+            // Clear Redux state
+            dispatch(userActions.setUser(null)); // Clear user state
+            dispatch(cartActions.clearCart()); // Clear cart
+            dispatch(wishListActions.clearWishList()); // Clear wishlist
+            localStorage.removeItem("authToken");
+            localStorage.removeItem("user");
+    
+            toast.success("Logged out successfully");
+            navigate("/login");
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Logout failed");
+        }
     };
 
     useEffect(() => {

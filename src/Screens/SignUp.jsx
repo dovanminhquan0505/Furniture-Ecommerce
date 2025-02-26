@@ -4,14 +4,9 @@ import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col, Form, FormGroup, Spinner } from "reactstrap";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { setDoc, doc } from "firebase/firestore";
-import { auth } from "../firebase.config";
-import { storage } from "../firebase.config";
-import { db } from "../firebase.config";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const Signup = () => {
     const [username, setUsername] = useState("");
@@ -46,83 +41,127 @@ const Signup = () => {
             return;
         }
 
+        // try {
+        //     //used to create a new user using an email and password.
+        //     const userCredential = await createUserWithEmailAndPassword(
+        //         auth,
+        //         email,
+        //         password
+        //     );
+
+        //     //The user's information
+        //     const user = userCredential.user;
+
+        //     if (user) {
+        //         //This creates a reference to Firebase Storage where a file (e.g., an image) will be uploaded.
+        //         const storageRef = ref(
+        //             storage,
+        //             `images/${Date.now() + username}`
+        //         );
+        //         //This function uploads the file to the Firebase Storage under the reference created earlier (storageRef).
+        //         const uploadTask = uploadBytesResumable(storageRef, file);
+
+        //         // Listen the process of uploading
+        //         uploadTask.on(
+        //             "state_changed",
+        //             (snapshot) => {
+        //                 const progress =
+        //                     (snapshot.bytesTransferred / snapshot.totalBytes) *
+        //                     100;
+        //                 console.log(`Upload is ${progress}% done`);
+        //             },
+        //             (error) => {
+        //                 toast.error(error.message);
+        //                 setLoading(false);
+        //             },
+        //             async () => {
+        //                 // After uploading finished, update file URL
+        //                 const downloadURL = await getDownloadURL(
+        //                     uploadTask.snapshot.ref
+        //                 );
+
+        //                 // Update information about user's profile
+        //                 await updateProfile(user, {
+        //                     displayName: username,
+        //                     photoURL: downloadURL,
+        //                 });
+
+        //                 const role =
+        //                     email ===
+        //                     process.env
+        //                         .REACT_APP_FURNITURE_ECOMMERCE_ADMIN_EMAIL
+        //                         ? "admin"
+        //                         : "user";
+
+        //                 // Save the user's information to firebase database
+        //                 await setDoc(doc(db, "users", user.uid), {
+        //                     uid: user.uid,
+        //                     displayName: username,
+        //                     email,
+        //                     photoURL: downloadURL,
+        //                     role: role,
+        //                 });
+
+        //                 setLoading(false);
+        //                 toast.success("Account created successfully!");
+        //                 navigate("/checkout");
+        //             }
+        //         );
+        //     }
+        // } catch (error) {
+        //     setLoading(false);
+        //     //Check if user use email existed before
+        //     if (error.code === "auth/email-already-in-use") {
+        //         toast.error(
+        //             "Email is already in use. Please try another email."
+        //         );
+        //     } else {
+        //         toast.error(error.message || "Something went wrong!");
+        //     }
+        // }
+
         try {
-            //used to create a new user using an email and password.
-            const userCredential = await createUserWithEmailAndPassword(
-                auth,
-                email,
-                password
+            // Tạo FormData để gửi file và thông tin người dùng
+            const formData = new FormData();
+            formData.append("file", file);
+            
+            // Bước 1: Upload file trước
+            const uploadResponse = await axios.post(
+                "http://localhost:5000/api/upload",
+                formData,
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                }
             );
 
-            //The user's information
-            const user = userCredential.user;
+            const photoURL = uploadResponse.data.fileURL;
 
-            if (user) {
-                //This creates a reference to Firebase Storage where a file (e.g., an image) will be uploaded.
-                const storageRef = ref(
-                    storage,
-                    `images/${Date.now() + username}`
-                );
-                //This function uploads the file to the Firebase Storage under the reference created earlier (storageRef).
-                const uploadTask = uploadBytesResumable(storageRef, file);
+            // Bước 2: Đăng ký người dùng với URL file đã upload
+            const registerResponse = await axios.post(
+                "http://localhost:5000/api/auth/register",
+                {
+                    username,
+                    email,
+                    password,
+                    photoURL
+                }
+            );
 
-                // Listen the process of uploading
-                uploadTask.on(
-                    "state_changed",
-                    (snapshot) => {
-                        const progress =
-                            (snapshot.bytesTransferred / snapshot.totalBytes) *
-                            100;
-                        console.log(`Upload is ${progress}% done`);
-                    },
-                    (error) => {
-                        toast.error(error.message);
-                        setLoading(false);
-                    },
-                    async () => {
-                        // After uploading finished, update file URL
-                        const downloadURL = await getDownloadURL(
-                            uploadTask.snapshot.ref
-                        );
+            // const { user } = registerResponse.data;
+            // localStorage.setItem("user", JSON.stringify(user));
 
-                        // Update information about user's profile
-                        await updateProfile(user, {
-                            displayName: username,
-                            photoURL: downloadURL,
-                        });
-
-                        const role =
-                            email ===
-                            process.env
-                                .REACT_APP_FURNITURE_ECOMMERCE_ADMIN_EMAIL
-                                ? "admin"
-                                : "user";
-
-                        // Save the user's information to firebase database
-                        await setDoc(doc(db, "users", user.uid), {
-                            uid: user.uid,
-                            displayName: username,
-                            email,
-                            photoURL: downloadURL,
-                            role: role,
-                        });
-
-                        setLoading(false);
-                        toast.success("Account created successfully!");
-                        navigate("/checkout");
-                    }
-                );
-            }
+            setLoading(false);
+            toast.success("Account created successfully!");
+            navigate("/checkout");
+            
         } catch (error) {
             setLoading(false);
-            //Check if user use email existed before
-            if (error.code === "auth/email-already-in-use") {
-                toast.error(
-                    "Email is already in use. Please try another email."
-                );
-            } else {
-                toast.error(error.message || "Something went wrong!");
-            }
+            
+            // Xử lý lỗi từ API
+            const errorMessage = error.response?.data?.error || error.message || "Something went wrong!";
+            toast.error(errorMessage);
         }
     };
 

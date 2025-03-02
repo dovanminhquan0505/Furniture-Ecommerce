@@ -6,6 +6,7 @@ const {
     googleLogin,
     authenticateUser,
     requireAdmin,
+    refreshToken,
 } = require("../controllers/authController");
 const router = express.Router();
 
@@ -29,5 +30,7 @@ router.get("/admin", authenticateUser, requireAdmin, (req, res) => {
         user: req.user
     });
 });
+
+router.post("/refresh-token", authenticateUser, refreshToken);
 
 module.exports = router;

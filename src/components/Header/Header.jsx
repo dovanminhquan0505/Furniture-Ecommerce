@@ -61,25 +61,26 @@ const Header = () => {
 
     const logOut = async () => {
         try {
-            const authToken = localStorage.getItem("authToken");
-
-            if (!authToken) {
-                throw new Error("No auth token found");
+            const token = localStorage.getItem("accessToken"); 
+            if (token) {
+                await axios.post(
+                    "http://localhost:5000/api/auth/logout",
+                    {},
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
             }
-
-            await axios.post("http://localhost:5000/api/auth/logout", {}, {
-                headers: {
-                    Authorization: `Bearer ${authToken}`,
-                },
-                withCredentials: true,
-            });
     
             // Clear Redux state
-            dispatch(userActions.setUser(null)); // Clear user state
-            dispatch(cartActions.clearCart()); // Clear cart
-            dispatch(wishListActions.clearWishList()); // Clear wishlist
-            localStorage.removeItem("authToken");
-            localStorage.removeItem("user");
+            dispatch(userActions.setUser(null)); 
+            dispatch(cartActions.clearCart()); 
+            dispatch(wishListActions.clearWishList());
+
+            // Clear localStorage only in browser environment
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem("accessToken");
+                localStorage.removeItem("authToken");
+                localStorage.removeItem("user");
+            }
     
             toast.success("Logged out successfully");
             navigate("/login");
@@ -134,8 +135,7 @@ const Header = () => {
 
         // Add event listener
         document.addEventListener("mousedown", handleClickOutside);
-
-        // Cleanup event listener when component is unmounted
+        
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };

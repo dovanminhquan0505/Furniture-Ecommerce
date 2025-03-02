@@ -9,18 +9,18 @@ import ProductsList from "../components/UI/ProductsList";
 import { useDispatch } from "react-redux";
 import { cartActions } from "../redux/slices/cartSlice";
 import { toast } from "react-toastify";
-import { db } from "../firebase.config";
-import {
-    arrayRemove,
-    arrayUnion,
-    doc,
-    onSnapshot,
-    updateDoc,
-} from "firebase/firestore";
 import useGetData from "../custom-hooks/useGetData";
 import useAdmin from "../custom-hooks/useAdmin";
 import useAuth from "../custom-hooks/useAuth";
-import productsData from "../assets/data/products";
+import { 
+    fetchProduct, 
+    fetchSellerInfo, 
+    addReview, 
+    deleteReview, 
+    toggleLikeReview, 
+    addReplyToReview, 
+    toggleLikeReply 
+} from "../api.js";
 
 const ProductDetails = () => {
     const [tab, setTab] = useState("desc");
@@ -31,10 +31,10 @@ const ProductDetails = () => {
     const [rating, setRating] = useState(null);
     const { id } = useParams();
     const [product, setProduct] = useState({});
+    const [ loading, setLoading ] = useState(true);
     const { data: products } = useGetData("products");
-    const docRef = doc(db, "products", id);
     const [isStaticProduct, setIsStaticProduct] = useState(false);
-    const { isAdmin, isLoading } = useAdmin();
+    const { isAdmin, isLoading: adminLoading } = useAdmin();
     const { currentUser } = useAuth();
     // Set Reviews Comment State
     const [replyingTo, setReplyingTo] = useState(null);
@@ -44,51 +44,48 @@ const ProductDetails = () => {
     const [expandedReplies, setExpandedReplies] = useState({});
     const [storeName, setStoreName] = useState("");
 
+    // Fetch product data using API
     useEffect(() => {
-        const docRef = doc(db, "products", id);
-        const unsubscribe = onSnapshot(docRef, (doc) => {
-            if (doc.exists()) {
-                const productData = doc.data();
+        const getProductData = async () => {
+            try {
+                setLoading(true);
+                const productData = await fetchProduct(id);
                 setProduct(productData);
                 setIsStaticProduct(false);
-
+                
                 if (Array.isArray(productData.reviews) && productData.reviews.length > 0) {
                     const avgRating = productData.reviews.reduce((sum, review) => sum + review.rating, 0) / productData.reviews.length;
                     setProduct(prev => ({ ...prev, avgRating: avgRating.toFixed(1) }));
                 }
-            } else {
-                const staticProduct = productsData.find(p => p.id === id);
-                if (staticProduct) {
-                    setProduct(staticProduct);
-                    setIsStaticProduct(true);
-                } else {
-                    toast.error("Product not found!");
-                }
-            }
-        });
-
-        // Clean up the listener on unmount
-        return () => unsubscribe();
-    }, [id]); // Added id as a dependency to make sure the listener updates when the id changes
-
-    useEffect(() => {
-        const fetchSellerData = async () => {
-            if (product.sellerId) {
-                const sellerDocRef = doc(db, "sellers", product.sellerId);
-                const unsubscribe = onSnapshot(sellerDocRef, (doc) => {
-                    if (doc.exists()) {
-                        const sellerData = doc.data();
-                        setStoreName(sellerData.storeName);
-                    } else {
-                        console.error("Seller not found!");
-                    }
-                });
-    
-                return () => unsubscribe();
+            } catch (error) {
+                console.error("Error fetching product:", error);
+                toast.error("Product not found!");
+                setProduct({}); // Clear product if not found
+            } finally {
+                setLoading(false);
             }
         };
-    
-        fetchSellerData();
+
+        getProductData();
+    }, [id]);
+
+    // Fetch seller info using API
+    useEffect(() => {
+        const getSellerData = async () => {
+            if (product.sellerId) {
+                try {
+                    const sellerData = await fetchSellerInfo(product.sellerId);
+                    setStoreName(sellerData.storeName);
+                } catch (error) {
+                    console.error("Error fetching seller info:", error);
+                    toast.error("Failed to load store information");
+                }
+            }
+        };
+
+        if (product.sellerId) {
+            getSellerData();
+        }
     }, [product.sellerId]);
 
     const {
@@ -130,104 +127,119 @@ const ProductDetails = () => {
             message: reviewUserMessage,
             rating: rating,
             createdAt: new Date().toISOString(),
-            likes: [],
+            likes: []
         };
 
         try {
-            await updateDoc(docRef, {
-                reviews: arrayUnion(reviewObject),
+            await addReview(id, {
+                userName: reviewUserName,
+                message: reviewUserMessage,
+                rating: rating
             });
-
-            toast.success("Review send successfully!");
-
-            // Reset form review
-            reviewUser.current.value = "";
-            reviewMessage.current.value = "";
-            setRating(null);
-
-            setReviewSubmitted(true);
-        } catch (error) {
-            toast.error("Failed to send review. Please try again");
+            toast.success("Review sent successfully!");
+            
+            // Cập nhật state sau khi lưu thành công
+            setProduct(prev => ({
+                ...prev,
+                reviews: prev.reviews ? [...prev.reviews, reviewObject] : [reviewObject]
+            }));
+        } catch (apiError) {
+            console.error("API error:", apiError);
+            toast.error("Failed to save review to server: " + apiError.message);
+            return; // Không hiển thị local nếu server thất bại
         }
+
+        // Reset form
+        reviewUser.current.value = "";
+        reviewMessage.current.value = "";
+        setRating(null);
+        setReviewSubmitted(true);
     };
 
     // Handle Delete reviews for admin only
-    const deleteReviews = async (reviewToDelete) => {
+    const deleteReviewHandler = async (reviewToDelete, index) => {
         try {
-            await updateDoc(docRef, {
-                reviews: arrayRemove(reviewToDelete),
+            await deleteReview(id, reviewToDelete);
+            
+            // Update local state for immediate UI update
+            setProduct(prev => {
+                const updatedReviews = [...prev.reviews];
+                updatedReviews.splice(index, 1);
+                return {
+                    ...prev,
+                    reviews: updatedReviews
+                };
             });
+            
             toast.success("Review deleted successfully!");
         } catch (error) {
+            console.error("Error deleting review:", error);
             toast.error("Failed to delete review. Please try again");
         }
     };
 
     // Handle like reviews
-    const toggleLikeReviews = async (review) => {
+    const toggleLikeReviewHandler = async (review, index) => {
         if (!currentUser) {
             toast.error("Please log in to like reviews.");
             return;
         }
-
+    
         const userId = currentUser.uid;
-
+    
         try {
-            let updatedReviews;
             if (isStaticProduct) {
-              // Handle for static products
-              updatedReviews = product.reviews.map((item) => {
-                if (item === review) {
-                  const likes = item.likes || [];
-                  const userLikeIndex = likes.indexOf(userId);
-                  if (userLikeIndex > -1) {
+                // Handle for static products in local state only
+                const updatedReviews = [...product.reviews];
+                const likes = updatedReviews[index].likes || [];
+                const userLikeIndex = likes.indexOf(userId);
+                
+                if (userLikeIndex > -1) {
                     likes.splice(userLikeIndex, 1);
                     toast.info("You have disliked this review");
-                  } else {
+                } else {
                     likes.push(userId);
                     toast.success("You have liked this review");
-                  }
-                  return { ...item, likes };
                 }
-                return item;
-              });
-              setProduct(prevProduct => ({
-                ...prevProduct,
-                reviews: updatedReviews
-              }));
+                
+                updatedReviews[index].likes = likes;
+                
+                setProduct(prev => ({
+                    ...prev,
+                    reviews: updatedReviews
+                }));
             } else {
-              // Handle for products from Firestore.
-              updatedReviews = reviews.map((item) => {
-                if (item === review) {
-                  const likes = item.likes || [];
-                  const userLikeIndex = likes.indexOf(userId);
-                  if (userLikeIndex > -1) {
+                // Handle with API
+                await toggleLikeReview(id, index, userId);
+                
+                // Update local state for immediate UI update
+                const updatedReviews = [...product.reviews];
+                const likes = updatedReviews[index].likes || [];
+                const userLikeIndex = likes.indexOf(userId);
+                
+                if (userLikeIndex > -1) {
                     likes.splice(userLikeIndex, 1);
                     toast.info("You have disliked this review!");
-                  } else {
+                } else {
                     likes.push(userId);
                     toast.success("You have liked this review!");
-                  }
-                  return { ...item, likes };
                 }
-                return item;
-              });
-              await updateDoc(docRef, { reviews: updatedReviews });
+                
+                updatedReviews[index].likes = likes;
+                
+                setProduct(prev => ({
+                    ...prev,
+                    reviews: updatedReviews
+                }));
             }
-      
-            // Update local state.
-            setProduct(prevProduct => ({
-              ...prevProduct,
-              reviews: updatedReviews,
-            }));
-          } catch (error) {
-            console.error("Error updating likes:", error);
-            toast.error("Can't update like for product:", error.message);
-          }
-    }
+        } catch (error) {
+            console.error("Error toggling like:", error);
+            toast.error("Failed to update like. Please try again");
+        }
+    };
 
     // Handle like replies
-    const toggleLikeReplies = async (reviewIndex, replyIndex) => {
+    const toggleLikeRepliesHandler = async (reviewIndex, replyIndex) => {
         if (!currentUser) {
             toast.error("Please log in to like replies.");
             return;
@@ -236,13 +248,16 @@ const ProductDetails = () => {
         const userId = currentUser.uid;
 
         try {
-            const updatedReviews = [...reviews];
+            await toggleLikeReply(id, reviewIndex, replyIndex, userId);
+            
+            // Update local state for immediate UI update
+            const updatedReviews = [...product.reviews];
             const targetReply = updatedReviews[reviewIndex].replies[replyIndex];
-
-            if(!targetReply.likes) {
+            
+            if (!targetReply.likes) {
                 targetReply.likes = [];
             }
-
+            
             const userLikeIndex = targetReply.likes.indexOf(userId);
             if (userLikeIndex > -1) {
                 targetReply.likes.splice(userLikeIndex, 1);
@@ -251,18 +266,16 @@ const ProductDetails = () => {
                 targetReply.likes.push(userId);
                 toast.success("You liked this reply!");
             }
-
-            await updateDoc(docRef, { reviews: updatedReviews });
-
-            setProduct((prevProduct) => ({
-                ...prevProduct,
-                reviews: updatedReviews,
+            
+            setProduct(prev => ({
+                ...prev,
+                reviews: updatedReviews
             }));
         } catch (error) {
-            console.error("Error updating likes for reply:", error);
-            toast.error("Failed to update likes. Please try again.");
+            console.error("Error toggling like for reply:", error);
+            toast.error("Failed to update like. Please try again");
         }
-    }
+    };
 
     // Handle display all comments or disappear it when user clicks on again.
     const toggleShowReplies = (reviewIndex) => {
@@ -301,26 +314,36 @@ const ProductDetails = () => {
             userName: replyUserName,
             message: replyMessage,
             createdAt: new Date().toISOString(),
-            likes: [],
+            likes: []
         };
 
         try {
-            const updateReviews = [...reviews];
-            if(!updateReviews[reviewIndex].replies) {
-                updateReviews[reviewIndex].replies = [];
-            }
-            updateReviews[reviewIndex].replies.push(replyObject);
-
-            await updateDoc(docRef, { reviews: updateReviews });
-
-            setReplyingTo(null);
-            setReplyMessage("");
-            setReplyUserName("");
+            await addReplyToReview(id, reviewIndex, {
+                userName: replyUserName,
+                message: replyMessage
+            });
+    
+            // Cập nhật state sau khi lưu thành công
+            setProduct(prev => {
+                const updatedReviews = [...prev.reviews];
+                if (!updatedReviews[reviewIndex].replies) {
+                    updatedReviews[reviewIndex].replies = [];
+                }
+                updatedReviews[reviewIndex].replies.push(replyObject);
+                return { ...prev, reviews: updatedReviews };
+            });
+    
             toast.success("Reply sent successfully!");
         } catch (error) {
             console.error("Error adding reply:", error);
-            toast.error("Failed to add reply. Please try again.");
+            toast.error("Failed to save reply to server: " + error.message);
+            return; // Không hiển thị local nếu server thất bại
         }
+
+        // Reset form
+        setReplyingTo(null);
+        setReplyMessage("");
+        setReplyUserName("");
     } 
 
     const addToCart = () => {
@@ -357,7 +380,7 @@ const ProductDetails = () => {
         return new Date(dateString).toLocaleDateString(undefined, options);
     };
 
-    if (isLoading) {
+    if (loading || adminLoading) {
         return (
             <Container
                 className="d-flex justify-content-center align-items-center"
@@ -534,7 +557,7 @@ const ProductDetails = () => {
                                                             <div className="review__actions">
                                                                 <motion.span
                                                                     whileTap={{scale: 1.2}} 
-                                                                    onClick={() => toggleLikeReviews(item)}
+                                                                    onClick={() => toggleLikeReviewHandler(item, index)}
                                                                     className="actions__like"
                                                                 >
                                                                     {item.likes && item.likes.includes(currentUser?.uid) ? "Dislike" : "Like"}
@@ -573,7 +596,7 @@ const ProductDetails = () => {
                                                                         <div className="review__actions">
                                                                             <motion.span
                                                                                 whileTap={{scale: 1.2}} 
-                                                                                onClick={() => toggleLikeReplies(index, replyIndex)}
+                                                                                onClick={() => toggleLikeRepliesHandler(index, replyIndex)}
                                                                                 className="actions__like"
                                                                             >
                                                                                 {reply.likes && reply.likes.includes(currentUser?.uid) ? "Dislike" : "Like"}
@@ -618,12 +641,12 @@ const ProductDetails = () => {
                                                             )}
 
                                                             {/* Delete icon for admin only */}
-                                                            {!isLoading &&
+                                                            {!adminLoading &&
                                                                 isAdmin && (
                                                                     <span
                                                                         className="delete-review-btn"
                                                                         onClick={() =>
-                                                                            deleteReviews(
+                                                                            deleteReviewHandler(
                                                                                 item
                                                                             )
                                                                         }

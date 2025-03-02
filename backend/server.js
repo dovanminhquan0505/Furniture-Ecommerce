@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const admin = require("firebase-admin");
+const cookieParser = require('cookie-parser');
 require("dotenv").config();
 
 // Khởi tạo Firebase Admin SDK
@@ -21,6 +22,7 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(cookieParser());
 
 const upload = multer({ storage: multer.memoryStorage() });
 

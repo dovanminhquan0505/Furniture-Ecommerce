@@ -3,7 +3,6 @@ import CommonSection from "../components/UI/CommonSection";
 import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col, Spinner } from "reactstrap";
 import "../styles/shop.css";
-import productsData from "../assets/data/products";
 import ProductsList from "../components/UI/ProductsList";
 import useGetData from "../custom-hooks/useGetData";
 
@@ -16,9 +15,10 @@ const Shop = () => {
 
     // Save database to local storage
     useEffect(() => {
-        const allProducts = [...productsData, ...productsFirebase];
-        setProducts(allProducts);
-        setFilteredProducts(allProducts);
+        if (productsFirebase) {
+            setProducts(productsFirebase);
+            setFilteredProducts(productsFirebase);
+        }
     }, [productsFirebase]);
 
     // Handle filter products based on category
@@ -116,7 +116,7 @@ const Shop = () => {
                             <Spinner style={{ width: '3rem', height: '3rem' }} />
                             <span className="visually-hidden">Loading...</span>
                         </Container>
-                        ) : productsData.length === 0 ? (
+                        ) : products.length === 0 ? (
                             <h1 className="text-center fs-4">
                                 Products are not found!
                             </h1>

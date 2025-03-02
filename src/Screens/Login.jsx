@@ -4,8 +4,6 @@ import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col, Form, FormGroup, Spinner } from "reactstrap";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { signInWithPopup } from "firebase/auth";
-import { auth, googleProvider } from "../firebase.config";
 import { toast } from "react-toastify";
 import logoGoogle from "../assets/images/logoGoogle.jpg";
 import axios from "axios";
@@ -35,86 +33,24 @@ const Login = () => {
             return;
         }
 
-        // try {
-        //     const userCredential = await signInWithEmailAndPassword(
-        //         auth,
-        //         email,
-        //         password
-        //     );
-
-        //     const user = userCredential.user;
-
-        //     const userDocRef = doc(db, "users", user.uid);
-        //     const userDoc = await getDoc(userDocRef);
-
-        //     if (userDoc.exists()) {
-        //         const userData = userDoc.data();
-        //         if (userData.role === "admin") {
-        //             console.log("Admin logged in, navigating to dashboard");
-        //             localStorage.setItem('userRole', 'admin');
-        //             navigate("/admin/dashboard");
-        //         } else {
-        //             console.log("Regular user logged in, navigating to checkout");
-        //             localStorage.setItem('userRole', 'user');
-        //             navigate("/checkout");
-        //         }
-        //     } else {
-        //         console.warn("User document not found, treating as regular user");
-        //         localStorage.setItem('userRole', 'user');
-        //         navigate("/checkout");
-        //     }
-
-        //     setLoading(false);
-        //     toast.success("Successfully logged in!");
-        // } catch (error) {
-        //     setLoading(false);
-            
-        //     switch (error.code) {
-        //         case "auth/wrong-password":
-        //             toast.error("Wrong Password!");
-        //             break;
-        //         case "auth/user-not-found":
-        //             toast.error("Account not found!");
-        //             break;
-        //         case "auth/invalid-email":
-        //             toast.error("Invalid Email!");
-        //             break;
-        //         case "auth/invalid-credential":
-        //             toast.error("Invalid Login Information!");
-        //             break;
-        //         default:
-        //             toast.error(error.message); // General error message
-        //     }
-        // }
-
         try {
-            console.log("Sending login request to API");
-            
-            // Gọi API đăng nhập từ backend
-            const response = await axios.post(
-                "http://localhost:5000/api/auth/login",
-                { email, password },
-                { headers: { 'Content-Type': 'application/json' } }
-            );
-    
-            console.log("Login response:", response.data);
-    
-            const { user, token } = response.data;
-            localStorage.setItem('authToken', token);
-            localStorage.setItem('userRole', user.role);
-            localStorage.setItem('user', JSON.stringify(user));
-    
-            dispatch(userActions.setUser(user));
+            const response = await axios.post("http://localhost:5000/api/auth/login", { email, password });
+            const { token, refreshToken, user } = response.data;
 
+            localStorage.setItem("accessToken", token); 
+            localStorage.setItem("authToken", token);
+            localStorage.setItem("refreshToken", refreshToken);
+            localStorage.setItem("user", JSON.stringify(user));
+
+            dispatch(userActions.setUser(user)); 
+    
             setLoading(false);
             toast.success("Successfully logged in!");
     
-            // Chuyển hướng dựa vào vai trò
             if (user.role === "admin") {
-                console.log("Admin logged in, navigating to dashboard");
+                console.log("Navigating to admin dashboard");
                 navigate("/admin/dashboard");
             } else {
-                console.log("Regular user logged in, navigating to checkout");
                 navigate("/checkout");
             }
         } catch (error) {

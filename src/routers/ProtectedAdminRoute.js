@@ -21,9 +21,9 @@ const ProtectedAdminRoute = () => {
         );
     }
 
-    const userRole = localStorage.getItem('userRole');
+    const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
 
-    if (!currentUser || (userRole !== 'admin' && !isAdmin)) {
+    if (!currentUser || (user.role !== 'admin' && !isAdmin)) {
         return <Navigate to="/home" replace />;
     }
 

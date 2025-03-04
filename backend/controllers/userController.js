@@ -1,9 +1,8 @@
 const admin = require("firebase-admin");
 const db = admin.firestore();
-const { authenticateUser, requireAdmin } = require('./authController');
 
 // Lấy tất cả người dùng
-exports.getAllUsers = [authenticateUser, async (req, res) => {
+exports.getAllUsers = [async (req, res) => {
   try {
     const snapshot = await db.collection("users").get();
     const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -14,10 +13,11 @@ exports.getAllUsers = [authenticateUser, async (req, res) => {
 }];
 
 // Lấy thông tin của người dùng hiện tại
-exports.getCurrentUser = [authenticateUser, async (req, res) => {
+exports.getUserById = async (req, res) => {
   try {
-    const uid = req.user.uid;
-    const userDoc = await db.collection("users").doc(uid).get();
+    const { id } = req.params; 
+    
+    const userDoc = await db.collection("users").doc(id).get();
     
     if (!userDoc.exists) {
       return res.status(404).json({ error: "User not found" });
@@ -32,17 +32,15 @@ exports.getCurrentUser = [authenticateUser, async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-}];
+};
 
 // Cập nhật thông tin người dùng
-exports.updateUser = [authenticateUser, async (req, res) => {
+exports.updateUserById = async (req, res) => {
   try {
-    const uid = req.user.uid;
+    const { id } = req.params; 
     const { displayName, photoURL } = req.body;
     
-    // Chỉ cho phép cập nhật các trường cụ thể
     const updateData = {};
-    
     if (displayName) updateData.displayName = displayName;
     if (photoURL) updateData.photoURL = photoURL;
     
@@ -50,16 +48,14 @@ exports.updateUser = [authenticateUser, async (req, res) => {
       return res.status(400).json({ error: "No valid fields to update" });
     }
     
-    // Cập nhật user trong Firestore
-    await db.collection("users").doc(uid).update(updateData);
+    await db.collection("users").doc(id).update(updateData);
     
-    // Cập nhật user trong Firebase Auth nếu cần
     if (displayName || photoURL) {
       const updateAuthData = {};
       if (displayName) updateAuthData.displayName = displayName;
       if (photoURL) updateAuthData.photoURL = photoURL;
       
-      await admin.auth().updateUser(uid, updateAuthData);
+      await admin.auth().updateUser(id, updateAuthData);
     }
     
     res.status(200).json({ 
@@ -69,13 +65,12 @@ exports.updateUser = [authenticateUser, async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-}];
+};
 
-exports.getUserProfile = [authenticateUser, async (req, res) => {
+exports.getUserProfileById = async (req, res) => {
   try {
-    const uid = req.user.uid;
-
-    const userDoc = await db.collection("users").doc(uid).get();
+    const { id } = req.params; 
+    const userDoc = await db.collection("users").doc(id).get();
 
     if (!userDoc.exists) {
       return res.status(404).json({ error: "User not found" });
@@ -96,4 +91,4 @@ exports.getUserProfile = [authenticateUser, async (req, res) => {
     console.error("Error fetching user profile:", error);
     res.status(500).json({ error: error.message });
   }
-}];
+};

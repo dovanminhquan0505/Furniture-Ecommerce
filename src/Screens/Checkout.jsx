@@ -10,6 +10,7 @@ import useAuth from "../custom-hooks/useAuth";
 import { toast } from "react-toastify";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "../firebase.config";
+import { createOrder } from "../api";
 
 const Checkout = () => {
     const { currentUser } = useAuth();
@@ -84,94 +85,49 @@ const Checkout = () => {
         const totalQuantity = orderData.totalQty || 0;
         const totalAmount = orderData.totalAmount || 0;
 
+        // Dữ liệu gửi lên API
+        const totalOrdersData = {
+            userId: currentUser.uid,
+            billingInfo: {
+                name: billingInfo.name,
+                email: billingInfo.email,
+                phone: billingInfo.phone,
+                address: billingInfo.address,
+                city: billingInfo.city,
+                postalCode: billingInfo.postalCode,
+                country: billingInfo.country,
+            },
+            items: orderData.cartItems.map(item => ({
+                id: item.id,
+                productName: item.productName,
+                price: item.price,
+                quantity: item.quantity,
+                totalPrice: item.totalPrice,
+                imgUrl: item.imgUrl,
+                category: item.category || "Unknown",
+                sellerId: item.sellerId || "Unknown",
+            })),
+            totalQuantity: totalQuantity,
+            totalAmount: totalAmount,
+            totalShipping: orderData.totalShipping,
+            totalTax: orderData.totalTax,
+            totalPrice: orderData.totalPrice,
+            isPaid: false,
+            isDelivered: false,
+            createdAt: new Date().toISOString(), 
+            sellerIds: [
+                ...new Set(
+                    orderData.cartItems.map(
+                        (item) => item.sellerId || "Unknown"
+                    )
+                ),
+            ],
+        };
+
         try {
-            const totalOrdersData = {
-                userId: currentUser.uid,
-                billingInfo: {
-                    name: billingInfo.name,
-                    email: billingInfo.email,
-                    phone: billingInfo.phone,
-                    address: billingInfo.address,
-                    city: billingInfo.city,
-                    postalCode: billingInfo.postalCode,
-                    country: billingInfo.country,
-                },
-                cartItems: orderData.cartItems.map(item => ({
-                    ...item,
-                    category: item.category || "Unknown",
-                    sellerId: item.sellerId || "Unknown",
-                })),
-                totalQuantity: totalQuantity,
-                totalAmount: totalAmount,
-                totalShipping: orderData.totalShipping,
-                totalTax: orderData.totalTax,
-                totalPrice: orderData.totalPrice,
-                isPaid: false,
-                isDelivered: false,
-                createdAt: new Date(),
-                sellerIds: [
-                    ...new Set(
-                        orderData.cartItems.map(
-                            (item) => item.sellerId || "Unknown"
-                        )
-                    ),
-                ],
-            };
+            const response = await createOrder(totalOrdersData);
+            const orderId = response.id; 
 
-            console.log("Order data:", totalOrdersData);
-
-            // Create order and get the orderId
-            const orderRef = await addDoc(
-                collection(db, "totalOrders"),
-                totalOrdersData
-            );
-            const orderId = orderRef.id;
-
-            // Create sub order
-            const subOrdersPromises = orderData.cartItems.reduce(
-                (acc, item) => {
-                    const sellerId = item.sellerId || "Unknown";
-                    if (!acc[sellerId]) {
-                        acc[sellerId] = {
-                            sellerId: sellerId,
-                            userId: currentUser.uid,
-                            totalOrderId: orderId,
-                            items: [],
-                            totalQuantity: 0,
-                            totalAmount: 0,
-                            isPaid: false,
-                            isDelivered: false,
-                            createdAt: new Date(),
-                        };
-                    }
-
-                    const itemQuantity = item.quantity || 0;
-                    const itemPrice = item.price || 0;
-
-                    acc[sellerId].items.push({
-                        id: item.id,
-                        productName: item.productName,
-                        price: itemPrice,
-                        quantity: itemQuantity,
-                        totalPrice: item.totalPrice,
-                        imgUrl: item.imgUrl,
-                        category: item.category || "Unknown",
-                    });
-                    acc[sellerId].totalQuantity += itemQuantity;
-                    acc[sellerId].totalAmount += itemPrice * itemQuantity;
-                    return acc;
-                },
-                {}
-            );
-
-            const subOrdersRef = collection(db, "subOrders");
-            await Promise.all(
-                Object.values(subOrdersPromises).map((subOrder) =>
-                    addDoc(subOrdersRef, subOrder)
-                )
-            );
-
-            // If order created successfully, navigate to place order details
             navigate(`/placeorder/${orderId}`, {
                 state: { billingInfo, orderId },
             });
@@ -179,6 +135,102 @@ const Checkout = () => {
             console.error(error);
             toast.error("Error creating order: " + (error.message || error));
         }
+
+        // try {
+        //     const totalOrdersData = {
+        //         userId: currentUser.uid,
+        //         billingInfo: {
+        //             name: billingInfo.name,
+        //             email: billingInfo.email,
+        //             phone: billingInfo.phone,
+        //             address: billingInfo.address,
+        //             city: billingInfo.city,
+        //             postalCode: billingInfo.postalCode,
+        //             country: billingInfo.country,
+        //         },
+        //         cartItems: orderData.cartItems.map(item => ({
+        //             ...item,
+        //             category: item.category || "Unknown",
+        //             sellerId: item.sellerId || "Unknown",
+        //         })),
+        //         totalQuantity: totalQuantity,
+        //         totalAmount: totalAmount,
+        //         totalShipping: orderData.totalShipping,
+        //         totalTax: orderData.totalTax,
+        //         totalPrice: orderData.totalPrice,
+        //         isPaid: false,
+        //         isDelivered: false,
+        //         createdAt: new Date(),
+        //         sellerIds: [
+        //             ...new Set(
+        //                 orderData.cartItems.map(
+        //                     (item) => item.sellerId || "Unknown"
+        //                 )
+        //             ),
+        //         ],
+        //     };
+
+        //     console.log("Order data:", totalOrdersData);
+
+        //     // Create order and get the orderId
+        //     const orderRef = await addDoc(
+        //         collection(db, "totalOrders"),
+        //         totalOrdersData
+        //     );
+        //     const orderId = orderRef.id;
+
+        //     // Create sub order
+        //     const subOrdersPromises = orderData.cartItems.reduce(
+        //         (acc, item) => {
+        //             const sellerId = item.sellerId || "Unknown";
+        //             if (!acc[sellerId]) {
+        //                 acc[sellerId] = {
+        //                     sellerId: sellerId,
+        //                     userId: currentUser.uid,
+        //                     totalOrderId: orderId,
+        //                     items: [],
+        //                     totalQuantity: 0,
+        //                     totalAmount: 0,
+        //                     isPaid: false,
+        //                     isDelivered: false,
+        //                     createdAt: new Date(),
+        //                 };
+        //             }
+
+        //             const itemQuantity = item.quantity || 0;
+        //             const itemPrice = item.price || 0;
+
+        //             acc[sellerId].items.push({
+        //                 id: item.id,
+        //                 productName: item.productName,
+        //                 price: itemPrice,
+        //                 quantity: itemQuantity,
+        //                 totalPrice: item.totalPrice,
+        //                 imgUrl: item.imgUrl,
+        //                 category: item.category || "Unknown",
+        //             });
+        //             acc[sellerId].totalQuantity += itemQuantity;
+        //             acc[sellerId].totalAmount += itemPrice * itemQuantity;
+        //             return acc;
+        //         },
+        //         {}
+        //     );
+
+        //     const subOrdersRef = collection(db, "subOrders");
+        //     await Promise.all(
+        //         Object.values(subOrdersPromises).map((subOrder) =>
+        //             addDoc(subOrdersRef, subOrder)
+        //         )
+        //     );
+
+        //     // If order created successfully, navigate to place order details
+        //     navigate(`/placeorder/${orderId}`, {
+        //         state: { billingInfo, orderId },
+        //     });
+        // } catch (error) {
+        //     console.error(error);
+        //     toast.error("Error creating order: " + (error.message || error));
+        // }
     };
 
     return (

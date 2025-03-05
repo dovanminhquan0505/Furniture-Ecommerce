@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
     Container,
     Row,
@@ -12,11 +12,9 @@ import {
 } from "reactstrap";
 import Helmet from "../components/Helmet/Helmet";
 import "../seller/styles/signupseller.css";
-import { Link, useNavigate } from "react-router-dom";
-import { auth, db } from "../firebase.config";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { addDoc, collection, doc, getDocs, query, setDoc, where } from "firebase/firestore";
-import bcrypt from "bcryptjs";
+import { registerSeller } from "../api";
 
 const SignupSeller = () => {
     const navigate = useNavigate();
@@ -36,30 +34,8 @@ const SignupSeller = () => {
         storeEmail: "",
     });
 
-    useEffect(() => {
-        const user = auth.currentUser;
-        if (user) {
-            setFormData((prevData) => ({
-                ...prevData,
-                email: user.email,
-            }));
-        }
-    }, []);
-
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const checkExistingEmail = async (email) => {
-        const pendingQuery = query(collection(db, "pendingOrders"), where("email", "==", email));
-        const sellersQuery = query(collection(db, "sellers"), where("email", "==", email));
-
-        const [pendingSnapshot, approvedSnapshot] = await Promise.all([
-            getDocs(pendingQuery),
-            getDocs(sellersQuery)
-        ]);
-
-        return !pendingSnapshot.empty || !approvedSnapshot.empty;
     };
 
     const handleSubmit = async (e) => {
@@ -73,53 +49,12 @@ const SignupSeller = () => {
         }
 
         try {
-            // Check if email already exists
-            const emailExists = await checkExistingEmail(formData.email);
-            if (emailExists) {
-                toast.error("An account with this email already exists or is pending approval.");
-                setLoading(false);
-                return;
-            }
-
-            // Generate a salt and hash the password
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(formData.password, salt);
-
-            // Generate a unique ID for the pending order
-            const pendingOrderId = doc(collection(db, "pendingOrders")).id;
-
-            // Save data into firestore database
-            await setDoc(doc(db, "pendingOrders", pendingOrderId), {
-                fullName: formData.fullName,
-                phoneNumber: formData.phoneNumber,
-                email: formData.email,
-                storeName: formData.storeName,
-                storeDescription: formData.storeDescription,
-                businessType: formData.businessType,
-                address: formData.address,
-                city: formData.city,
-                storeEmail: formData.storeEmail,
-                hashedPassword: hashedPassword, // Store the hashed password
-                status: "pending",
-                createdAt: new Date(),
-                notification: false,
-            });
-
-            // Add notifications for admin
-            await addDoc(collection(db, "adminNotifications"), {
-                type: "newSellerRequest",
-                sellerId: pendingOrderId,
-                createdAt: new Date(),
-                read: false,
-            })
-
+            await registerSeller(formData);
             setLoading(false);
-            toast.success(
-                "Seller registration submitted successfully! Awaiting admin approval."
-            );
+            toast.success("Seller registration submitted successfully! Awaiting admin approval.");
             navigate("/seller/dashboard");
         } catch (error) {
-            toast.error("Failed to submit registration. Please try again.");
+            toast.error("Failed to submit registration:" + error.message);
             setLoading(false);
         }
     };

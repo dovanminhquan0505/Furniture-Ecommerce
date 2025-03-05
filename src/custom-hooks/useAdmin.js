@@ -1,22 +1,25 @@
 import { useState, useEffect } from "react";
-import useAuth from "./useAuth";
-import { db } from "../firebase.config";
-import { doc, getDoc } from "firebase/firestore";
+import { auth } from "../firebase.config";
 
 const useAdmin = () => {
-    const [isAdmin, setIsAdmin] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    
-    useEffect(() => {
-        // Check for user role in localStorage
-        const userRole = localStorage.getItem('userRole');
-        const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
-        
-        setIsAdmin(userRole === 'admin');
-        setIsLoading(false);
-    }, []);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-    return { isAdmin, isLoading };
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        setIsAdmin(storedUser.role === "admin");
+      } else {
+        setIsAdmin(false);
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  return { isAdmin, isLoading };
 };
 
 export default useAdmin;

@@ -9,6 +9,8 @@ import logoGoogle from "../assets/images/logoGoogle.jpg";
 import axios from "axios";
 import { useDispatch } from "react-redux";
 import { userActions } from "../redux/slices/userSlice";
+import { signInWithCustomToken } from "firebase/auth";
+import { auth } from "../firebase.config";
 
 const Login = () => {
     const [email, setEmail] = useState("");
@@ -35,10 +37,15 @@ const Login = () => {
 
         try {
             const response = await axios.post("http://localhost:5000/api/auth/login", { email, password });
-            const { token, refreshToken, user } = response.data;
+            const { token: customToken, refreshToken, user } = response.data;
 
-            localStorage.setItem("accessToken", token); 
-            localStorage.setItem("authToken", token);
+            // Đăng nhập vào Firebase với custom token
+            const userCredential = await signInWithCustomToken(auth, customToken);
+            const idToken = await userCredential.user.getIdToken();
+
+            // Lưu thông tin vào localStorage
+            localStorage.setItem("accessToken", idToken);
+            localStorage.setItem("authToken", idToken);
             localStorage.setItem("refreshToken", refreshToken);
             localStorage.setItem("user", JSON.stringify(user));
 

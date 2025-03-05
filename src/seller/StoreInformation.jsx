@@ -11,12 +11,12 @@ import {
     Spinner,
 } from "reactstrap";
 import { Store, Mail, Phone, MapPin, Building, Briefcase } from "lucide-react";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { auth, db } from "../firebase.config";
+import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import "../seller/styles/store-information.css";
 import Helmet from "../components/Helmet/Helmet";
+import { fetchSellerInfo, getUserById, updateSellerInfo } from "../api";
 
 const StoreInformation = () => {
     const [loading, setLoading] = useState(true);
@@ -39,56 +39,41 @@ const StoreInformation = () => {
 
     // Get sellerId for user
     useEffect(() => {
-        const fetchSellerData = async () => {
+        const fetchSellerId = async () => {
             const currentUser = auth.currentUser;
             if (!currentUser) {
-                toast.error("You must be logged in to view your products");
-                navigate("/login");
-                return;
+              toast.error("You must be logged in");
+              navigate("/login");
+              return;
             }
-
-            const userDocRef = doc(db, "users", currentUser.uid);
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                setSellerId(userData.sellerId);
-            } else {
-                toast.error("User not found");
-                navigate("/register");
+            try {
+              const idToken = await currentUser.getIdToken();
+              const userData = await getUserById(idToken, currentUser.uid);
+              setSellerId(userData.sellerId);
+            } catch (error) {
+              toast.error("Failed to fetch seller ID: " + error.message);
+              navigate("/login");
             }
-        };
+          };
 
-        fetchSellerData();
+          fetchSellerId();
     }, [navigate]);
 
     useEffect(() => {
         const fetchSellerData = async () => {
+            if (!sellerId) return;
             setLoading(true);
-
-            if (!sellerId) {
-                setLoading(false);
-                return;
-            }
-
             try {
-                const sellerDocRef = doc(db, "sellers", sellerId);
-                const sellerDoc = await getDoc(sellerDocRef);
-
-                if (sellerDoc.exists()) {
-                    const sellersData = sellerDoc.data();
-                    setStoreInfo(sellersData);
-                    setOriginalStoreInfo(sellersData);
-                } else {
-                    toast.error("Seller data not found");
-                }
+              const data = await fetchSellerInfo(sellerId);
+              setStoreInfo(data);
+              setOriginalStoreInfo(data);
             } catch (error) {
-                toast.error("Failed to fetch data:", error.message);
+              toast.error("Failed to fetch data: " + error.message);
             } finally {
-                setLoading(false);
+              setLoading(false);
             }
-        };
-
-        fetchSellerData();
+          };
+          fetchSellerData();
     }, [sellerId]);
 
     const handleInputChange = (e) => {
@@ -111,8 +96,8 @@ const StoreInformation = () => {
         }
 
         try {
-            const sellerDocRef = doc(db, "sellers", sellerId);
-            await updateDoc(sellerDocRef, storeInfo);
+            const idToken = await auth.currentUser.getIdToken();
+            await updateSellerInfo(idToken, sellerId, storeInfo);
             setIsEditing(false);
             setOriginalStoreInfo(storeInfo);
             toast.success("Store information updated successfully");

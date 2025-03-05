@@ -46,3 +46,54 @@ exports.createOrder = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+/******************** SELLER ********************/
+exports.getSellerOrders = async (req, res) => {
+  try {
+    const ordersSnapshot = await db
+      .collection('subOrders')
+      .where('sellerId', '==', req.params.sellerId)
+      .get();
+    const orders = await Promise.all(
+      ordersSnapshot.docs.map(async doc => {
+        const orderData = doc.data();
+        const totalOrderDoc = await db.collection('totalOrders').doc(orderData.totalOrderId).get();
+        const userName = totalOrderDoc.exists ? totalOrderDoc.data().billingInfo?.name || 'Unknown' : 'Unknown';
+        return { id: doc.id, ...orderData, userName };
+      })
+    );
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching orders', error });
+  }
+};
+
+exports.confirmDelivery = async (req, res) => {
+  try {
+    const orderRef = db.collection('subOrders').doc(req.params.orderId);
+    const orderDoc = await orderRef.get();
+    if (!orderDoc.exists) return res.status(404).json({ message: 'Order not found' });
+
+    await orderRef.update({
+      isDelivered: true,
+      deliveredAt: new Date(),
+    });
+    const updatedDoc = await orderRef.get();
+    res.json(updatedDoc.data());
+  } catch (error) {
+    res.status(500).json({ message: 'Error confirming delivery', error });
+  }
+};
+
+exports.deleteOrder = async (req, res) => {
+  try {
+    const orderRef = db.collection('subOrders').doc(req.params.orderId);
+    const orderDoc = await orderRef.get();
+    if (!orderDoc.exists) return res.status(404).json({ message: 'Order not found' });
+
+    await orderRef.delete();
+    res.json({ message: 'Order deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting order', error });
+  }
+};

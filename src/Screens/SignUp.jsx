@@ -9,6 +9,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useDispatch } from "react-redux";
 import { userActions } from "../redux/slices/userSlice";
+import { signInWithCustomToken } from "firebase/auth";
+import { auth } from "../firebase.config";
 
 const Signup = () => {
     const [username, setUsername] = useState("");
@@ -71,12 +73,15 @@ const Signup = () => {
                 }
             );
 
-            const { user, token, refreshToken } = registerResponse.data;
+            const { user, token: customToken } = registerResponse.data;
 
-            // Lưu token và thông tin người dùng vào localStorage
-            localStorage.setItem('authToken', token);
-            localStorage.setItem('refreshToken', refreshToken);
-            localStorage.setItem('user', JSON.stringify(user));
+            // Đăng nhập vào Firebase với custom token
+            const userCredential = await signInWithCustomToken(auth, customToken);
+            const idToken = await userCredential.user.getIdToken();
+
+            localStorage.setItem("authToken", idToken);
+            localStorage.setItem("accessToken", idToken);
+            localStorage.setItem("user", JSON.stringify(user));
 
             // Cập nhật Redux store
             dispatch(userActions.setUser(user));

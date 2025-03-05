@@ -1,7 +1,7 @@
 const admin = require("firebase-admin");
 const db = admin.firestore();
 
-const getProducts = async (req, res) => {
+exports.getProducts = async (req, res) => {
     try {
         const snapshot = await db.collection("products").get();
         const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -11,7 +11,7 @@ const getProducts = async (req, res) => {
     }
 };
 
-const getProductById = async (req, res) => {
+exports.getProductById = async (req, res) => {
     try {
         const productId = req.params.id;
         const productDoc = await db.collection("products").doc(productId).get();
@@ -27,7 +27,7 @@ const getProductById = async (req, res) => {
     }
 };
 
-const addReview = async (req, res) => {
+exports.addReview = async (req, res) => {
     try {
         const productId = req.params.id;
         const { userName, message, rating } = req.body;
@@ -47,7 +47,6 @@ const addReview = async (req, res) => {
             likes: []
         };
         
-        // Khởi tạo reviews nếu chưa tồn tại
         const productData = productDoc.data();
         const reviews = productData.reviews || [];
 
@@ -62,7 +61,7 @@ const addReview = async (req, res) => {
     }
 };
 
-const deleteReview = async (req, res) => {
+exports.deleteReview = async (req, res) => {
     try {
         const productId = req.params.id;
         const reviewToDelete = req.body.review;
@@ -77,7 +76,7 @@ const deleteReview = async (req, res) => {
     }
 };
 
-const toggleLikeReview = async (req, res) => {
+exports.toggleLikeReview = async (req, res) => {
     try {
         const productId = req.params.id;
         const { reviewIndex, userId } = req.body;
@@ -114,7 +113,7 @@ const toggleLikeReview = async (req, res) => {
     }
 };
 
-const addReplyToReview = async (req, res) => {
+exports.addReplyToReview = async (req, res) => {
     try {
         const productId = req.params.id;
         const { reviewIndex, userName, message } = req.body;
@@ -154,7 +153,7 @@ const addReplyToReview = async (req, res) => {
     }
 };
 
-const toggleLikeReply = async (req, res) => {
+exports.toggleLikeReply = async (req, res) => {
     try {
         const productId = req.params.id;
         const { reviewIndex, replyIndex, userId } = req.body;
@@ -194,8 +193,8 @@ const toggleLikeReply = async (req, res) => {
     }
 };
 
-// API xử lý thông tin cửa hàng
-const getSellerInfo = async (req, res) => {
+/**************************** SELLER ****************************/
+exports.getSellerInfo = async (req, res) => {
     try {
         const sellerId = req.params.id;
         const sellerDoc = await db.collection("sellers").doc(sellerId).get();
@@ -211,13 +210,42 @@ const getSellerInfo = async (req, res) => {
     }
 };
 
-module.exports = { 
-    getProducts,
-    getProductById,
-    addReview,
-    deleteReview,
-    toggleLikeReview,
-    addReplyToReview,
-    toggleLikeReply,
-    getSellerInfo
+exports.getSellerProducts = async (req, res) => {
+    try {
+      const productsSnapshot = await db
+        .collection('products')
+        .where('sellerId', '==', req.params.sellerId)
+        .get();
+      const products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      res.json(products);
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching products', error });
+    }
+};
+
+exports.updateProduct = async (req, res) => {
+    try {
+      const productRef = db.collection('products').doc(req.params.productId);
+      const productDoc = await productRef.get();
+      if (!productDoc.exists) return res.status(404).json({ message: 'Product not found' });
+  
+      await productRef.update(req.body);
+      const updatedDoc = await productRef.get();
+      res.json(updatedDoc.data());
+    } catch (error) {
+      res.status(500).json({ message: 'Error updating product', error });
+    }
+};
+
+exports.deleteProduct = async (req, res) => {
+    try {
+      const productRef = db.collection('products').doc(req.params.productId);
+      const productDoc = await productRef.get();
+      if (!productDoc.exists) return res.status(404).json({ message: 'Product not found' });
+  
+      await productRef.delete();
+      res.json({ message: 'Product deleted' });
+    } catch (error) {
+      res.status(500).json({ message: 'Error deleting product', error });
+    }
 };

@@ -41,6 +41,9 @@ app.use("/api/users", userRoutes);
 const authRoutes = require("./routes/authRoutes");
 app.use("/api/auth", authRoutes);
 
+const sellerRoutes = require("./routes/sellerRoutes");
+app.use("/api/sellers",sellerRoutes);
+
 const { uploadFile } = require("./controllers/uploadController");
 app.post("/api/upload", upload.single("file"), uploadFile);
 

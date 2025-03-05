@@ -8,8 +8,6 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import useAuth from "../custom-hooks/useAuth";
 import { toast } from "react-toastify";
-import { collection, addDoc } from "firebase/firestore";
-import { db } from "../firebase.config";
 import { createOrder } from "../api";
 
 const Checkout = () => {
@@ -169,8 +167,6 @@ const Checkout = () => {
         //             ),
         //         ],
         //     };
-
-        //     console.log("Order data:", totalOrdersData);
 
         //     // Create order and get the orderId
         //     const orderRef = await addDoc(

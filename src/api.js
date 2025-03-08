@@ -517,17 +517,19 @@ export const toggleLikeReply = async (
 };
 
 // Orders
-export const createOrder = async (orderData) => {
+export const createOrder = async (token, orderData) => {
     try {
         const response = await fetch(`${BASE_URL}/orders`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify(orderData),
         });
         if (!response.ok) {
-            throw new Error("Failed to create order");
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Failed to create order");
         }
         return await response.json();
     } catch (error) {

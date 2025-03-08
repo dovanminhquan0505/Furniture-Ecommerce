@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import useAuth from "../custom-hooks/useAuth";
 import { toast } from "react-toastify";
 import { createOrder } from "../api";
+import { auth } from "../firebase.config";
 
 const Checkout = () => {
     const { currentUser } = useAuth();
@@ -123,7 +124,8 @@ const Checkout = () => {
         };
 
         try {
-            const response = await createOrder(totalOrdersData);
+            const token = await auth.currentUser.getIdToken();
+            const response = await createOrder(token, totalOrdersData);
             const orderId = response.id; 
 
             navigate(`/placeorder/${orderId}`, {

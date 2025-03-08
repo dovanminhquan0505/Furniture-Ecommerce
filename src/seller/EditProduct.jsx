@@ -3,11 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Container, Row, Col, Form, FormGroup, Spinner } from "reactstrap";
 import { motion } from "framer-motion";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db, storage } from "../firebase.config";
+import { auth, db, storage } from "../firebase.config";
 import { toast } from "react-toastify";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import "../styles/Add-EditProduct.css";
 import Helmet from "../components/Helmet/Helmet";
+import { fetchProduct, updateProduct } from "../api";
 
 const EditProduct = () => {
     const { productId } = useParams();
@@ -28,14 +29,9 @@ const EditProduct = () => {
     useEffect(() => {
         const fetchProductDetails = async () => {
             try {
-                const docRef = doc(db, "products", productId);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setProductDetails(docSnap.data());
-                } else {
-                    toast.error("Product not found!");
-                    navigate("/seller/all-products");
-                }
+                const idToken = await auth.currentUser.getIdToken();
+                const product = await fetchProduct(productId, idToken); 
+                setProductDetails(product);
             } catch (error) {
                 toast.error("Error fetching product details: " + error.message);
                 navigate("/seller/all-products");
@@ -60,60 +56,37 @@ const EditProduct = () => {
     };
 
     // Handle update value when seller clicks on update product button
-    const updateProduct = async (e) => {
+    const updateProductHandler = async (e) => {
         e.preventDefault();
         setLoading(true);
 
         try {
-            // Use img Url default
             let imgUrl = productDetails.imgUrl;
-
             if (enterProductImg) {
-                // Upload new image only if a new file is selected
-                const storageRef = ref(
-                    storage,
-                    `productImages/${Date.now() + enterProductImg.name}`
+              const storageRef = ref(storage, `productImages/${Date.now() + enterProductImg.name}`);
+              const uploadTask = uploadBytesResumable(storageRef, enterProductImg);
+              imgUrl = await new Promise((resolve, reject) => {
+                uploadTask.on(
+                  "state_changed",
+                  (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    console.log(`Upload is ${progress}% done`);
+                  },
+                  reject,
+                  async () => resolve(await getDownloadURL(uploadTask.snapshot.ref))
                 );
-                const uploadTask = uploadBytesResumable(
-                    storageRef,
-                    enterProductImg
-                );
-
-                await new Promise((resolve, reject) => {
-                    uploadTask.on(
-                        "state_changed",
-                        (snapshot) => {
-                            const progress =
-                                (snapshot.bytesTransferred /
-                                    snapshot.totalBytes) *
-                                100;
-                            console.log(`Upload is ${progress}% done`);
-                        },
-                        reject,
-                        async () => {
-                            imgUrl = await getDownloadURL(
-                                uploadTask.snapshot.ref
-                            );
-                            resolve();
-                        }
-                    );
-                });
+              });
             }
-
-            // Update product in firestore
-            const docRef = doc(db, "products", productId);
-            await updateDoc(docRef, {
-                ...productDetails,
-                imgUrl: imgUrl,
-            });
-
+      
+            const idToken = await auth.currentUser.getIdToken();
+            await updateProduct(idToken, productId, { ...productDetails, imgUrl });
             setLoading(false);
             toast.success("Product updated successfully!");
             navigate("/seller/all-products");
-        } catch (error) {
+          } catch (error) {
             setLoading(false);
-            toast.error("Product upload failed: " + error.message);
-        }
+            toast.error("Product update failed: " + error.message);
+          }
     };
 
     return (
@@ -140,7 +113,7 @@ const EditProduct = () => {
                             ) : (
                                 <div className="create-product-form">
                                     <h4 className="mb-4">Edit Product</h4>
-                                    <Form onSubmit={updateProduct}>
+                                    <Form onSubmit={updateProductHandler}>
                                         <FormGroup className="form__group">
                                             <span>Product title</span>
                                             <input

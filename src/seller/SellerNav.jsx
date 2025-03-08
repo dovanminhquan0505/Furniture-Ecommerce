@@ -9,6 +9,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
+import { logoutUser } from "../api";
 
 const seller_nav = [
     {
@@ -58,28 +59,30 @@ const SellerNav = () => {
 
     if (isLoading) {
         return (
-          <Container
-            className="d-flex justify-content-center align-items-center"
-            style={{ height: "100vh" }}
-          >
-            <Spinner style={{ width: "3rem", height: "3rem" }} />
-            <span className="visually-hidden">Loading...</span>
-          </Container>
+            <Container
+                className="d-flex justify-content-center align-items-center"
+                style={{ height: "100vh" }}
+            >
+                <Spinner style={{ width: "3rem", height: "3rem" }} />
+                <span className="visually-hidden">Loading...</span>
+            </Container>
         );
-      }
+    }
 
     if (!isSeller) {
         return null;
     }
 
-    const logOut = () => {
-        signOut(auth)
-            .then(() => {
-                toast.success("Logged out");
-            })
-            .catch((error) => {
-                toast.error(error.message);
-            });
+    const logOut = async () => {
+        try {
+            const idToken = await auth.currentUser.getIdToken();
+            await logoutUser(idToken);
+            await auth.signOut(); 
+            localStorage.clear();
+            toast.success("Logged out");
+        } catch (error) {
+            toast.error("Logout failed: " + error.message);
+        }
     };
 
     const toggleProfileActions = () => {
@@ -139,7 +142,10 @@ const SellerNav = () => {
                                 className="logout__seller d-flex align-items-center"
                                 onClick={logOut}
                             >
-                                <Link to="/login" className="logout__seller__profile">
+                                <Link
+                                    to="/login"
+                                    className="logout__seller__profile"
+                                >
                                     Log out
                                 </Link>
                             </span>

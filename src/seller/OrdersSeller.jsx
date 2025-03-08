@@ -1,23 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Container, Col, Row, Spinner } from "reactstrap";
 import { motion } from "framer-motion";
-import { auth, db } from "../firebase.config";
+import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
-import {
-    doc,
-    deleteDoc,
-    collection,
-    query,
-    where,
-    getDocs,
-    getDoc,
-    updateDoc,
-    Timestamp,
-} from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import "../seller/styles/orders-seller.css";
 import { useTheme } from "../components/UI/ThemeContext";
 import Helmet from "../components/Helmet/Helmet";
+import { confirmDelivery, deleteOrder, fetchSellerOrders, getUserById } from "../api";
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -35,64 +25,23 @@ const Orders = () => {
                 return;
             }
 
-            const userDocRef = doc(db, "users", currentUser.uid);
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                setSellerId(userData.sellerId);
-            } else {
-                toast.error("User not found");
-                navigate("/register");
-            }
+            const idToken = await currentUser.getIdToken();
+            const userData = await getUserById(idToken, currentUser.uid);
+            setSellerId(userData.sellerId);
         };
 
         fetchSellerData();
     }, [navigate, setSellerId]);
 
     useEffect(() => {
-        const fetchSellerOrders = async () => {
+        const fetchOrders = async () => {
             if (!sellerId) return;
 
             try {
                 setLoading(true);
-                const subOrdersRef = collection(db, "subOrders");
-                const q = query(
-                    subOrdersRef,
-                    where("sellerId", "==", sellerId)
-                );
-                const querySnapshot = await getDocs(q);
-
-                const ordersData = querySnapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...doc.data(),
-                }));
-
-                // Fetch user names from totalOrders collection
-                const userNames = await Promise.all(
-                    ordersData.map(async (order) => {
-                        const totalOrderRef = doc(
-                            db,
-                            "totalOrders",
-                            order.totalOrderId
-                        );
-                        const totalOrderDoc = await getDoc(totalOrderRef);
-                        if (totalOrderDoc.exists()) {
-                            const totalOrderData = totalOrderDoc.data();
-                            return (
-                                totalOrderData.billingInfo?.name || "Unknown"
-                            );
-                        }
-                        return "Unknown";
-                    })
-                );
-
-                // Combine subOrders data with user names
-                const ordersWithUserNames = ordersData.map((order, index) => ({
-                    ...order,
-                    userName: userNames[index],
-                }));
-
-                setOrders(ordersWithUserNames);
+                const idToken = await auth.currentUser.getIdToken();
+                const ordersData = await fetchSellerOrders(idToken, sellerId);
+                setOrders(ordersData);
             } catch (error) {
                 toast.error("Error fetching orders: " + error.message);
             } finally {
@@ -100,46 +49,47 @@ const Orders = () => {
             }
         };
 
-        fetchSellerOrders();
+        fetchOrders();
     }, [sellerId]);
 
     // Handle Deliver orders for each seller
     const handleConfirmDelivery = async (orderId) => {
         try {
-            const orderRef = await doc(db, "subOrders", orderId);
-            await updateDoc(orderRef, {
-                isDelivered: true,
-                deliveredAt: Timestamp.fromDate(new Date()),
-            });
-
+            const idToken = await auth.currentUser.getIdToken();
+            await confirmDelivery(idToken, orderId); 
             setOrders((prevOrders) =>
-                prevOrders.map((order) =>
-                    order.id === orderId
-                        ? {
-                              ...order,
-                              isDelivered: true,
-                              deliveredAt: new Date(),
-                          }
-                        : order
-                )
+              prevOrders.map((order) =>
+                order.id === orderId ? { ...order, isDelivered: true, deliveredAt: new Date() } : order
+              )
             );
             toast.success("Order delivered successfully!");
-        } catch (error) {
+          } catch (error) {
             toast.error("Failed to confirm delivery: " + error.message);
-        }
+          }
     };
 
     // Handle delete orders
-    const deleteOrder = async (orderId) => {
+    const deleteOrderHandler = async (orderId) => {
         try {
-            await deleteDoc(doc(db, "subOrders", orderId));
-            setOrders((prevOrders) =>
-                prevOrders.filter((order) => order.id !== orderId)
-            );
+            const idToken = await auth.currentUser.getIdToken();
+            await deleteOrder(idToken, sellerId, orderId);
+            setOrders((prevOrders) => prevOrders.filter((order) => order.id !== orderId));
             toast.success("Order deleted successfully!");
-        } catch (error) {
-            toast.error("Failed to delete order:" + error.message);
+          } catch (error) {
+            toast.error("Failed to delete order: " + error.message);
+          }
+    };
+
+    const parseDate = (createdAt) => {
+        if (!createdAt) return new Date(); 
+        if (createdAt instanceof Date) return createdAt; 
+        if (createdAt.seconds && createdAt.nanoseconds) {
+            return new Date(createdAt.seconds * 1000 + createdAt.nanoseconds / 1000000);
         }
+        if (typeof createdAt === "string") {
+            return new Date(createdAt);
+        }
+        return new Date(); 
     };
 
     const getStatusClass = (status) => {
@@ -206,9 +156,7 @@ const Orders = () => {
                                                                 {order.userName}
                                                             </td>
                                                             <td>
-                                                                {order.createdAt
-                                                                    .toDate()
-                                                                    .toLocaleDateString()}
+                                                                {parseDate(order.createdAt).toLocaleDateString()}
                                                             </td>
                                                             <td>
                                                                 $
@@ -273,7 +221,7 @@ const Orders = () => {
                                                                         e
                                                                     ) => {
                                                                         e.stopPropagation();
-                                                                        deleteOrder(
+                                                                        deleteOrderHandler(
                                                                             order.id
                                                                         );
                                                                     }}

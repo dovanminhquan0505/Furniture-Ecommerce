@@ -1,21 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Spinner } from "reactstrap";
 import { motion } from "framer-motion";
-import { auth, db } from "../firebase.config";
-import { doc, deleteDoc, collection, query, where, getDocs, getDoc } from "firebase/firestore";
+import { auth} from "../firebase.config";
 import { toast } from "react-toastify";
 import "../styles/all-products.css";
 import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "../components/UI/ThemeContext";
 import Helmet from "../components/Helmet/Helmet";
 import { useProducts } from "../contexts/ProductContext";
+import { deleteProduct, fetchSellerProducts, getUserById, refreshToken } from "../api";
 
 const AllProducts = () => {
-    const { products, addProduct } = useProducts();
+    const { products, updateProducts } = useProducts();
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
-    const [ sellerId, setSellerId ] = useState(null);
+    const [sellerId, setSellerId] = useState(null);
 
     useEffect(() => {
         const fetchSellerData = async () => {
@@ -26,43 +26,61 @@ const AllProducts = () => {
                 return;
             }
 
-            const userDocRef = doc(db, "users", currentUser.uid);
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                setSellerId(userData.sellerId);
-            } else {
-                toast.error("User not found");
-                navigate("/register"); 
-            }
+            const idToken = await currentUser.getIdToken();
+            const userData = await getUserById(idToken, currentUser.uid);
+            setSellerId(userData.sellerId);
         };
 
         fetchSellerData();
     }, [navigate, setSellerId]);
-
+    
     useEffect(() => {
         const fetchProducts = async () => {
             if (!sellerId) return;
 
-            const productsRef = collection(db, "products");
-            const q = query(productsRef, where("sellerId", "==", sellerId));
-            const querySnapShot = await getDocs(q);
-            const fetchedProducts = [];
-            querySnapShot.forEach((doc) => {
-                fetchedProducts.push({ id: doc.id, ...doc.data() });
-            });
-            fetchedProducts.forEach(product => addProduct(product)); 
-            setLoading(false);
+            setLoading(true);
+            try {
+                let idToken = await auth.currentUser.getIdToken();
+                let fetchedProducts;
+                try {
+                    fetchedProducts = await fetchSellerProducts(idToken, sellerId);
+                    updateProducts(fetchedProducts);
+                } catch (error) {
+                    if (error.message.includes("auth/id-token-expired")) {
+                        const refreshTokenValue = localStorage.getItem("refreshToken");
+                        if (refreshTokenValue) {
+                            const refreshedData = await refreshToken(refreshTokenValue);
+                            idToken = refreshedData.token;
+                            localStorage.setItem("accessToken", idToken);
+                            const fetchedProducts = await fetchSellerProducts(idToken, sellerId);
+                            updateProducts(fetchedProducts);
+                        } else {
+                            throw new Error("No refresh token available");
+                        }
+                    } else {
+                        throw error;
+                    }
+                }
+            } catch (error) {
+                toast.error("Error fetching products: " + error.message);
+                updateProducts([]);
+            } finally {
+                setLoading(false);
+            }
         };
 
         fetchProducts();
-    }, [sellerId, addProduct]);
+    }, [sellerId]);
 
-    const deleteProduct = async (id) => {
-        await deleteDoc(doc(db, "products", id));
-        toast.success("Product deleted successfully!");
-        const updatedProducts = products.filter(product => product.id !== id);
-        updatedProducts.forEach(product => addProduct(product));
+    const deleteProductHandler = async (id) => {
+        try {
+            const idToken = await auth.currentUser.getIdToken();
+            await deleteProduct(idToken, id); 
+            updateProducts(products.filter((product) => product.id !== id)); 
+            toast.success("Product deleted successfully!");
+        } catch (error) {
+            toast.error("Failed to delete product: " + error.message);
+        }
     };
 
     const editProduct = async (productId) => {
@@ -104,59 +122,62 @@ const AllProducts = () => {
                                         </Container>
                                     ) : products.length === 0 ? (
                                         <tr>
-                                            <td colSpan="5" className="text-center fw-bold">No products found</td>
+                                            <td
+                                                colSpan="5"
+                                                className="text-center fw-bold"
+                                            >
+                                                No products found
+                                            </td>
                                         </tr>
                                     ) : (
-                                        (
-                                            products.map((item) => (
-                                                <tr key={item.id}>
-                                                    <td data-label="Image">
-                                                        <img
-                                                            src={item.imgUrl}
-                                                            alt=""
-                                                        />
-                                                    </td>
-                                                    <td data-label="Title">
-                                                        {item.productName}
-                                                    </td>
-                                                    <td data-label="Category">
-                                                        {item.category}
-                                                    </td>
-                                                    <td data-label="Price">
-                                                        ${item.price}
-                                                    </td>
-                                                    <td data-label="Actions">
-                                                        <motion.button
-                                                            onClick={() => {
-                                                                editProduct(
-                                                                    item.id
-                                                                );
-                                                            }}
-                                                            whileTap={{
-                                                                scale: 1.1,
-                                                            }}
-                                                            className="btn btn-primary"
-                                                        >
-                                                            Edit
-                                                        </motion.button>
-    
-                                                        <motion.button
-                                                            onClick={() => {
-                                                                deleteProduct(
-                                                                    item.id
-                                                                );
-                                                            }}
-                                                            whileTap={{
-                                                                scale: 1.1,
-                                                            }}
-                                                            className="btn btn-danger"
-                                                        >
-                                                            Delete
-                                                        </motion.button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )
+                                        products.map((item) => (
+                                            <tr key={item.id}>
+                                                <td data-label="Image">
+                                                    <img
+                                                        src={item.imgUrl}
+                                                        alt=""
+                                                    />
+                                                </td>
+                                                <td data-label="Title">
+                                                    {item.productName}
+                                                </td>
+                                                <td data-label="Category">
+                                                    {item.category}
+                                                </td>
+                                                <td data-label="Price">
+                                                    ${item.price}
+                                                </td>
+                                                <td data-label="Actions">
+                                                    <motion.button
+                                                        onClick={() => {
+                                                            editProduct(
+                                                                item.id
+                                                            );
+                                                        }}
+                                                        whileTap={{
+                                                            scale: 1.1,
+                                                        }}
+                                                        className="btn btn-primary"
+                                                    >
+                                                        Edit
+                                                    </motion.button>
+
+                                                    <motion.button
+                                                        onClick={() => {
+                                                            deleteProductHandler(
+                                                                item.id
+                                                            );
+                                                        }}
+                                                        whileTap={{
+                                                            scale: 1.1,
+                                                        }}
+                                                        className="btn btn-danger"
+                                                    >
+                                                        Delete
+                                                    </motion.button>
+                                                </td>
+                                            </tr>
+                                        ))
                                     )}
                                 </tbody>
                             </table>

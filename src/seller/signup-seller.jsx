@@ -52,7 +52,7 @@ const SignupSeller = () => {
             await registerSeller(formData);
             setLoading(false);
             toast.success("Seller registration submitted successfully! Awaiting admin approval.");
-            navigate("/seller/dashboard");
+            navigate("/login");
         } catch (error) {
             toast.error("Failed to submit registration:" + error.message);
             setLoading(false);

@@ -42,21 +42,21 @@ const StoreInformation = () => {
         const fetchSellerId = async () => {
             const currentUser = auth.currentUser;
             if (!currentUser) {
-              toast.error("You must be logged in");
-              navigate("/login");
-              return;
+                toast.error("You must be logged in");
+                navigate("/login");
+                return;
             }
             try {
-              const idToken = await currentUser.getIdToken();
-              const userData = await getUserById(idToken, currentUser.uid);
-              setSellerId(userData.sellerId);
+                const idToken = await currentUser.getIdToken();
+                const userData = await getUserById(idToken, currentUser.uid);
+                setSellerId(userData.sellerId);
             } catch (error) {
-              toast.error("Failed to fetch seller ID: " + error.message);
-              navigate("/login");
+                toast.error("Failed to fetch seller ID: " + error.message);
+                navigate("/login");
             }
-          };
+        };
 
-          fetchSellerId();
+        fetchSellerId();
     }, [navigate]);
 
     useEffect(() => {
@@ -64,16 +64,17 @@ const StoreInformation = () => {
             if (!sellerId) return;
             setLoading(true);
             try {
-              const data = await fetchSellerInfo(sellerId);
-              setStoreInfo(data);
-              setOriginalStoreInfo(data);
+                const idToken = await auth.currentUser.getIdToken();
+                const data = await fetchSellerInfo(idToken, sellerId);
+                setStoreInfo(data);
+                setOriginalStoreInfo(data);
             } catch (error) {
-              toast.error("Failed to fetch data: " + error.message);
+                toast.error("Failed to fetch data: " + error.message);
             } finally {
-              setLoading(false);
+                setLoading(false);
             }
-          };
-          fetchSellerData();
+        };
+        fetchSellerData();
     }, [sellerId]);
 
     const handleInputChange = (e) => {

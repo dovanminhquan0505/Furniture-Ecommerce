@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import "../styles/Add-EditProduct.css";
 import Helmet from "../components/Helmet/Helmet";
 import { useProducts } from "../contexts/ProductContext";
+import { createProduct, getUserById } from "../api";
 
 const AddProducts = () => {
     const [enterTitle, setEnterTitle] = useState("");
@@ -19,92 +20,59 @@ const AddProducts = () => {
     const [enterProductImg, setEnterProductImg] = useState(null);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
-    const { addProduct } = useProducts();
+    const { products, updateProducts } = useProducts();
 
     //Create Product
-    const createProduct = async (e) => {
+    const addProduct = async (e) => {
         e.preventDefault();
         setLoading(true);
 
         const currentUser = auth.currentUser;
-
         if (!currentUser) {
             toast.error("You must be logged in to create a product");
             setLoading(false);
             return;
         }
 
-        // Create Product to the Firebase database
         try {
-            // Get sellerId from collection "users"
-            const userDocRef = doc(db, "users", currentUser.uid);
-            const userDoc = await getDoc(userDocRef);
-
-            if (!userDoc.exists()) {
-                toast.error("User not found");
-                setLoading(false);
-                return;
-            }
-
-            const userData = userDoc.data();
+            const idToken = await currentUser.getIdToken();
+            const userData = await getUserById(idToken, currentUser.uid);
             const sellerId = userData.sellerId;
-
-            const storageRef = ref(
-                storage,
-                `productImages/${Date.now() + enterProductImg.name}`
-            );
-            const uploadTask = uploadBytesResumable(
-                storageRef,
-                enterProductImg
-            );
-
-            uploadTask.on(
+      
+            const storageRef = ref(storage, `productImages/${Date.now() + enterProductImg.name}`);
+            const uploadTask = uploadBytesResumable(storageRef, enterProductImg);
+            const downloadURL = await new Promise((resolve, reject) => {
+              uploadTask.on(
                 "state_changed",
                 (snapshot) => {
-                    const progress =
-                        (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    console.log(`Upload is ${progress}% done`);
+                  const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                  console.log(`Upload is ${progress}% done`);
                 },
-                () => {
-                    toast.error("Images can not uploaded!");
-                    setLoading(false);
-                },
-                async () => {
-                    // After uploading finished, update file URL
-                    const downloadURL = await getDownloadURL(
-                        uploadTask.snapshot.ref
-                    );
-                    // Add a new document to Firestore with the URL of the uploaded image
-                    const docRef = await addDoc(collection(db, "products"), {
-                        productName: enterTitle,
-                        shortDesc: enterShortDesc,
-                        description: enterDescription,
-                        category: enterCategory,
-                        price: enterPrice,
-                        imgUrl: downloadURL,
-                        sellerId: sellerId,
-                    });
-
-                    addProduct({
-                        id: docRef.id,
-                        productName: enterTitle,
-                        shortDesc: enterShortDesc,
-                        description: enterDescription,
-                        category: enterCategory,
-                        price: enterPrice,
-                        imgUrl: downloadURL,
-                        sellerId: sellerId,
-                    });
-
-                    setLoading(false);
-                    toast.success("Product created successfully!");
-                    navigate("/seller/all-products");
-                }
-            );
-        } catch (error) {
+                reject,
+                async () => resolve(await getDownloadURL(uploadTask.snapshot.ref))
+              );
+            });
+      
+            const productData = {
+              productName: enterTitle,
+              shortDesc: enterShortDesc,
+              description: enterDescription,
+              category: enterCategory,
+              price: enterPrice,
+              imgUrl: downloadURL,
+              sellerId,
+            };
+      
+            const newProduct = await createProduct(idToken, sellerId, productData);
+            updateProducts([...products, newProduct]);
+      
             setLoading(false);
-            toast.error("Something went wrong!");
-        }
+            toast.success("Product created successfully!");
+            navigate("/seller/all-products");
+          } catch (error) {
+            setLoading(false);
+            toast.error("Product creation failed: " + error.message);
+          }
     };
 
     return (
@@ -131,7 +99,7 @@ const AddProducts = () => {
                             ) : (
                                 <div className="create-product-form">
                                     <h4 className="mb-4">Create Product</h4>
-                                    <Form onSubmit={createProduct}>
+                                    <Form onSubmit={addProduct}>
                                         <FormGroup className="form__group">
                                             <span>Product title</span>
                                             <input

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import useAuth from "./useAuth";
-import { getSellerById, getUserById } from "../api";
+import { getSellerById } from "../api";
 
 const useSeller = () => {
     const [isSeller, setIsSeller] = useState(false);

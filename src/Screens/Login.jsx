@@ -9,8 +9,9 @@ import logoGoogle from "../assets/images/logoGoogle.jpg";
 import axios from "axios";
 import { useDispatch } from "react-redux";
 import { userActions } from "../redux/slices/userSlice";
-import { signInWithCustomToken } from "firebase/auth";
+import { GoogleAuthProvider, signInWithCustomToken, signInWithPopup } from "firebase/auth";
 import { auth } from "../firebase.config";
+import { googleLogin } from "../api";
 
 const Login = () => {
     const [email, setEmail] = useState("");
@@ -36,11 +37,17 @@ const Login = () => {
         }
 
         try {
-            const response = await axios.post("http://localhost:5000/api/auth/login", { email, password });
+            const response = await axios.post(
+                "http://localhost:5000/api/auth/login",
+                { email, password }
+            );
             const { token: customToken, refreshToken, user } = response.data;
 
             // Đăng nhập vào Firebase với custom token
-            const userCredential = await signInWithCustomToken(auth, customToken);
+            const userCredential = await signInWithCustomToken(
+                auth,
+                customToken
+            );
             const idToken = await userCredential.user.getIdToken();
 
             // Lưu thông tin vào localStorage
@@ -49,11 +56,11 @@ const Login = () => {
             localStorage.setItem("refreshToken", refreshToken);
             localStorage.setItem("user", JSON.stringify(user));
 
-            dispatch(userActions.setUser(user)); 
-    
+            dispatch(userActions.setUser(user));
+
             setLoading(false);
             toast.success("Successfully logged in!");
-    
+
             if (user.role === "admin") {
                 console.log("Navigating to admin dashboard");
                 navigate("/admin/dashboard");
@@ -63,62 +70,41 @@ const Login = () => {
         } catch (error) {
             setLoading(false);
             console.error("Login error:", error);
-            
-            // Xử lý các lỗi từ API
-            const errorMessage = error.response?.data?.error || error.message || "Login failed!";
+            const errorMessage =
+                error.response?.data?.error || error.message || "Login failed!";
             toast.error(errorMessage);
         }
     };
 
     // Sign In for Google account.
     const signInWithGoogle = async () => {
-        // setLoading(true);
-        // try {
-        //     // Redirect đến API xác thực Google của backend
-        //     window.location.href = "http://localhost:5000/api/auth/google";
-        //     const result = await signInWithPopup(auth, googleProvider);
-        //     const idToken = await result.user.getIdToken();
-            
-        //     // Gửi idToken lên backend để xác thực
-        //     const response = await axios.post(
-        //         "http://localhost:5000/api/auth/google-login",
-        //         { idToken }
-        //     );
-            
-        //     const { user, token } = response.data;
-        //     localStorage.setItem('authToken', token);
-        //     localStorage.setItem('userRole', user.role);
-        //     localStorage.setItem('user', JSON.stringify(user));
-            
-        //     navigate("/checkout");
-        // } catch (error) {
-        //     setLoading(false);
-        //     toast.error("Failed to login with Google!");
-        //     console.error(error); // General error message
-        // }
-    };
-
-    // // Handle add user to Users collection
-    // const addUserToFireStore = async (user) => {
-    //     const userRef = doc(db, "users", user.uid);
-    //     const userData = {
-    //         displayName: user.displayName || user.email,
-    //         email: user.email,
-    //         photoURL: user.photoURL,
-    //         role: "user",
-    //         uid: user.uid, 
-    //         loginStatus: "Google"
-    //     };
-
-    //     try {
-    //         // Add or update user information
-    //         await setDoc(userRef, userData, { merge: true });
-    //         toast.success("User info added to Firestore!");
-    //     } catch (error) {
-    //         console.error("Error adding user info to Firestore: ", error);
-    //         toast.error("Failed to add user info.");
-    //     }
-    // }
+        setLoading(true);
+        try {
+          const provider = new GoogleAuthProvider();
+          const result = await signInWithPopup(auth, provider);
+          const idToken = await result.user.getIdToken();
+      
+          // Gửi idToken lên backend qua googleLogin
+          const response = await googleLogin(idToken);
+          const { token, refreshToken, user } = response;
+      
+          // Lưu thông tin vào localStorage
+          localStorage.setItem("accessToken", idToken);
+          localStorage.setItem("authToken", idToken);
+          localStorage.setItem("refreshToken", refreshToken);
+          localStorage.setItem("user", JSON.stringify(user));
+      
+          dispatch(userActions.setUser(user));
+      
+          setLoading(false);
+          toast.success("Successfully logged in with Google!");
+          navigate("/checkout");
+        } catch (error) {
+          setLoading(false);
+          console.error("Google login error:", error);
+          toast.error(error.message || "Failed to login with Google!");
+        }
+      };
 
     if (loading) {
         return (
@@ -126,7 +112,7 @@ const Login = () => {
                 className="d-flex justify-content-center align-items-center"
                 style={{ height: "100vh" }}
             >
-                <Spinner style={{ width: '3rem', height: '3rem' }} />
+                <Spinner style={{ width: "3rem", height: "3rem" }} />
                 <span className="visually-hidden">Loading...</span>
             </Container>
         );

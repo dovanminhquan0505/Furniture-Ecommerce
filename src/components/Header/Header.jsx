@@ -12,7 +12,7 @@ import { useDispatch } from "react-redux";
 import { userActions } from "../../redux/slices/userSlice";
 import { cartActions } from "../../redux/slices/cartSlice";
 import { wishListActions } from "../../redux/slices/wishListSlice";
-import axios from "axios";
+import { logoutUser, refreshToken as refreshTokenAPI } from "../../api";
 
 const nav__links = [
     {
@@ -61,32 +61,50 @@ const Header = () => {
 
     const logOut = async () => {
         try {
-            const token = localStorage.getItem("accessToken"); 
-            if (token) {
-                await axios.post(
-                    "http://localhost:5000/api/auth/logout",
-                    {},
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-            }
-    
-            // Clear Redux state
-            dispatch(userActions.setUser(null)); 
-            dispatch(cartActions.clearCart()); 
-            dispatch(wishListActions.clearWishList());
+            let token = localStorage.getItem("accessToken");
+            const refreshTokenValue = localStorage.getItem("refreshToken"); // Giả sử bạn lưu refreshToken
 
-            // Clear localStorage only in browser environment
-            if (typeof window !== 'undefined') {
-                localStorage.removeItem("accessToken");
-                localStorage.removeItem("authToken");
-                localStorage.removeItem("user");
+            if (token) {
+                try {
+                    // Gọi API logout từ API client
+                    await logoutUser(token);
+                } catch (error) {
+                    if (
+                        error.message.includes("auth/id-token-expired") &&
+                        refreshTokenValue
+                    ) {
+                        const refreshedData = await refreshTokenAPI(
+                            refreshTokenValue
+                        );
+                        token = refreshedData.token; 
+                        localStorage.setItem("accessToken", token); 
+
+                        await logoutUser(token);
+                    } else {
+                        throw error; 
+                    }
+                }
             }
-    
-            toast.success("Logged out successfully");
-            navigate("/login");
+
+            clearStateAndNavigate();
         } catch (error) {
-            toast.error(error.response?.data?.message || "Logout failed");
+            toast.error(error.message || "Logout failed");
         }
+    };
+
+    // Xóa trạng thái và diều hướng
+    const clearStateAndNavigate = () => {
+        dispatch(userActions.setUser(null));
+        dispatch(cartActions.clearCart());
+        dispatch(wishListActions.clearWishList());
+        if (typeof window !== "undefined") {
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("authToken");
+            localStorage.removeItem("user");
+        }
+        toast.success("Logged out successfully");
+        navigate("/login");
     };
 
     useEffect(() => {
@@ -135,7 +153,7 @@ const Header = () => {
 
         // Add event listener
         document.addEventListener("mousedown", handleClickOutside);
-        
+
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };

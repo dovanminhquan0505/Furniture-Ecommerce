@@ -8,20 +8,11 @@ import "../styles/checkout.css";
 import "../styles/placeorder.css";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { toast } from "react-toastify";
-import {
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    query,
-    Timestamp,
-    updateDoc,
-    where,
-} from "firebase/firestore";
-import { db } from "../firebase.config";
+import { auth } from "../firebase.config";
 import { cartActions } from "../redux/slices/cartSlice";
 import { useDispatch } from "react-redux";
 import useSeller from "../custom-hooks/useSeller";
+import { getOrderById, updateOrder } from "../api";
 
 // Get Paypal Client from your environment
 const clientId = process.env.REACT_APP_PAYPAL_CLIENT_ID;
@@ -39,58 +30,22 @@ const PlaceOrder = () => {
     useEffect(() => {
         if (!orderId) {
             navigate("/checkout");
+            return;
         }
 
-        // Get order details from Firestore
         const fetchOrderDetails = async () => {
             try {
                 setIsFetchingOrder(true);
-                const totalOrderRef = doc(db, "totalOrders", orderId);
-                const totalOrderSnap = await getDoc(totalOrderRef);
-                if (totalOrderSnap.exists()) {
-                    const totalOrderData = totalOrderSnap.data();
+                const token = await auth.currentUser.getIdToken();
+                const response = await getOrderById(token, orderId);
 
-                    if (!totalOrderData.billingInfo) {
-                        totalOrderData.billingInfo = {};
-                    }
-
-                    // Convert Firestore Timestamp to Date object
-                    if (totalOrderData.paidAt && totalOrderData.paidAt instanceof Timestamp) {
-                        totalOrderData.paidAt = totalOrderData.paidAt.toDate();
-                    }
-                    if (
-                        totalOrderData.deliveredAt &&
-                        totalOrderData.deliveredAt instanceof Timestamp
-                    ) {
-                        totalOrderData.deliveredAt = totalOrderData.deliveredAt.toDate();
-                    }
-
-                    // Fetch sub orders
-                    const subOrdersRef = collection(db, "subOrders");
-                    const q = query(
-                        subOrdersRef,
-                        where("totalOrderId", "==", orderId)
-                    );
-                    const subOrdersSnap = await getDocs(q);
-
-                    const subOrdersData = subOrdersSnap.docs.map((doc) => ({
-                        id: doc.id,
-                        ...doc.data(),
-                    }));
-
-                    setOrderDetails({
-                        totalOrder: {
-                            id: totalOrderSnap.id,
-                            ...totalOrderData,
-                        },
-                        subOrders: subOrdersData,
-                    });
-                } else {
-                    toast.error("Order not found");
-                    navigate("/checkout");
-                }
+                setOrderDetails({
+                    totalOrder: response.totalOrder,
+                    subOrders: response.subOrders,
+                });
             } catch (error) {
                 toast.error("Error fetching order details: " + error.message);
+                navigate("/checkout");
             } finally {
                 setIsFetchingOrder(false);
             }
@@ -125,7 +80,7 @@ const PlaceOrder = () => {
 
     // Get order details
     const { totalOrder, subOrders } = orderDetails;
-    const cartItems = totalOrder.cartItems || [];
+    const cartItems = totalOrder.items || [];
 
     const handleConfirmOrder = () => {
         setShowPaypal(true);
@@ -135,11 +90,12 @@ const PlaceOrder = () => {
     const handlePaymentSuccess = async (details) => {
         try {
             setLoading(true);
-            const orderRef = doc(db, "totalOrders", orderId);
-            const paidAt = new Date();
-            await updateDoc(orderRef, {
+            const token = await auth.currentUser.getIdToken();
+            const paidAt = new Date().toISOString();
+
+            await updateOrder(token, orderId, {
                 isPaid: true,
-                paidAt: Timestamp.fromDate(paidAt),
+                paidAt,
                 paymentResult: {
                     id: details.id,
                     status: details.status,
@@ -153,27 +109,11 @@ const PlaceOrder = () => {
                 totalOrder: {
                     ...prevDetails.totalOrder,
                     isPaid: true,
-                    paidAt: paidAt,
+                    paidAt: new Date(paidAt),
                 },
             }));
 
-            // Update payment status for subOrders
-            const subOrdersRef = collection(db, "subOrders");
-            const q = query(subOrdersRef, where("totalOrderId", "==", orderId));
-            const subOrdersSnap = await getDocs(q);
-
-            const updatePromises = subOrdersSnap.docs.map((doc) =>
-                updateDoc(doc.ref, {
-                    isPaid: true,
-                    paidAt: Timestamp.fromDate(paidAt),
-                })
-            );
-
-            await Promise.all(updatePromises);
-
-            // Clear cart and update Redux store
             dispatch(cartActions.clearCart());
-
             toast.success("Payment successful!");
         } catch (error) {
             toast.error("Error updating order: " + error.message);
@@ -190,24 +130,28 @@ const PlaceOrder = () => {
         }
 
         try {
-            const subOrderRef = doc(db, "subOrders", orderId);
+            setLoading(true);
+            const token = await auth.currentUser.getIdToken();
+            const deliveredAt = new Date().toISOString();
 
-            await updateDoc(subOrderRef, {
+            await updateOrder(token, orderId, {
                 isDelivered: true,
-                deliveredAt: Timestamp.fromDate(new Date()),
+                deliveredAt,
             });
+
             setOrderDetails((prev) => ({
                 ...prev,
                 totalOrder: {
                     ...prev.totalOrder,
                     isDelivered: true,
-                    deliveredAt: new Date(),
+                    deliveredAt: new Date(deliveredAt),
                 },
             }));
             toast.success("Order marked as delivered");
         } catch (error) {
-            console.error("Delivery confirmation error:", error);
             toast.error("Error updating order: " + error.message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -264,7 +208,7 @@ const PlaceOrder = () => {
                                         {totalOrder.billingInfo?.postalCode ||
                                             "No postal code available"}
                                     </p>
-                                    <p>
+                                    <p> 
                                         <strong>Country: </strong>
                                         {totalOrder.billingInfo?.country ||
                                             "No country available country"}

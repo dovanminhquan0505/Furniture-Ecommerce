@@ -81,15 +81,9 @@ const Orders = () => {
     };
 
     const parseDate = (createdAt) => {
-        if (!createdAt) return new Date(); 
-        if (createdAt instanceof Date) return createdAt; 
-        if (createdAt.seconds && createdAt.nanoseconds) {
-            return new Date(createdAt.seconds * 1000 + createdAt.nanoseconds / 1000000);
-        }
-        if (typeof createdAt === "string") {
-            return new Date(createdAt);
-        }
-        return new Date(); 
+        if (!createdAt) return new Date();
+        const date = new Date(createdAt);
+        return isNaN(date.getTime()) ? new Date() : date;
     };
 
     const getStatusClass = (status) => {

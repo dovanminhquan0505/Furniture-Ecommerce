@@ -537,3 +537,38 @@ export const createOrder = async (token, orderData) => {
         throw error;
     }
 };
+
+export const getOrderById = async (token, orderId) => {
+    try {
+        const response = await fetch(`${BASE_URL}/orders/${orderId}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        if (!response.ok) throw new Error("Failed to fetch order details");
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching order details:", error);
+        throw error;
+    }
+};
+
+export const updateOrder = async (token, orderId, updateData) => {
+    try {
+        const response = await fetch(`${BASE_URL}/orders/${orderId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(updateData),
+        });
+        if (!response.ok) throw new Error("Failed to update order");
+        return await response.json();
+    } catch (error) {
+        console.error("Error updating order:", error);
+        throw error;
+    }
+};

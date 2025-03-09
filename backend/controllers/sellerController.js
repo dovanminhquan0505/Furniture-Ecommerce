@@ -123,7 +123,11 @@ exports.getSellerOrders = async (req, res) => {
                 const userName = totalOrderDoc.exists
                     ? totalOrderDoc.data().billingInfo?.name || "Unknown"
                     : "Unknown";
-                return { id: doc.id, ...orderData, userName };
+
+                const createdAt = orderData.createdAt instanceof admin.firestore.Timestamp
+                    ? orderData.createdAt.toDate().toISOString()
+                    : orderData.createdAt || new Date().toISOString();
+                return { id: doc.id, ...orderData, userName, createdAt };
             })
         );
         res.json(orders);

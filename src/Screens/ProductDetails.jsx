@@ -19,8 +19,11 @@ import {
     deleteReview, 
     toggleLikeReview, 
     addReplyToReview, 
-    toggleLikeReply 
+    toggleLikeReply, 
+    fetchSellerInfoByProduct
 } from "../api.js";
+import { current } from "@reduxjs/toolkit";
+import { auth } from "../firebase.config.js";
 
 const ProductDetails = () => {
     const [tab, setTab] = useState("desc");
@@ -74,11 +77,14 @@ const ProductDetails = () => {
         const getSellerData = async () => {
             if (product.sellerId) {
                 try {
-                    const sellerData = await fetchSellerInfo(product.sellerId);
-                    setStoreName(sellerData.storeName);
+                    const user = auth.currentUser;
+                    const token = user ? await user.getIdToken() : null; 
+                    const sellerData = await fetchSellerInfoByProduct(token, product.sellerId);
+                    setStoreName(sellerData.storeName || "Unknown Store");
                 } catch (error) {
                     console.error("Error fetching seller info:", error);
                     toast.error("Failed to load store information");
+                    setStoreName("Unknown Store");
                 }
             }
         };

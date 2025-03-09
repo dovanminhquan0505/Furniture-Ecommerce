@@ -8,8 +8,6 @@ const {
     addReplyToReview, 
     toggleLikeReply,
     getSellerInfo,
-    updateProduct,
-    deleteProduct
 } = require("../controllers/productController");
 const { requireSeller } = require('../controllers/authController'); 
 

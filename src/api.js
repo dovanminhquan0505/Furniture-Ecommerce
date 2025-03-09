@@ -196,21 +196,48 @@ export const updateProduct = async (token, productId, updateData) => {
 
 export const createProduct = async (token, sellerId, productData) => {
     try {
-        const response = await fetch(`${BASE_URL}/sellers/${sellerId}/products`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(productData),
-        });
+        const response = await fetch(
+            `${BASE_URL}/sellers/${sellerId}/products`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(productData),
+            }
+        );
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || `Failed to create product: ${response.status}`);
+            throw new Error(
+                errorData.error ||
+                    `Failed to create product: ${response.status}`
+            );
         }
         return await response.json();
     } catch (error) {
         console.error("Error creating product:", error);
+        throw error;
+    }
+};
+
+// Seller Info for Product Details
+export const fetchSellerInfoByProduct = async (token, sellerId) => {
+    try {
+        const response = await fetch(`${BASE_URL}/products/seller/${sellerId}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Failed to fetch seller info: ${errorData.message || response.statusText}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching seller info by product:", error);
         throw error;
     }
 };
@@ -256,20 +283,27 @@ export const getSellerById = async (token, sellerId) => {
 
 export const fetchSellerInfo = async (token, sellerId) => {
     try {
-      const response = await fetch(`${BASE_URL}/sellers/${sellerId}/store`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) throw new Error("Failed to fetch seller info");
-      return await response.json();
+        const response = await fetch(`${BASE_URL}/sellers/${sellerId}/store`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(
+                `Failed to fetch seller info: ${
+                    errorData.message || response.statusText
+                }`
+            );
+        }
+        return await response.json();
     } catch (error) {
-      console.error("Error fetching seller info:", error);
-      throw error;
+        console.error("Error fetching seller info:", error);
+        throw error;
     }
-  };
+};
 
 export const updateSellerInfo = async (token, sellerId, updateData) => {
     try {
@@ -291,16 +325,22 @@ export const updateSellerInfo = async (token, sellerId, updateData) => {
 
 export const fetchSellerProducts = async (token, sellerId) => {
     try {
-        const response = await fetch(`${BASE_URL}/sellers/${sellerId}/products`, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-        });
+        const response = await fetch(
+            `${BASE_URL}/sellers/${sellerId}/products`,
+            {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || `Failed to fetch seller products: ${response.status}`);
+            throw new Error(
+                errorData.error ||
+                    `Failed to fetch seller products: ${response.status}`
+            );
         }
         return await response.json();
     } catch (error) {
@@ -362,13 +402,16 @@ export const confirmDelivery = async (token, orderId) => {
 
 export const deleteOrder = async (token, sellerId, orderId) => {
     try {
-        const response = await fetch(`${BASE_URL}/sellers/${sellerId}/orders/${orderId}`, {
-            method: "DELETE",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-        });
+        const response = await fetch(
+            `${BASE_URL}/sellers/${sellerId}/orders/${orderId}`,
+            {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
         if (!response.ok) throw new Error("Failed to delete order");
         return await response.json();
     } catch (error) {

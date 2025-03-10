@@ -125,6 +125,102 @@ export const updateUserById = async (token, id, updateData) => {
     }
 };
 
+export const updateUserPhoto = async (token, id, photoURL) => {
+    try {
+        const response = await fetch(`${BASE_URL}/users/${id}/photo`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ photoURL }),
+        });
+        if (!response.ok) throw new Error("Failed to update user photo");
+        return await response.json();
+    } catch (error) {
+        console.error("Error updating user photo:", error);
+        throw error;
+    }
+};
+
+export const updateUserPassword = async (
+    token,
+    id,
+    newPassword
+) => {
+    try {
+        const response = await fetch(`${BASE_URL}/users/${id}/password`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ newPassword }),
+        });
+        if (!response.ok) throw new Error("Failed to update password");
+        return await response.json();
+    } catch (error) {
+        console.error("Error updating password:", error);
+        throw error;
+    }
+};
+
+export const getUserOrders = async (token, id) => {
+    try {
+        const response = await fetch(`${BASE_URL}/users/${id}/orders`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        if (!response.ok) throw new Error("Failed to fetch user orders");
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching user orders:", error);
+        throw error;
+    }
+};
+
+export const deleteUserOrder = async (token, orderId) => {
+    try {
+        const response = await fetch(`${BASE_URL}/users/orders/${orderId}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        if (!response.ok) throw new Error("Failed to delete order");
+        return await response.json();
+    } catch (error) {
+        console.error("Error deleting order:", error);
+        throw error;
+    }
+};
+
+export const uploadFile = async (file) => {
+    try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch(`${BASE_URL}/upload`, {
+            method: "POST",
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Failed to upload file");
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error("Error uploading file:", error);
+        throw error;
+    }
+};
+
 export const refreshToken = async (refreshToken) => {
     try {
         const response = await fetch(`${BASE_URL}/auth/refresh-token`, {
@@ -224,16 +320,23 @@ export const createProduct = async (token, sellerId, productData) => {
 // Seller Info for Product Details
 export const fetchSellerInfoByProduct = async (token, sellerId) => {
     try {
-        const response = await fetch(`${BASE_URL}/products/seller/${sellerId}`, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-        });
+        const response = await fetch(
+            `${BASE_URL}/products/seller/${sellerId}`,
+            {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Failed to fetch seller info: ${errorData.message || response.statusText}`);
+            throw new Error(
+                `Failed to fetch seller info: ${
+                    errorData.message || response.statusText
+                }`
+            );
         }
         return await response.json();
     } catch (error) {

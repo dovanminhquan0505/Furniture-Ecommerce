@@ -1,9 +1,9 @@
-import React, { useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../../firebase.config';
-import { userActions } from '../../redux/slices/userSlice';
+import React, { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../../firebase.config";
+import { userActions } from "../../redux/slices/userSlice";
 
 const AuthWrapper = ({ children }) => {
     const dispatch = useDispatch();
@@ -16,7 +16,7 @@ const AuthWrapper = ({ children }) => {
                     email: user.email,
                     displayName: user.displayName,
                     photoURL: user.photoURL,
-                }
+                };
 
                 // User is signed in
                 const userDocRef = doc(db, "users", user.uid);
@@ -24,14 +24,26 @@ const AuthWrapper = ({ children }) => {
                     const userDoc = await getDoc(userDocRef);
                     if (userDoc.exists()) {
                         const userFirestoreData = userDoc.data();
-                        const birthDate = userFirestoreData.birthDate?.toDate?.().toISOString() || null;
+                        // Convert all Timestamp fields to ISO strings
+                        const serializedData = {};
+                        Object.keys(userFirestoreData).forEach((key) => {
+                            const value = userFirestoreData[key];
+                            if (value && typeof value.toDate === "function") {
+                                serializedData[key] = value
+                                    .toDate()
+                                    .toISOString();
+                            } else {
+                                serializedData[key] = value;
+                            }
+                        });
 
                         // Combine auth user data with Firestore user data
-                        dispatch(userActions.setUser({ 
-                            ...userData, 
-                            ...userFirestoreData, 
-                            birthDate,
-                        }));
+                        dispatch(
+                            userActions.setUser({
+                                ...userData,
+                                ...serializedData,
+                            })
+                        );
                     } else {
                         dispatch(userActions.setUser(userData));
                     }

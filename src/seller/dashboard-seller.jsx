@@ -47,7 +47,6 @@ const DashboardSeller = () => {
         console.log("Checking auth state on mount:", auth.currentUser);
         const fetchSellerId = async () => {
             const currentUser = auth.currentUser;
-            console.log("Firebase auth.currentUser:", currentUser);
             if (!currentUser) {
               toast.error("You must be logged in");
               navigate("/login");

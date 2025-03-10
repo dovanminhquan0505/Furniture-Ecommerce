@@ -14,7 +14,6 @@ import useAdmin from "../custom-hooks/useAdmin";
 import useAuth from "../custom-hooks/useAuth";
 import { 
     fetchProduct, 
-    fetchSellerInfo, 
     addReview, 
     deleteReview, 
     toggleLikeReview, 
@@ -22,7 +21,6 @@ import {
     toggleLikeReply, 
     fetchSellerInfoByProduct
 } from "../api.js";
-import { current } from "@reduxjs/toolkit";
 import { auth } from "../firebase.config.js";
 
 const ProductDetails = () => {

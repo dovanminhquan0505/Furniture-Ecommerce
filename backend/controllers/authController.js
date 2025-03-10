@@ -42,22 +42,24 @@ exports.registerUser = async (req, res) => {
         });
 
         // Tạo custom token
-        const customToken = await admin.auth().createCustomToken(userRecord.uid, {
-            role,
-        });
+        const customToken = await admin
+            .auth()
+            .createCustomToken(userRecord.uid, {
+                role,
+            });
 
         return res.status(201).json({
             message: "User registered successfully",
             user: {
-              uid: userRecord.uid,
-              username,
-              email,
-              photoURL: fileURL,
-              role,
+                uid: userRecord.uid,
+                username,
+                email,
+                photoURL: fileURL,
+                role,
             },
             token: customToken,
-            refreshToken: null, 
-          });
+            refreshToken: null,
+        });
     } catch (error) {
         if (error.code === "auth/email-already-in-use") {
             return res.status(400).json({ error: "Email is already in use" });
@@ -69,77 +71,92 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
-    
+
         if (!email || !password) {
-          return res.status(400).json({ error: "Email and password are required" });
+            return res
+                .status(400)
+                .json({ error: "Email and password are required" });
         }
-    
+
         // Gọi Firebase Identity Toolkit để xác thực
         const response = await axios.post(
-          `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${process.env.FIREBASE_API_KEY}`,
-          { email, password, returnSecureToken: true }
+            `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${process.env.FIREBASE_API_KEY}`,
+            { email, password, returnSecureToken: true }
         );
-    
+
         const firebaseUser = response.data;
         const uid = firebaseUser.localId;
-    
+
         // Lấy thông tin người dùng từ Firestore
         const userDoc = await db.collection("users").doc(uid).get();
         if (!userDoc.exists) {
-          return res.status(404).json({ error: "User not found in database" });
+            return res
+                .status(404)
+                .json({ error: "User not found in database" });
         }
-    
+
         const userData = userDoc.data();
-    
+
         // Tạo custom token
         const customToken = await admin.auth().createCustomToken(uid, {
-          role: userData.role, 
-          sellerId: userData.sellerId || null, 
-        });
-    
-        return res.status(200).json({
-          message: "Login successful",
-          user: {
-            uid,
-            username: userData.displayName,
-            email: userData.email,
-            photoURL: userData.photoURL,
             role: userData.role,
             sellerId: userData.sellerId || null,
-          },
-          token: customToken,
-          refreshToken: firebaseUser.refreshToken,
         });
-      } catch (error) {
+
+        return res.status(200).json({
+            message: "Login successful",
+            user: {
+                uid,
+                username: userData.displayName,
+                email: userData.email,
+                photoURL: userData.photoURL,
+                role: userData.role,
+                sellerId: userData.sellerId || null,
+            },
+            token: customToken,
+            refreshToken: firebaseUser.refreshToken,
+        });
+    } catch (error) {
         console.error("Login error details:", error);
         if (error.response?.data?.error) {
-          const firebaseError = error.response.data.error;
-          if (firebaseError.code === 400 && firebaseError.message.includes("EMAIL_NOT_FOUND")) {
-            return res.status(404).json({ error: "Account not found" });
-          } else if (firebaseError.message.includes("INVALID_PASSWORD")) {
-            return res.status(401).json({ error: "Wrong password" });
-          }
+            const firebaseError = error.response.data.error;
+            if (
+                firebaseError.code === 400 &&
+                firebaseError.message.includes("EMAIL_NOT_FOUND")
+            ) {
+                return res.status(404).json({ error: "Account not found" });
+            } else if (firebaseError.message.includes("INVALID_PASSWORD")) {
+                return res.status(401).json({ error: "Wrong password" });
+            }
         }
-        return res.status(500).json({ error: "Server error: " + error.message });
-      }
+        return res
+            .status(500)
+            .json({ error: "Server error: " + error.message });
+    }
 };
 
 exports.logoutUser = async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
-          return res.status(401).json({ error: "Unauthorized: No token provided" });
+            return res
+                .status(401)
+                .json({ error: "Unauthorized: No token provided" });
         }
-    
+
         const token = authHeader.split(" ")[1];
         const decodedToken = await admin.auth().verifyIdToken(token); // Xác minh idToken từ Firebase
         await admin.auth().revokeRefreshTokens(decodedToken.uid);
-    
-        return res.status(200).json({ message: "User logged out successfully" });
-      } catch (error) {
+
+        return res
+            .status(200)
+            .json({ message: "User logged out successfully" });
+    } catch (error) {
         console.error("Logout error:", error);
-        return res.status(500).json({ error: "Server error: " + error.message });
-      }
+        return res
+            .status(500)
+            .json({ error: "Server error: " + error.message });
+    }
 };
 
 //Seller
@@ -170,11 +187,9 @@ exports.registerSeller = async (req, res) => {
         ]);
 
         if (!pendingSnapshot.empty || !sellersSnapshot.empty) {
-            return res
-                .status(400)
-                .json({
-                    message: "Email already exists or is pending approval",
-                });
+            return res.status(400).json({
+                message: "Email already exists or is pending approval",
+            });
         }
 
         const salt = await bcrypt.genSalt(10);
@@ -274,22 +289,36 @@ exports.googleLogin = async (req, res) => {
 
 exports.authenticateUser = async (req, res, next) => {
     try {
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        return res.status(401).json({ error: "Authentication required" });
-      }
-  
-      const token = authHeader.split(" ")[1];
-      const decoded = await admin.auth().verifyIdToken(token); 
-      req.user = decoded;
-      next();
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return res.status(401).json({ error: "Authentication required" });
+        }
+
+        const tokenParts = authHeader.split(" ");
+        if (tokenParts.length !== 2 || !tokenParts[1]) {
+            return res
+                .status(401)
+                .json({ error: "Invalid Authorization header format" });
+        }
+
+        const token = tokenParts[1];
+        const decoded = await admin.auth().verifyIdToken(token);
+        req.user = decoded;
+        next();
     } catch (error) {
-      if (error.code === "auth/id-token-expired") {
-        return res.status(401).json({ error: "Token expired" });
-      }
-      return res.status(401).json({ error: "Invalid token" });
+        switch (error.code) {
+            case "auth/id-token-expired":
+                return res.status(401).json({ error: "Token expired" });
+            case "auth/invalid-id-token":
+                return res.status(401).json({ error: "Invalid token" });
+            case "auth/argument-error":
+                return res.status(400).json({ error: "Malformed token" });
+            default:
+                console.error("Authentication error:", error.message);
+                return res.status(401).json({ error: "Authentication failed" });
+        }
     }
-  };
+};
 
 exports.requireSeller = (req, res, next) => {
     if (
@@ -317,42 +346,44 @@ exports.requireAdmin = (req, res, next) => {
 exports.refreshToken = async (req, res) => {
     try {
         const { refreshToken } = req.body;
-    
+
         if (!refreshToken) {
-          return res.status(401).json({ error: "No refresh token provided" });
+            return res.status(401).json({ error: "No refresh token provided" });
         }
-    
+
         // Làm mới token bằng Firebase Identity Toolkit
         const response = await axios.post(
-          `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${process.env.FIREBASE_API_KEY}`,
-          { idToken: refreshToken }
+            `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${process.env.FIREBASE_API_KEY}`,
+            { idToken: refreshToken }
         );
-    
+
         const uid = response.data.users[0].localId;
         const userDoc = await db.collection("users").doc(uid).get();
         if (!userDoc.exists) {
-          return res.status(404).json({ error: "User not found" });
+            return res.status(404).json({ error: "User not found" });
         }
-    
+
         const userData = userDoc.data();
         const newCustomToken = await admin.auth().createCustomToken(uid, {
-          role: userData.role,
-          sellerId: userData.sellerId || null,
-        });
-    
-        return res.status(200).json({
-          token: newCustomToken,
-          user: {
-            uid,
-            username: userData.displayName,
-            email: userData.email,
-            photoURL: userData.photoURL,
             role: userData.role,
             sellerId: userData.sellerId || null,
-          },
         });
-      } catch (error) {
+
+        return res.status(200).json({
+            token: newCustomToken,
+            user: {
+                uid,
+                username: userData.displayName,
+                email: userData.email,
+                photoURL: userData.photoURL,
+                role: userData.role,
+                sellerId: userData.sellerId || null,
+            },
+        });
+    } catch (error) {
         console.error("Refresh token error:", error);
-        return res.status(401).json({ error: "Invalid or expired refresh token" });
-      }
+        return res
+            .status(401)
+            .json({ error: "Invalid or expired refresh token" });
+    }
 };

@@ -6,11 +6,11 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { useDispatch } from "react-redux";
 import { userActions } from "../redux/slices/userSlice";
 import { signInWithCustomToken } from "firebase/auth";
 import { auth } from "../firebase.config";
+import { registerUser, uploadFile } from "../api";
 
 const Signup = () => {
     const [username, setUsername] = useState("");
@@ -47,53 +47,34 @@ const Signup = () => {
         }
 
         try {
-            // Tạo FormData để gửi file và thông tin người dùng
-            const formData = new FormData();
-            formData.append("file", file);
-            
-            const uploadResponse = await axios.post(
-                "http://localhost:5000/api/upload",
-                formData,
-                {
-                    headers: {
-                        'Content-Type': 'multipart/form-data'
-                    }
-                }
+            const uploadResponse = await uploadFile(file);
+            const fileURL = uploadResponse.fileURL;
+            const registerResponse = await registerUser({
+                username,
+                email,
+                password,
+                fileURL,
+            });
+
+            const { user, token: customToken } = registerResponse;
+            const userCredential = await signInWithCustomToken(
+                auth,
+                customToken
             );
-
-            const photoURL = uploadResponse.data.fileURL;
-
-            const registerResponse = await axios.post(
-                "http://localhost:5000/api/auth/register",
-                {
-                    username,
-                    email,
-                    password,
-                    photoURL
-                }
-            );
-
-            const { user, token: customToken } = registerResponse.data;
-
-            // Đăng nhập vào Firebase với custom token
-            const userCredential = await signInWithCustomToken(auth, customToken);
             const idToken = await userCredential.user.getIdToken();
 
             localStorage.setItem("authToken", idToken);
             localStorage.setItem("accessToken", idToken);
             localStorage.setItem("user", JSON.stringify(user));
 
-            // Cập nhật Redux store
             dispatch(userActions.setUser(user));
 
             setLoading(false);
             toast.success("Account created successfully!");
             navigate("/checkout");
-            
         } catch (error) {
             setLoading(false);
-            // Xử lý lỗi từ API
-            const errorMessage = error.response?.data?.error || error.message || "Something went wrong!";
+            const errorMessage = error.message || "Something went wrong!";
             toast.error(errorMessage);
         }
     };

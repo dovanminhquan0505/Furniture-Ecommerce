@@ -1,5 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Container, Row, Col, Button, Table, Form, Spinner, Alert } from "react-bootstrap";
+import {
+    Container,
+    Row,
+    Col,
+    Button,
+    Table,
+    Form,
+    Spinner,
+    Alert,
+} from "react-bootstrap";
 import {
     User,
     Mail,
@@ -17,32 +26,29 @@ import {
     EyeOff,
 } from "lucide-react";
 import "../styles/Profile.css";
-import {
-    collection,
-    deleteDoc,
-    doc,
-    getDoc,
-    getDocs,
-    query,
-    updateDoc,
-    where,
-} from "firebase/firestore";
-import { auth, db, storage } from "../firebase.config";
+import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
 import {
-    onAuthStateChanged,
-    updatePassword,
     EmailAuthProvider,
+    onAuthStateChanged,
     reauthenticateWithCredential,
     signOut,
 } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import Helmet from "../components/Helmet/Helmet";
 import { useTheme } from "../components/UI/ThemeContext";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useDispatch } from "react-redux";
 import { userActions } from "../redux/slices/userSlice";
-import axios from "axios";
+import {
+    deleteUserOrder,
+    getUserOrders,
+    getUserProfileById,
+    logoutUser,
+    updateUserById,
+    updateUserPassword,
+    updateUserPhoto,
+    uploadFile,
+} from "../api";
 
 const ProfileUser = () => {
     const [editing, setEditing] = useState(false);
@@ -62,74 +68,30 @@ const ProfileUser = () => {
     const [originalUserInfo, setOriginalUserInfo] = useState({ ...userInfo });
 
     useEffect(() => {
-        const fetchUserData = async () => {
+        const fetchUserData = async (user) => {
             setIsDataLoading(true);
             setIsEmpty(false);
-            const token = localStorage.getItem("authToken");
-            if (!token) {
+            if (!user) {
                 toast.error("Unauthorized! Please log in again.");
                 navigate("/login");
                 return;
             }
-            try {
-                const response = await axios.get("http://localhost:5000/api/user/profile", {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setUserInfo(response.data);
-            } catch (error) {
-                toast.error("Failed to fetch user data.");
-            } finally {
-                setIsDataLoading(false);
-            }
-        };
 
-        const fetchOrderData = async (userId) => {
-            setIsDataLoading(true);
-            if (!userId) {
-                toast.error("User ID is undefined!");
-                return;
-            }
+            const token = await user.getIdToken();
+            const userId = user.uid;
 
             try {
-                // Use query to filter orders by userId
-                const ordersQuery = query(
-                    collection(db, "totalOrders"),
-                    where("userId", "==", userId)
-                );
-                const orderDocs = await getDocs(ordersQuery);
-                const orders = [];
-
-                orderDocs.forEach((doc) => {
-                    const orderData = doc.data();
-                    orders.push({
-                        orderId: doc.id || "No ID",
-                        date: orderData.createdAt
-                            .toDate()
-                            .toISOString()
-                            .split("T")[0],
-                        totalPrice: orderData.totalPrice,
-                        paidAt: orderData.isPaid
-                            ? orderData.paidAt
-                                  .toDate()
-                                  .toISOString()
-                                  .split("T")[0]
-                            : "No",
-                        deliveredAt: orderData.isDelivered
-                            ? orderData.deliveredAt
-                                  .toDate()
-                                  .toISOString()
-                                  .split("T")[0]
-                            : "No",
-                    });
-                });
-
-                // Update the state with the fetched orders
+                const userData = await getUserProfileById(token, userId);
+                if (!userData) {
+                    setIsEmpty(true);
+                    return;
+                }
+                setUserInfo(userData);
+                setOriginalUserInfo(userData);
+                const orders = await getUserOrders(token, userId);
                 setOrderInfo(orders);
             } catch (error) {
-                toast.error(
-                    "Failed to get order document from Firestore: " +
-                        error.message
-                );
+                toast.error("Failed to fetch user data: " + error.message);
             } finally {
                 setIsDataLoading(false);
             }
@@ -138,9 +100,9 @@ const ProfileUser = () => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
                 fetchUserData(user);
-                fetchOrderData(user.uid);
             } else {
                 toast.error("User not found!");
+                navigate("/login");
             }
         });
 
@@ -150,22 +112,25 @@ const ProfileUser = () => {
     // Handle Edit Profile
     const handleEditUserProfile = async () => {
         const user = auth.currentUser;
-        if (user) {
-            const userDocRef = doc(db, "users", user.uid);
+        if (!user) {
+            toast.error("No authenticated user found!");
+            return;
+        }
 
-            try {
-                await updateDoc(userDocRef, {
-                    displayName: userInfo.displayName,
-                    birthDate: new Date(userInfo.birthDate),
-                    phone: userInfo.phone,
-                    address: userInfo.address,
-                });
+        const token = await user.getIdToken();
+        const userId = user.uid;
 
-                toast.success("Updated Profile Successfully!");
-                setEditing(false);
-            } catch (error) {
-                toast.error("Failed to update Profile: " + error.message);
-            }
+        try {
+            await updateUserById(token, userId, {
+                displayName: userInfo.displayName,
+                birthDate: userInfo.birthDate,
+                phone: userInfo.phone,
+                address: userInfo.address,
+            });
+            toast.success("Updated Profile Successfully!");
+            setEditing(false);
+        } catch (error) {
+            toast.error("Failed to update Profile: " + error.message);
         }
     };
 
@@ -184,11 +149,16 @@ const ProfileUser = () => {
     };
 
     const handleDeleteOrder = async (orderId) => {
-        try {
-            const orderDocRef = doc(db, "totalOrders", orderId);
-            await deleteDoc(orderDocRef);
+        const user = auth.currentUser;
+        if (!user) {
+            toast.error("No authenticated user found!");
+            return;
+        }
 
-            // Update state list of orders after deleting order
+        const token = await user.getIdToken();
+
+        try {
+            await deleteUserOrder(token, orderId);
             setOrderInfo((prevOrders) =>
                 prevOrders.filter((order) => order.orderId !== orderId)
             );
@@ -200,41 +170,54 @@ const ProfileUser = () => {
 
     const handleChangePassword = async (e) => {
         e.preventDefault();
+        const user = auth.currentUser;
+        if (!user) {
+            toast.error("No authenticated user found!");
+            return;
+        }
+
+        const token = await user.getIdToken();
+        const userId = user.uid;
         const currentPassword = e.target.currentPassword.value;
         const newPassword = e.target.newPassword.value;
         const confirmPassword = e.target.confirmPassword.value;
+
+        if (!currentPassword) {
+            toast.error("Please enter your current password!");
+            return;
+        }
 
         if (newPassword !== confirmPassword) {
             toast.error("Passwords do not match!");
             return;
         }
 
-        try {
-            const user = auth.currentUser;
-            if (!user) {
-                toast.error("No authenticated user found!");
-                return;
-            }
+        if (newPassword.length < 6) {
+            toast.error("New password must be at least 6 characters long!");
+            return;
+        }
 
-            // Create credential to re-authenticate user
+        try {
+            // Tạo credential để xác thực lại người dùng với mật khẩu hiện tại
             const credential = EmailAuthProvider.credential(
                 user.email,
                 currentPassword
             );
-            // Re-authenticate user with the credential
+            // Xác thực lại người dùng
             await reauthenticateWithCredential(user, credential);
 
-            // Update new password
-            await updatePassword(user, newPassword);
+            await updateUserPassword(
+                token,
+                userId,
+                newPassword
+            );
             toast.success("Password updated successfully!");
-
-            // Reset input fields after successful password change
             e.target.reset();
         } catch (error) {
             if (error.code === "auth/wrong-password") {
-                toast.error("Incorrect current password. Please try again.");
+                toast.error("Current password is incorrect!");
             } else if (error.code === "auth/invalid-credential") {
-                toast.error("Invalid credentials. Please check your input.");
+                toast.error("Current password is incorrect!");
             } else {
                 toast.error("Failed to change password: " + error.message);
             }
@@ -245,15 +228,23 @@ const ProfileUser = () => {
         toggleDarkMode();
     };
 
-    const handleLogOut = () => {
-        signOut(auth)
-            .then(() => {
-                toast.success("Logged out");
-            })
-            .catch((error) => {
-                toast.error(error.message);
-            });
-        navigate("/login");
+    const handleLogOut = async () => {
+        const user = auth.currentUser;
+        if (!user) {
+            toast.error("No authenticated user found!");
+            return;
+        }
+
+        const token = await user.getIdToken();
+
+        try {
+            await logoutUser(token);
+            await signOut(auth);
+            toast.success("Logged out");
+            navigate("/login");
+        } catch (error) {
+            toast.error(error.message);
+        }
     };
 
     const handleAvatarChange = async (e) => {
@@ -267,26 +258,30 @@ const ProfileUser = () => {
             };
             reader.readAsDataURL(file);
 
-            // Upload image to Firebase Storage
-            const avatarRef = ref(storage, `avatars/${auth.currentUser.uid}`);
-
-            try {
-                await uploadBytes(avatarRef, file); // Upload file
-                const downloadURL = await getDownloadURL(avatarRef);
-
-                // Update photoURL in Firebase Storage
-                const userDocRef = doc(db, "users", auth.currentUser.uid);
-                await updateDoc(userDocRef, { photoURL: downloadURL });
-
-                // Update Redux state
-                dispatch(userActions.updateUserPhoto(downloadURL));
-
-                toast.success("Avatar uploaded successfully!");
-            } catch (error) {
-                toast.error("Failed to upload avatar: " + error.message);
-            } finally {
+            const user = auth.currentUser;
+            if (!user) {
+                toast.error("No authenticated user found!");
                 setIsAvatarUpLoading(false);
+                return;
             }
+
+            const token = await user.getIdToken();
+            const userId = user.uid;
+
+            // Upload image to Firebase Storage
+            try {
+                const uploadResponse = await uploadFile(file);
+                const photoURL = uploadResponse.fileURL;
+          
+                await updateUserPhoto(token, userId, photoURL);
+                dispatch(userActions.updateUserPhoto(photoURL));
+          
+                toast.success("Avatar uploaded successfully!");
+              } catch (error) {
+                toast.error("Failed to upload avatar: " + error.message);
+              } finally {
+                setIsAvatarUpLoading(false);
+              }
         }
     };
 
@@ -299,99 +294,105 @@ const ProfileUser = () => {
     };
 
     // Render Personal Information
-    const renderPersonalInfo = () => (
-        <div className="personal-info">
-            <h3>Personal Information</h3>
-            <div className="info-item">
-                <User size={18} />
-                <span>
-                    <strong>Name:</strong>
-                    {editing ? (
-                        <input
-                            type="text"
-                            name="displayName"
-                            value={userInfo.displayName}
-                            onChange={handleInputChanges}
-                        />
-                    ) : (
-                        userInfo.displayName || "Not Provided"
-                    )}
-                </span>
-            </div>
-            <div className="info-item">
-                <Calendar size={18} />
-                <span>
-                    <strong>BirthDate:</strong>
-                    {editing ? (
-                        <input
-                            type="date"
-                            name="birthDate"
-                            value={userInfo.birthDate}
-                            onChange={handleInputChanges}
-                        />
-                    ) : (
-                        userInfo.birthDate || "Not Provided"
-                    )}
-                </span>
-            </div>
-            <div className="info-item">
-                <Mail size={18} />
-                <span>
-                    <strong>Email:</strong> {userInfo.email}
-                </span>
-            </div>
-            <div className="info-item">
-                <Phone size={18} />
-                <span>
-                    <strong>Phone:</strong>
-                    {editing ? (
-                        <input
-                            type="text"
-                            name="phone"
-                            value={userInfo.phone}
-                            onChange={handleInputChanges}
-                        />
-                    ) : (
-                        userInfo.phone || "Not Provided"
-                    )}
-                </span>
-            </div>
-            <div className="info-item last">
-                <MapPin size={18} />
-                <span>
-                    <strong>Address:</strong>
-                    {editing ? (
-                        <input
-                            type="text"
-                            name="address"
-                            value={userInfo.address}
-                            onChange={handleInputChanges}
-                        />
-                    ) : (
-                        userInfo.address || "Not Provided"
-                    )}
-                </span>
-            </div>
-            <Button
-                variant="primary"
-                className="edit-profile-button"
-                onClick={() =>
-                    editing ? handleEditUserProfile() : setEditing(true)
-                }
-            >
-                {editing ? "Save Changes" : "Edit Profile"}
-            </Button>
-            {editing && (
+    const renderPersonalInfo = () => {
+        if (!userInfo) {
+            return <div>Loading personal information...</div>;
+        }
+    
+        return (
+            <div className="personal-info">
+                <h3>Personal Information</h3>
+                <div className="info-item">
+                    <User size={18} />
+                    <span>
+                        <strong>Name:</strong>
+                        {editing ? (
+                            <input
+                                type="text"
+                                name="displayName"
+                                value={userInfo.displayName || ""}
+                                onChange={handleInputChanges}
+                            />
+                        ) : (
+                            userInfo.displayName || "Not Provided"
+                        )}
+                    </span>
+                </div>
+                <div className="info-item">
+                    <Calendar size={18} />
+                    <span>
+                        <strong>BirthDate:</strong>
+                        {editing ? (
+                            <input
+                                type="date"
+                                name="birthDate"
+                                value={userInfo.birthDate || ""}
+                                onChange={handleInputChanges}
+                            />
+                        ) : (
+                            userInfo.birthDate || "Not Provided"
+                        )}
+                    </span>
+                </div>
+                <div className="info-item">
+                    <Mail size={18} />
+                    <span>
+                        <strong>Email:</strong> {userInfo.email || "Not Provided"}
+                    </span>
+                </div>
+                <div className="info-item">
+                    <Phone size={18} />
+                    <span>
+                        <strong>Phone:</strong>
+                        {editing ? (
+                            <input
+                                type="text"
+                                name="phone"
+                                value={userInfo.phone || ""}
+                                onChange={handleInputChanges}
+                            />
+                        ) : (
+                            userInfo.phone || "Not Provided"
+                        )}
+                    </span>
+                </div>
+                <div className="info-item last">
+                    <MapPin size={18} />
+                    <span>
+                        <strong>Address:</strong>
+                        {editing ? (
+                            <input
+                                type="text"
+                                name="address"
+                                value={userInfo.address || ""}
+                                onChange={handleInputChanges}
+                            />
+                        ) : (
+                            userInfo.address || "Not Provided"
+                        )}
+                    </span>
+                </div>
                 <Button
-                    variant="secondary"
-                    className="cancel-edit-button"
-                    onClick={handleCancelEdit}
+                    variant="primary"
+                    className="edit-profile-button"
+                    onClick={() =>
+                        editing ? handleEditUserProfile() : setEditing(true)
+                    }
                 >
-                    Back
+                    {editing ? "Save Changes" : "Edit Profile"}
                 </Button>
-            )}
-        </div>
-    );
+                {editing && (
+                    <Button
+                        variant="secondary"
+                        className="cancel-edit-button"
+                        onClick={handleCancelEdit}
+                    >
+                        Back
+                    </Button>
+                )}
+            </div>
+        );
+    };
 
     // Render Order Information
     const renderOrderInformation = () => (
@@ -617,13 +618,13 @@ const ProfileUser = () => {
         );
     }
 
-    if (isDataLoading) {
+    if (isDataLoading || !userInfo) {
         return (
             <Container
                 className="d-flex justify-content-center align-items-center"
                 style={{ height: "100vh" }}
             >
-                <Spinner style={{ width: '3rem', height: '3rem' }} />
+                <Spinner style={{ width: "3rem", height: "3rem" }} />
                 <span className="visually-hidden">Loading...</span>
             </Container>
         );

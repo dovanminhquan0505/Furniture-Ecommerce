@@ -25,8 +25,9 @@ const store = configureStore({
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
             serializableCheck: {
-                // Bỏ qua kiểm tra tuần tự hóa cho các action của redux-persist
-                ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
+                ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE', 'user/setUser'],
+                ignoredActionPaths: ['payload.createdAt'],
+                ignoredPaths: ['user.createdAt'],
             },
         }),
 });

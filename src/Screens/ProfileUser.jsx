@@ -68,6 +68,7 @@ const ProfileUser = () => {
     const [originalUserInfo, setOriginalUserInfo] = useState({ ...userInfo });
 
     useEffect(() => {
+        // Fetch user info
         const fetchUserData = async (user) => {
             setIsDataLoading(true);
             setIsEmpty(false);

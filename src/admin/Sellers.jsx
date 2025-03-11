@@ -1,22 +1,57 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Spinner } from "reactstrap";
-import useGetData from "../custom-hooks/useGetData";
 import { motion } from "framer-motion";
-import { deleteDoc, doc } from "firebase/firestore";
-import { db } from "../firebase.config";
+import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
 import "../styles/all-products.css";
 import { useTheme } from "../components/UI/ThemeContext";
 import Helmet from "../components/Helmet/Helmet";
+import { deleteSellerAdmin, getAllSellersAdmin } from "../api";
 
 const Sellers = () => {
-    const { data: sellersData, loading } = useGetData("sellers");
+    const [sellersData, setSellersData] = useState([]);
+    const [loading, setLoading] = useState(true);
     const { isDarkMode } = useTheme();
 
-    const deleteUser = async (id) => {
-        await deleteDoc(doc(db, "sellers", id));
-        toast.success("Seller deleted successfully!");
+    useEffect(() => {
+        const fetchSellers = async () => {
+            const user = auth.currentUser;
+            if (!user) {
+                toast.error("Unauthorized! Please log in again.");
+                return;
+            }
+
+            const token = await user.getIdToken();
+            try {
+                const sellers = await getAllSellersAdmin(token);
+                setSellersData(sellers);
+            } catch (error) {
+                toast.error("Failed to fetch sellers: " + error.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSellers();
+    }, []);
+
+    const handleDeleteSeller = async (id) => {
+        const user = auth.currentUser;
+        if (!user) {
+            toast.error("No authenticated user found!");
+            return;
+        }
+
+        const token = await user.getIdToken();
+        try {
+            await deleteSellerAdmin(token, id);
+            setSellersData((prev) => prev.filter((seller) => seller.id !== id));
+            toast.success("Seller deleted successfully!");
+        } catch (error) {
+            toast.error("Failed to delete seller: " + error.message);
+        }
     };
+
     return (
         <Helmet title=" Sellers">
             <section className={`${isDarkMode ? "dark-mode" : "light-mode"}`}>
@@ -76,7 +111,7 @@ const Sellers = () => {
                                                 <td data-label="Action">
                                                     <motion.button
                                                         onClick={() => {
-                                                            deleteUser(
+                                                            handleDeleteSeller(
                                                                 seller.id
                                                             );
                                                         }}

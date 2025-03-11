@@ -1,7 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Spinner } from "reactstrap";
 import "../styles/dashboard.css";
-import useGetData from "../custom-hooks/useGetData";
 import {
     LineChart,
     Line,
@@ -17,68 +16,55 @@ import {
 } from "recharts";
 import { useTheme } from "../components/UI/ThemeContext";
 import Helmet from "../components/Helmet/Helmet";
+import { auth } from "../firebase.config";
+import { toast } from "react-toastify";
+import { getDashboardDataAdmin } from "../api";
 
 const Dashboard = () => {
-    const {
-        data: products,
-        loading: loadingProducts,
-        error: productsError,
-    } = useGetData("products");
-    const {
-        data: users,
-        loading: loadingUsers,
-        error: usersError,
-    } = useGetData("users");
-    const {
-        data: orders,
-        loading: loadingOrders,
-        error: ordersError,
-    } = useGetData("totalOrders");
-    const {
-        data: sellers,
-        loading: loadingSellers,
-        error: sellersError,
-    } = useGetData("sellers");
+    const [dashboardData, setDashboardData] = useState({ products: [], users: [], orders: [], sellers: [] });
+    const [loading, setLoading] = useState(true);
     const { isDarkMode } = useTheme();
 
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            const user = auth.currentUser;
+            if (!user) {
+                toast.error("Unauthorized! Please log in again.");
+                return;
+            }
+
+            const token = await user.getIdToken();
+            try {
+                const data = await getDashboardDataAdmin(token);
+                setDashboardData(data);
+            } catch (error) {
+                toast.error("Failed to fetch dashboard data: " + error.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, []);
+
     // Format date function to handle different date formats
-    const formatDate = (createdAt) => {
-        if (!createdAt) return "Unknown";
-
-        if (typeof createdAt.toDate === "function") {
-            return createdAt.toDate().toLocaleDateString("en-US");
-        }
-
-        if (createdAt instanceof Date) {
-            return createdAt.toLocaleDateString("en-US");
-        }
-
-        if (typeof createdAt === "number") {
-            return new Date(createdAt).toLocaleDateString("en-US");
-        }
-
-        if (typeof createdAt === "string") {
-            return new Date(createdAt).toLocaleDateString("en-US");
-        }
-
-        return "Unknown";
+    const formatDate = (date) => {
+        if (!date) return "Unknown";
+        return new Date(date).toLocaleDateString("en-US");
     };
 
     // Set Data for line chart
-    const lineChartData = orders.map((order) => ({
+    const lineChartData = dashboardData.orders.map((order) => ({
         date: formatDate(order.createdAt),
         sales: order.totalPrice,
     }));
 
     // Get category data for pie chart based on paidAt
-    const categoryData = orders.reduce((acc, order) => {
-        if (order.paidAt) {
+    const categoryData = dashboardData.orders.reduce((acc, order) => {
+        if (order.paidAt && Array.isArray(order.cartItems)) { 
             order.cartItems.forEach((item) => {
                 const category = item.category || "Unknown";
-                if (!acc[category]) {
-                    acc[category] = 0;
-                }
-                acc[category] += item.quantity;
+                acc[category] = (acc[category] || 0) + item.quantity;
             });
         }
         return acc;
@@ -93,14 +79,7 @@ const Dashboard = () => {
     // Set colors for chart
     const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#FF0000"];
 
-    // Check if any data is loading
-    const isLoading =
-        loadingProducts || loadingUsers || loadingOrders || loadingSellers;
-
-    // Check for errors
-    const hasError = productsError || usersError || ordersError || sellersError;
-
-    if (isLoading) {
+    if (loading) {
         return (
             <Container
                 className="d-flex justify-content-center align-items-center"
@@ -109,22 +88,6 @@ const Dashboard = () => {
                 <Spinner animation="border" role="status">
                     <span className="visually-hidden">Loading dashboard data...</span>
                 </Spinner>
-            </Container>
-        );
-    }
-
-    if (hasError) {
-        return (
-            <Container
-                className="d-flex justify-content-center align-items-center flex-column"
-                style={{ height: "100vh" }}
-            >
-                <h3 className="text-danger mb-3">Error Loading Dashboard</h3>
-                <p>There was a problem loading the dashboard data. Please check your connection and try again.</p>
-                {productsError && <p>Products error: {productsError}</p>}
-                {usersError && <p>Users error: {usersError}</p>}
-                {ordersError && <p>Orders error: {ordersError}</p>}
-                {sellersError && <p>Sellers error: {sellersError}</p>}
             </Container>
         );
     }
@@ -140,25 +103,25 @@ const Dashboard = () => {
                             <Col lg="3">
                                 <div className="orders__box">
                                     <h5>Sellers</h5>
-                                    <span>{Array.isArray(sellers) ? sellers.length : 0}</span>
+                                    <span>{dashboardData.sellers.length}</span>
                                 </div>
                             </Col>
                             <Col lg="3">
                                 <div className="products__box">
                                     <h5>Products</h5>
-                                    <span>{Array.isArray(products) ? products.length : 0}</span>
+                                    <span>{dashboardData.products.length}</span>
                                 </div>
                             </Col>
                             <Col lg="3">
                                 <div className="users__box">
                                     <h5>Users</h5>
-                                    <span>{Array.isArray(users) ? users.length : 0}</span>
+                                    <span>{dashboardData.users.length}</span>
                                 </div>
                             </Col>
                             <Col lg="3">
                                 <div className="revenue__box">
                                     <h5>Orders</h5>
-                                    <span>{Array.isArray(orders) ? orders.length : 0}</span>
+                                    <span>{dashboardData.orders.length}</span>
                                 </div>
                             </Col>
                         </Row>

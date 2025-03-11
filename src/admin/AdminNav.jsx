@@ -1,16 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Badge, Container, Row, Spinner } from "reactstrap";
 import "../styles/admin-nav.css";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import useAdmin from "../custom-hooks/useAdmin";
 import { signOut } from "firebase/auth";
-import { auth, db } from "../firebase.config";
+import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
-import { collection, getDocs, onSnapshot, query, where } from "firebase/firestore";
-import defaultAvatar from "../assets/images/user-icon.png"
+import { getPendingOrders, logoutUser } from "../api";
 
 const admin_nav = [
     {
@@ -46,30 +45,24 @@ const AdminNav = () => {
     const { currentUser } = useSelector((state) => state.user);
     const [pendingRequests, setPendingRequests] = useState([]);
     const [showNotifications, setShowNotifications] = useState(false);
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (isAdmin) {
-            const q = query(
-                collection(db, "pendingOrders"),
-                where("status", "==", "pending")
-            );
-            const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-                const requests = [];
-                for (const doc of querySnapshot.docs) {
-                    const data = doc.data();
-                    // Fetch user avatar
-                    const userQuery = query(collection(db, "users"), where("email", "==", data.email));
-                    const userSnapshot = await getDocs(userQuery);
-                    let avatarURL = {defaultAvatar}; // Default avatar
-                    if (!userSnapshot.empty) {
-                        avatarURL = userSnapshot.docs[0].data().photoURL || avatarURL;
-                    }
-                    requests.push({ id: doc.id, ...data, avatarURL });
-                }
-                setPendingRequests(requests);
-            });
+            const fetchPendingOrders = async () => {
+                const user = auth.currentUser;
+                if (!user) return;
 
-            return () => unsubscribe();
+                const token = await user.getIdToken();
+                try {
+                    const requests = await getPendingOrders(token);
+                    setPendingRequests(requests);
+                } catch (error) {
+                    toast.error("Failed to fetch pending orders: " + error.message);
+                }
+            };
+
+            fetchPendingOrders();
         }
     }, [isAdmin]);
 
@@ -102,29 +95,28 @@ const AdminNav = () => {
         };
     }, []);
 
-    if (isLoading) {
-        <Container
-            className="d-flex justify-content-center align-items-center"
-            style={{ height: "100vh" }}
-        >
-            <Spinner style={{ width: "3rem", height: "3rem" }} />
-            <span className="visually-hidden">Loading...</span>
-        </Container>;
-    }
-
     if (!isAdmin) {
         return null;
     }
 
-    const logOut = () => {
-        signOut(auth)
-            .then(() => {
+    const logOut = async () => {
+            const user = auth.currentUser;
+            if (!user) {
+                toast.error("No authenticated user found!");
+                return;
+            }
+    
+            const token = await user.getIdToken();
+    
+            try {
+                await logoutUser(token);
+                await signOut(auth);
                 toast.success("Logged out");
-            })
-            .catch((error) => {
+                navigate("/login");
+            } catch (error) {
                 toast.error(error.message);
-            });
-    };
+            }
+        };
 
     const toggleProfileActions = () => {
         if (profileActionRef.current) {
@@ -138,6 +130,15 @@ const AdminNav = () => {
         profileActionRef.current.classList.remove("active__profileActions");
     };
 
+    if (isLoading) {
+        <Container
+            className="d-flex justify-content-center align-items-center"
+            style={{ height: "100vh" }}
+        >
+            <Spinner style={{ width: "3rem", height: "3rem" }} />
+            <span className="visually-hidden">Loading...</span>
+        </Container>;
+    }
     return (
         <>
             <header className="admin__header">
@@ -236,7 +237,7 @@ const AdminNav = () => {
                                                     {request.storeName} - {request.fullName}
                                                 </p>
                                                 <small className="notification__time">
-                                                    {new Date(request.createdAt.toDate()).toLocaleString()}
+                                                    {new Date(request.createdAt).toLocaleString()}
                                                 </small>
                                             </div>
                                         </div>

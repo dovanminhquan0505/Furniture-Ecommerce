@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "../styles/login.css";
 import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col, Form, FormGroup, Spinner } from "reactstrap";
@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import logoGoogle from "../assets/images/logoGoogle.jpg";
 import axios from "axios";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { userActions } from "../redux/slices/userSlice";
 import { GoogleAuthProvider, signInWithCustomToken, signInWithPopup } from "firebase/auth";
 import { auth } from "../firebase.config";
@@ -19,6 +19,7 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const dispatch = useDispatch();
+    const reduxUser = useSelector((state) => state.user.currentUser);
 
     const signIn = async (e) => {
         e.preventDefault();
@@ -60,13 +61,6 @@ const Login = () => {
 
             setLoading(false);
             toast.success("Successfully logged in!");
-
-            if (user.role === "admin") {
-                console.log("Navigating to admin dashboard");
-                navigate("/admin/dashboard");
-            } else {
-                navigate("/checkout");
-            }
         } catch (error) {
             setLoading(false);
             console.error("Login error:", error);
@@ -104,8 +98,19 @@ const Login = () => {
           console.error("Google login error:", error);
           toast.error(error.message || "Failed to login with Google!");
         }
-      };
-
+    };
+    
+    useEffect(() => {
+        if (reduxUser) {
+            console.log("Redux user updated:", reduxUser);
+            if (reduxUser.role === "admin") {
+                navigate("/admin/dashboard");
+            } else {
+                navigate("/checkout");
+            }
+        }
+    }, [reduxUser, navigate]);
+    
     if (loading) {
         return (
             <Container

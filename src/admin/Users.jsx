@@ -1,22 +1,57 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Spinner } from "reactstrap";
-import useGetData from "../custom-hooks/useGetData";
 import { motion } from "framer-motion";
-import { deleteDoc, doc } from "firebase/firestore";
-import { db } from "../firebase.config";
+import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
 import "../styles/all-products.css";
 import { useTheme } from "../components/UI/ThemeContext";
 import Helmet from "../components/Helmet/Helmet";
+import { deleteUserAdmin, getAllUsersAdmin } from "../api";
 
 const Users = () => {
-    const { data: usersData, loading } = useGetData("users");
+    const [usersData, setUsersData] = useState([]);
+    const [loading, setLoading] = useState(true);
     const { isDarkMode } = useTheme();
 
-    const deleteUser = async (id) => {
-        await deleteDoc(doc(db, "users", id));
-        toast.success("User deleted successfully!");
+    useEffect(() => {
+        const fetchUsers = async () => {
+            const user = auth.currentUser;
+            if (!user) {
+                toast.error("Unauthorized! Please log in again.");
+                return;
+            }
+
+            const token = await user.getIdToken();
+            try {
+                const users = await getAllUsersAdmin(token);
+                setUsersData(users);
+            } catch (error) {
+                toast.error("Failed to fetch users: " + error.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUsers();
+    }, []);
+
+    const handleDeleteUser = async (id) => {
+        const user = auth.currentUser;
+        if (!user) {
+            toast.error("No authenticated user found!");
+            return;
+        }
+
+        const token = await user.getIdToken();
+        try {
+            await deleteUserAdmin(token, id);
+            setUsersData((prev) => prev.filter((user) => user.uid !== id));
+            toast.success("User deleted successfully!");
+        } catch (error) {
+            toast.error("Failed to delete user: " + error.message);
+        }
     };
+
     return (
         <Helmet title=" Users">
             <section className={`${isDarkMode ? "dark-mode" : "light-mode"}`}>
@@ -68,7 +103,7 @@ const Users = () => {
                                                 <td data-label="Action">
                                                     <motion.button
                                                         onClick={() => {
-                                                            deleteUser(
+                                                            handleDeleteUser(
                                                                 user.uid
                                                             );
                                                         }}

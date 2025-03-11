@@ -1,14 +1,12 @@
 import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import useAdmin from "../custom-hooks/useAdmin";
 import useAuth from "../custom-hooks/useAuth";
 import { Container, Spinner } from "react-bootstrap";
 
 const ProtectedAdminRoute = () => {
-    const { currentUser } = useAuth();
-    const { isAdmin, isLoading } = useAdmin();
+    const { currentUser, loading } = useAuth();
 
-    if (isLoading) {
+    if (loading) {
         return (
             <Container
                 className="d-flex justify-content-center align-items-center"
@@ -21,9 +19,7 @@ const ProtectedAdminRoute = () => {
         );
     }
 
-    const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
-
-    if (!currentUser || (user.role !== 'admin' && !isAdmin)) {
+    if (!currentUser || currentUser.role !== "admin") {
         return <Navigate to="/home" replace />;
     }
 

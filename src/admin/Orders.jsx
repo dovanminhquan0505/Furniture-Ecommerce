@@ -1,16 +1,41 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Spinner } from "reactstrap";
-import useGetData from "../custom-hooks/useGetData";
 import { motion } from "framer-motion";
 import "../styles/all-products.css";
 import { useTheme } from "../components/UI/ThemeContext";
 import Helmet from "../components/Helmet/Helmet";
 import { useNavigate } from "react-router-dom";
+import { auth } from "../firebase.config";
+import { toast } from "react-toastify";
+import { getAllOrdersAdmin } from "../api";
 
 const Orders = () => {
-    const { data: ordersData, loading } = useGetData("totalOrders");
+    const [ordersData, setOrdersData] = useState([]);
     const { isDarkMode } = useTheme();
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchOrders = async () => {
+            const user = auth.currentUser;
+            if (!user) {
+                toast.error("Unauthorized! Please log in again.");
+                return;
+            }
+
+            const token = await user.getIdToken();
+            try {
+                const orders = await getAllOrdersAdmin(token);
+                setOrdersData(orders);
+            } catch (error) {
+                toast.error("Failed to fetch orders: " + error.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchOrders();
+    }, []);
 
     const viewOrders = (orderId) => {
         navigate(`/placeorder/${orderId}`)
@@ -60,18 +85,15 @@ const Orders = () => {
                                                     {order.billingInfo?.name}
                                                 </td>
                                                 <td data-label="Date">
-                                                    {order.createdAt
-                                                        .toDate()
-                                                        .toLocaleDateString()}
+                                                    {new Date(order.createdAt).toLocaleDateString("en-US")}
                                                 </td>
                                                 <td data-label="Total Amount">
                                                     ${order.totalPrice}
                                                 </td>
                                                 <td data-label="Paid At">
                                                     {order.paidAt
-                                                        .toDate()
-                                                        .toLocaleDateString() ||
-                                                        "No"}
+                                                        ? new Date(order.paidAt).toLocaleDateString("en-US")
+                                                        : "No"}
                                                 </td>
                                                 <td data-label="Delivered At">
                                                     {order.isDelivered

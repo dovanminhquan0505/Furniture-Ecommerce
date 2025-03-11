@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { userActions } from "../redux/slices/userSlice";
 import { toast } from "react-toastify";
 import { getUserById } from "../api";
@@ -9,8 +9,19 @@ const useAuth = () => {
     const [currentUser, setCurrentUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const dispatch = useDispatch();
+    const reduxUser = useSelector((state) => state.user.currentUser);
 
     useEffect(() => {
+        // Kiểm tra dữ liệu từ localStorage trước khi chờ Firebase
+        const storedUser = localStorage.getItem("user")
+            ? JSON.parse(localStorage.getItem("user"))
+            : null;
+        if (storedUser) {
+            setCurrentUser(storedUser);
+            dispatch(userActions.setUser(storedUser));
+            setLoading(false);
+        }
+
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
             setLoading(true);
             try {
@@ -42,6 +53,7 @@ const useAuth = () => {
             } catch (error) {
                 console.error("Auth initialization error:", error);
                 toast.error("Failed to sync user state");
+                setCurrentUser(storedUser || null);
             } finally {
                 setLoading(false);
             }
@@ -50,7 +62,7 @@ const useAuth = () => {
         return () => unsubscribe();
     }, [dispatch]);
 
-    return { currentUser, loading };
+    return { currentUser: reduxUser || currentUser, loading };
 };
 
 export default useAuth;

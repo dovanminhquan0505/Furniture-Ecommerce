@@ -29,6 +29,10 @@ const userSlice = createSlice({
                 state.currentUser.photoURL = action.payload;
             }
         },
+
+        clearUser: (state) => {
+            state.currentUser = null;
+        },
     },
 });
 

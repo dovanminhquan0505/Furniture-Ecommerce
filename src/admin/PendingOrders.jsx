@@ -1,63 +1,48 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "../styles/pendingorders.css";
-import { collection, deleteDoc, doc, getDocs, query, setDoc, updateDoc, where } from "firebase/firestore";
-import { db } from "../firebase.config";
+import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
 import { Button, Col, Container, Row, Spinner } from "reactstrap";
-import useGetData from "../custom-hooks/useGetData";
 import Helmet from "../components/Helmet/Helmet";
+import { approvePendingOrder, getPendingOrders, rejectPendingOrder } from "../api";
 
 const PendingOrders = () => {
-    const { data: pendingOrdersData, loading } = useGetData("pendingOrders");
+    const [pendingOrdersData, setPendingOrdersData] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const handleApprove = async (order) => {
-        try {
-            // Generate a unique ID for the seller
-            const sellerId = doc(collection(db, "sellers")).id;
-
-            // Update approved order information to collection sellers
-            await setDoc(doc(db, "sellers", sellerId), {
-                fullName: order.fullName,
-                phoneNumber: order.phoneNumber,
-                email: order.email,
-                storeName: order.storeName,
-                storeDescription: order.storeDescription,
-                businessType: order.businessType,
-                address: order.address,
-                city: order.city,
-                storeEmail: order.storeEmail,
-                role: "seller",
-                status: "approved",
-                createdAt: order.createdAt,
-                approvedAt: new Date(),
-            });
-
-            // Find the user document by email
-            const usersRef = collection(db, "users");
-            const q = query(usersRef, where("email", "==", order.email));
-            const querySnapshot = await getDocs(q);
-
-            if (!querySnapshot.empty) {
-                // Get the first (and should be only) document
-                const userDoc = querySnapshot.docs[0];
-                
-                try {
-                    await updateDoc(doc(db, "users", userDoc.id), {
-                        status: "seller",
-                        sellerId: sellerId
-                    });
-                    console.log("User document updated successfully");
-                } catch (error) {
-                    console.error("Error updating user document:", error);
-                    throw error; 
-                }
-            } else {
-                console.error("User document not found for email:", order.email);
-                throw new Error("User not found");
+    useEffect(() => {
+        const fetchPendingOrders = async () => {
+            const user = auth.currentUser;
+            if (!user) {
+                toast.error("Unauthorized! Please log in again.");
+                return;
             }
 
-            await deleteDoc(doc(db, "pendingOrders", order.id));
+            const token = await user.getIdToken();
+            try {
+                const orders = await getPendingOrders(token);
+                setPendingOrdersData(orders);
+            } catch (error) {
+                toast.error("Failed to fetch pending orders: " + error.message);
+            } finally {
+                setLoading(false);
+            }
+        };
 
+        fetchPendingOrders();
+    }, []);
+
+    const handleApprove = async (order) => {
+        const user = auth.currentUser;
+        if (!user) {
+            toast.error("No authenticated user found!");
+            return;
+        }
+
+        const token = await user.getIdToken();
+        try {
+            await approvePendingOrder(token, order.id);
+            setPendingOrdersData((prev) => prev.filter((o) => o.id !== order.id));
             toast.success("Seller account approved and created successfully!");
         } catch (error) {
             toast.error("Error approving seller account: " + error.message);
@@ -65,12 +50,19 @@ const PendingOrders = () => {
     };
 
     const handleReject = async (orderId) => {
+        const user = auth.currentUser;
+        if (!user) {
+            toast.error("No authenticated user found!");
+            return;
+        }
+
+        const token = await user.getIdToken();
         try {
-            const pendingOrderRef = doc(db, "pendingOrders", orderId);
-            await deleteDoc(pendingOrderRef);
+            await rejectPendingOrder(token, orderId);
+            setPendingOrdersData((prev) => prev.filter((o) => o.id !== orderId));
             toast.success("Order rejected successfully!");
         } catch (error) {
-            toast.error("Error rejecting order: ", error);
+            toast.error("Error rejecting order: " + error.message);
         }
     };
 
@@ -153,9 +145,7 @@ const PendingOrders = () => {
                                             </p>
                                             <p>
                                                 <strong>Created At:</strong>{" "}
-                                                {order.createdAt
-                                                    .toDate()
-                                                    .toString()}
+                                                {new Date(order.createdAt).toLocaleDateString("en-US")}
                                             </p>
                                             <div className="d-flex justify-content-between mt-3">
                                                 <Button

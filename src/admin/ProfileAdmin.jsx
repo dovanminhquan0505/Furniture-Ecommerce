@@ -24,22 +24,27 @@ import {
     Eye,
 } from "lucide-react";
 import "../styles/Profile.css";
-import { auth, db, storage } from "../firebase.config";
+import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
-import { collection, doc, getDoc, getDocs, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import {
     onAuthStateChanged,
     EmailAuthProvider,
     reauthenticateWithCredential,
-    updatePassword,
     signOut,
 } from "firebase/auth";
 import { useTheme } from "../components/UI/ThemeContext";
 import { useNavigate } from "react-router-dom";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import useAdmin from "../custom-hooks/useAdmin";
 import Helmet from "../components/Helmet/Helmet";
-import defaultAvatar from "../assets/images/user-icon.png"
+import {
+    getAdminProfileById,
+    getPendingOrders,
+    logoutUser,
+    updateAdminPassword,
+    updateAdminPhoto,
+    updateAdminProfile,
+    uploadFile,
+} from "../api";
 
 const ProfileAdmin = () => {
     const [editing, setEditing] = useState(false);
@@ -68,27 +73,20 @@ const ProfileAdmin = () => {
 
     useEffect(() => {
         if (isAdmin) {
-            const q = query(
-                collection(db, "pendingOrders"),
-                where("status", "==", "pending")
-            );
-            const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-                const requests = [];
-                for (const doc of querySnapshot.docs) {
-                    const data = doc.data();
-                    // Fetch user avatar
-                    const userQuery = query(collection(db, "users"), where("email", "==", data.email));
-                    const userSnapshot = await getDocs(userQuery);
-                    let avatarURL = defaultAvatar;
-                    if (!userSnapshot.empty) {
-                        avatarURL = userSnapshot.docs[0].data().photoURL || avatarURL;
-                    }
-                    requests.push({ id: doc.id, ...data, avatarURL });
-                }
-                setPendingRequests(requests);
-            });
+            const fetchPendingOrders = async () => {
+                const user = auth.currentUser;
+                if (!user) return;
 
-            return () => unsubscribe();
+                const token = await user.getIdToken();
+                try {
+                    const requests = await getPendingOrders(token);
+                    setPendingRequests(requests);
+                } catch (error) {
+                    toast.error("Failed to fetch pending orders: " + error.message);
+                }
+            };
+
+            fetchPendingOrders();
         }
     }, [isAdmin]);
 
@@ -97,40 +95,34 @@ const ProfileAdmin = () => {
         const fetchAdminData = async (user) => {
             setIsDataLoading(true);
             setIsEmpty(false);
+            if (!user) {
+                toast.error("Unauthorized! Please log in again.");
+                navigate("/login");
+                return;
+            }
+
+            const token = await user.getIdToken();
+            const userId = user.uid;
+
             try {
-                if (user) {
-                    const userDocRef = doc(db, "users", user.uid);
-                    const userDoc = await getDoc(userDocRef);
-
-                    if (userDoc.exists()) {
-                        const userData = userDoc.data();
-                        const newAdminInfo = {
-                            displayName: userData.displayName || "",
-                            birthDate: userData.birthDate
-                                ? new Date(userData.birthDate.toDate())
-                                      .toISOString()
-                                      .split("T")[0]
-                                : "",
-                            email: userData.email || user.email,
-                            phone: userData.phone || "",
-                            address: userData.address || "",
-                            role: userData.role || "admin",
-                            photoURL: userData.photoURL || "",
-                        };
-                        setAdminInfo(newAdminInfo);
-                        setOriginalAdminInfo(newAdminInfo);
-
-                        if (Object.keys(userData).length === 0) {
-                            setIsEmpty(true);
-                        }
-                    } else {
-                        toast.error("User not found");
-                    }
-                } else {
-                    toast.error("User document not found in Firestore!");
+                const data = await getAdminProfileById(token, userId);
+                if (!data) {
+                    setIsEmpty(true);
+                    return;
                 }
+                const newAdminInfo = {
+                    displayName: data.displayName || "",
+                    birthDate: data.birthDate || "",
+                    email: data.email || "",
+                    phone: data.phone || "",
+                    address: data.address || "",
+                    role: data.role || "admin",
+                    photoURL: data.photoURL || "",
+                };
+                setAdminInfo(newAdminInfo);
+                setOriginalAdminInfo(newAdminInfo);
             } catch (error) {
-                toast.error("Fetch failed for user: " + error.message);
+                toast.error("Fetch failed for admin: " + error.message);
             } finally {
                 setIsDataLoading(false);
             }
@@ -141,31 +133,35 @@ const ProfileAdmin = () => {
                 fetchAdminData(user);
             } else {
                 toast.error("User not found!");
+                navigate("/login");
             }
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [navigate]);
 
     // Handle Edit profile admin
     const handleEditProfile = async () => {
         const user = auth.currentUser;
-        if (user) {
-            const userDocRef = doc(db, "users", user.uid);
+        if (!user) {
+            toast.error("No authenticated user found!");
+            return;
+        }
 
-            try {
-                await updateDoc(userDocRef, {
-                    displayName: adminInfo.displayName,
-                    birthDate: new Date(adminInfo.birthDate),
-                    phone: adminInfo.phone,
-                    address: adminInfo.address,
-                });
+        const token = await user.getIdToken();
+        const userId = user.uid;
 
-                toast.success("Profile updated successfully!");
-                setEditing(false);
-            } catch (error) {
-                toast.error("Failed to update profile: " + error.message);
-            }
+        try {
+            await updateAdminProfile(token, userId, {
+                displayName: adminInfo.displayName,
+                birthDate: adminInfo.birthDate,
+                phone: adminInfo.phone,
+                address: adminInfo.address,
+            });
+            toast.success("Profile updated successfully!");
+            setEditing(false);
+        } catch (error) {
+            toast.error("Failed to update profile: " + error.message);
         }
     };
 
@@ -177,7 +173,6 @@ const ProfileAdmin = () => {
 
     // Handle Cancel edit and revert changes
     const handleCancelEdit = () => {
-        // Revert to original info
         setAdminInfo(originalAdminInfo);
         setEditing(false);
     };
@@ -185,42 +180,48 @@ const ProfileAdmin = () => {
     // Handle Change Password
     const handleChangePassword = async (e) => {
         e.preventDefault();
+        const user = auth.currentUser;
+        if (!user) {
+            toast.error("No authenticated user found!");
+            return;
+        }
 
+        const token = await user.getIdToken();
+        const userId = user.uid;
         const currentPassword = e.target.currentPassword.value;
         const newPassword = e.target.newPassword.value;
         const confirmPassword = e.target.confirmPassword.value;
+
+        if (!currentPassword) {
+            toast.error("Please enter your current password!");
+            return;
+        }
 
         if (newPassword !== confirmPassword) {
             toast.error("Passwords do not match!");
             return;
         }
 
-        try {
-            const user = auth.currentUser;
-            if (!user) {
-                toast.error("No authenticated user found!");
-                return;
-            }
+        if (newPassword.length < 6) {
+            toast.error("New password must be at least 6 characters long!");
+            return;
+        }
 
-            // Create credential to re-authenticate user
+        try {
             const credential = EmailAuthProvider.credential(
                 user.email,
                 currentPassword
             );
-            // Re-authenticate user with the credential
             await reauthenticateWithCredential(user, credential);
 
-            // Update new password
-            await updatePassword(user, newPassword);
+            await updateAdminPassword(token, userId, newPassword);
             toast.success("Password updated successfully!");
-
-            // Reset input fields after successful password change
             e.target.reset();
         } catch (error) {
             if (error.code === "auth/wrong-password") {
-                toast.error("Incorrect current password. Please try again.");
+                toast.error("Current password is incorrect!");
             } else if (error.code === "auth/invalid-credential") {
-                toast.error("Invalid credentials. Please check your input.");
+                toast.error("Current password is incorrect!");
             } else {
                 toast.error("Failed to change password: " + error.message);
             }
@@ -232,39 +233,49 @@ const ProfileAdmin = () => {
         toggleDarkMode();
     };
 
-    const handleLogOut = () => {
-        signOut(auth)
-            .then(() => {
-                toast.success("Logged out");
-            })
-            .catch((error) => {
-                toast.error(error.message);
-            });
-        navigate("/login");
+    const handleLogOut = async () => {
+        const user = auth.currentUser;
+        if (!user) {
+            toast.error("No authenticated user found!");
+            return;
+        }
+
+        const token = await user.getIdToken(); // Lấy token từ Firebase
+
+        try {
+            await logoutUser(token);
+            await signOut(auth);
+            toast.success("Logged out");
+            navigate("/login");
+        } catch (error) {
+            toast.error(error.message);
+        }
     };
 
     const handleAvatarChange = async (e) => {
         const file = e.target.files[0];
         if (file) {
             setIsAvatarUpLoading(true);
-            // Update temporary image in UI
             const reader = new FileReader();
             reader.onloadend = () => {
                 setAdminInfo((prev) => ({ ...prev, photoURL: reader.result }));
             };
             reader.readAsDataURL(file);
 
-            // Upload image to Firebase Storage
-            const avatarRef = ref(storage, `avatars/${auth.currentUser.uid}`);
+            const user = auth.currentUser;
+            if (!user) {
+                toast.error("No authenticated user found!");
+                setIsAvatarUpLoading(false);
+                return;
+            }
+
+            const token = await user.getIdToken(); 
+            const userId = user.uid;
 
             try {
-                await uploadBytes(avatarRef, file); // Upload file
-                const downloadURL = await getDownloadURL(avatarRef);
-
-                // Update photoURL in Firebase Storage
-                const userDocRef = doc(db, "users", auth.currentUser.uid);
-                await updateDoc(userDocRef, { photoURL: downloadURL });
-
+                const uploadResponse = await uploadFile(file);
+                const photoURL = uploadResponse.fileURL;
+                await updateAdminPhoto(token, userId, photoURL);
                 toast.success("Avatar uploaded successfully!");
             } catch (error) {
                 toast.error("Failed to upload avatar: " + error.message);
@@ -460,7 +471,7 @@ const ProfileAdmin = () => {
     const renderNotifications = () => (
         <div className="notifications-section">
             <h3>Notifications</h3>
-            
+
             <div className="notifications-container">
                 {pendingRequests.length === 0 ? (
                     <Alert variant="info">No notifications found</Alert>
@@ -470,9 +481,9 @@ const ProfileAdmin = () => {
                             <div key={request.id} className="notification-item">
                                 <div className="notification-content">
                                     <div className="notification-avatar">
-                                        <img 
-                                            src={request.avatarURL} 
-                                            alt="User Avatar" 
+                                        <img
+                                            src={request.avatarURL}
+                                            alt="User Avatar"
                                             className="rounded-circle"
                                             width="40"
                                             height="40"
@@ -481,19 +492,22 @@ const ProfileAdmin = () => {
                                     <div className="notification-details">
                                         <h5>New Seller Registration Request</h5>
                                         <p>
-                                            Store: {request.storeName}<br/>
+                                            Store: {request.storeName}
+                                            <br />
                                             Owner: {request.fullName}
                                         </p>
                                         <small className="text-muted">
-                                            {new Date(request.createdAt.toDate()).toLocaleString()}
-                                        </small>
+                                        {new Date(request.createdAt).toLocaleString()}
+                                    </small>
                                     </div>
                                 </div>
                                 <div className="notification-actions mt-2">
-                                    <Button 
-                                        variant="outline-primary" 
+                                    <Button
+                                        variant="outline-primary"
                                         size="sm"
-                                        onClick={() => navigate('/admin/pending-orders')}
+                                        onClick={() =>
+                                            navigate("/admin/pending-orders")
+                                        }
                                     >
                                         View Details
                                     </Button>

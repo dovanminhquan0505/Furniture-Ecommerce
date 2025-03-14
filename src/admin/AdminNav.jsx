@@ -8,9 +8,8 @@ import useAdmin from "../custom-hooks/useAdmin";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { getPendingOrders, logoutUser } from "../api";
-import { userActions } from "../redux/slices/userSlice";
 import defaultAvatar from "../assets/images/user-icon.png";
 
 const admin_nav = [
@@ -48,7 +47,6 @@ const AdminNav = () => {
     const [pendingRequests, setPendingRequests] = useState([]);
     const [showNotifications, setShowNotifications] = useState(false);
     const navigate = useNavigate();
-    const dispatch = useDispatch();
 
     useEffect(() => {
         if (isAdmin && currentUser) {

@@ -6,12 +6,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import logoGoogle from "../assets/images/logoGoogle.jpg";
-import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { userActions } from "../redux/slices/userSlice";
-import { GoogleAuthProvider, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { auth } from "../firebase.config";
-import { googleLogin, loginUser } from "../api";
+import { getUserById, googleLogin, loginUser } from "../api";
 
 const Login = () => {
     const [email, setEmail] = useState("");
@@ -57,21 +56,31 @@ const Login = () => {
     // Sign In for Google account.
     const signInWithGoogle = async () => {
         setLoading(true);
-    try {
-        const provider = new GoogleAuthProvider();
-        const result = await signInWithPopup(auth, provider);
-        const idToken = await result.user.getIdToken();
+        try {
+            const provider = new GoogleAuthProvider();
+            const result = await signInWithPopup(auth, provider);
+            const idToken = await result.user.getIdToken();
+            await googleLogin(idToken);
 
-        const response = await googleLogin(idToken);
+            const user = result.user;
+            const fullUserData = await getUserById(user.uid);
+            const updatedUserData = {
+                uid: user.uid,
+                email: user.email,
+                displayName: fullUserData.username || user.displayName,
+                photoURL: fullUserData.photoURL || user.photoURL,
+                role: fullUserData.role || "user",
+                sellerId: fullUserData.sellerId || null,
+            };
 
-        dispatch(userActions.setUser(response.user));
-        setLoading(false);
-        toast.success("Successfully logged in with Google!");
-        navigate("/checkout");
-    } catch (error) {
-        setLoading(false);
-        toast.error(error.message || "Failed to login with Google!");
-    }
+            dispatch(userActions.setUser(updatedUserData));
+            toast.success("Successfully logged in with Google!");
+        } catch (error) {
+            console.error("Error during signInWithPopup:", error);
+            toast.error(error.message || "Failed to login with Google!");
+        } finally {
+            setLoading(false);
+        }
     };
     
     useEffect(() => {

@@ -69,7 +69,7 @@ export const googleLogin = async (idToken) => {
             const errorData = await response.json();
             throw new Error(errorData.message || "Failed to login with Google");
         }
-        return await response.json();
+        return { success: true };
     } catch (error) {
         console.error("Error logging in with Google:", error);
         throw error;

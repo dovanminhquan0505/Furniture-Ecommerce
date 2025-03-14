@@ -258,7 +258,14 @@ exports.googleLogin = async (req, res) => {
 
         // Tạo session token
         const sessionToken = jwt.sign(
-            { uid, role: userData.role },
+            {
+                uid,
+                email: userData.email,
+                displayName: userData.displayName,
+                photoURL: userData.photoURL,
+                role: userData.role,
+                sellerId: userData.sellerId || null,
+            },
             process.env.JWT_SECRET,
             { expiresIn: "1h" }
         );
@@ -279,6 +286,7 @@ exports.googleLogin = async (req, res) => {
                 email: userData.email,
                 photoURL: userData.photoURL,
                 role: userData.role,
+                sellerId: userData.sellerId || null,
             },
         });
     } catch (error) {

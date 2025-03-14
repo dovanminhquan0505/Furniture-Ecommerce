@@ -29,8 +29,7 @@ const EditProduct = () => {
     useEffect(() => {
         const fetchProductDetails = async () => {
             try {
-                const idToken = await auth.currentUser.getIdToken();
-                const product = await fetchProduct(productId, idToken); 
+                const product = await fetchProduct(productId); 
                 setProductDetails(product);
             } catch (error) {
                 toast.error("Error fetching product details: " + error.message);
@@ -78,8 +77,7 @@ const EditProduct = () => {
               });
             }
       
-            const idToken = await auth.currentUser.getIdToken();
-            await updateProduct(idToken, productId, { ...productDetails, imgUrl });
+            await updateProduct(productId, { ...productDetails, imgUrl });
             setLoading(false);
             toast.success("Product updated successfully!");
             navigate("/seller/all-products");

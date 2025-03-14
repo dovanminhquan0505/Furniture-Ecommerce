@@ -35,8 +35,7 @@ const AddProducts = () => {
         }
 
         try {
-            const idToken = await currentUser.getIdToken();
-            const userData = await getUserById(idToken, currentUser.uid);
+            const userData = await getUserById(currentUser.uid);
             const sellerId = userData.sellerId;
       
             const storageRef = ref(storage, `productImages/${Date.now() + enterProductImg.name}`);
@@ -63,7 +62,7 @@ const AddProducts = () => {
               sellerId,
             };
       
-            const newProduct = await createProduct(idToken, sellerId, productData);
+            const newProduct = await createProduct(sellerId, productData);
             updateProducts([...products, newProduct]);
       
             setLoading(false);

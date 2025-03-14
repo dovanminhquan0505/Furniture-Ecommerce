@@ -8,7 +8,6 @@ import "../styles/checkout.css";
 import "../styles/placeorder.css";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { toast } from "react-toastify";
-import { auth } from "../firebase.config";
 import { cartActions } from "../redux/slices/cartSlice";
 import { useDispatch } from "react-redux";
 import useSeller from "../custom-hooks/useSeller";
@@ -36,9 +35,7 @@ const PlaceOrder = () => {
         const fetchOrderDetails = async () => {
             try {
                 setIsFetchingOrder(true);
-                const token = await auth.currentUser.getIdToken();
-                const response = await getOrderById(token, orderId);
-
+                const response = await getOrderById(orderId);
                 setOrderDetails({
                     totalOrder: response.totalOrder,
                     subOrders: response.subOrders,
@@ -90,10 +87,9 @@ const PlaceOrder = () => {
     const handlePaymentSuccess = async (details) => {
         try {
             setLoading(true);
-            const token = await auth.currentUser.getIdToken();
             const paidAt = new Date().toISOString();
 
-            await updateOrder(token, orderId, {
+            await updateOrder(orderId, {
                 isPaid: true,
                 paidAt,
                 paymentResult: {
@@ -131,10 +127,9 @@ const PlaceOrder = () => {
 
         try {
             setLoading(true);
-            const token = await auth.currentUser.getIdToken();
             const deliveredAt = new Date().toISOString();
 
-            await updateOrder(token, orderId, {
+            await updateOrder(orderId, {
                 isDelivered: true,
                 deliveredAt,
             });

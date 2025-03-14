@@ -61,7 +61,7 @@ const ProductDetails = () => {
             } catch (error) {
                 console.error("Error fetching product:", error);
                 toast.error("Product not found!");
-                setProduct({}); // Clear product if not found
+                setProduct({});
             } finally {
                 setLoading(false);
             }
@@ -75,9 +75,7 @@ const ProductDetails = () => {
         const getSellerData = async () => {
             if (product.sellerId) {
                 try {
-                    const user = auth.currentUser;
-                    const token = user ? await user.getIdToken() : null; 
-                    const sellerData = await fetchSellerInfoByProduct(token, product.sellerId);
+                    const sellerData = await fetchSellerInfoByProduct(product.sellerId);
                     setStoreName(sellerData.storeName || "Unknown Store");
                 } catch (error) {
                     console.error("Error fetching seller info:", error);
@@ -135,11 +133,7 @@ const ProductDetails = () => {
         };
 
         try {
-            await addReview(id, {
-                userName: reviewUserName,
-                message: reviewUserMessage,
-                rating: rating
-            });
+            await addReview(id, reviewObject);
             toast.success("Review sent successfully!");
             
             // Cập nhật state sau khi lưu thành công

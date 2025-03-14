@@ -18,9 +18,8 @@ const PendingOrders = () => {
                 return;
             }
 
-            const token = await user.getIdToken();
             try {
-                const orders = await getPendingOrders(token);
+                const orders = await getPendingOrders();
                 setPendingOrdersData(orders);
             } catch (error) {
                 toast.error("Failed to fetch pending orders: " + error.message);
@@ -39,9 +38,8 @@ const PendingOrders = () => {
             return;
         }
 
-        const token = await user.getIdToken();
         try {
-            await approvePendingOrder(token, order.id);
+            await approvePendingOrder(order.id);
             setPendingOrdersData((prev) => prev.filter((o) => o.id !== order.id));
             toast.success("Seller account approved and created successfully!");
         } catch (error) {
@@ -56,9 +54,8 @@ const PendingOrders = () => {
             return;
         }
 
-        const token = await user.getIdToken();
         try {
-            await rejectPendingOrder(token, orderId);
+            await rejectPendingOrder(orderId);
             setPendingOrdersData((prev) => prev.filter((o) => o.id !== orderId));
             toast.success("Order rejected successfully!");
         } catch (error) {

@@ -47,8 +47,7 @@ const StoreInformation = () => {
                 return;
             }
             try {
-                const idToken = await currentUser.getIdToken();
-                const userData = await getUserById(idToken, currentUser.uid);
+                const userData = await getUserById(currentUser.uid);
                 setSellerId(userData.sellerId);
             } catch (error) {
                 toast.error("Failed to fetch seller ID: " + error.message);
@@ -64,8 +63,7 @@ const StoreInformation = () => {
             if (!sellerId) return;
             setLoading(true);
             try {
-                const idToken = await auth.currentUser.getIdToken();
-                const data = await fetchSellerInfo(idToken, sellerId);
+                const data = await fetchSellerInfo(sellerId);
                 setStoreInfo(data);
                 setOriginalStoreInfo(data);
             } catch (error) {
@@ -97,8 +95,7 @@ const StoreInformation = () => {
         }
 
         try {
-            const idToken = await auth.currentUser.getIdToken();
-            await updateSellerInfo(idToken, sellerId, storeInfo);
+            await updateSellerInfo(sellerId, storeInfo);
             setIsEditing(false);
             setOriginalStoreInfo(storeInfo);
             toast.success("Store information updated successfully");

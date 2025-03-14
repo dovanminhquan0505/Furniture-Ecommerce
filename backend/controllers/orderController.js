@@ -31,6 +31,13 @@ exports.createOrder = async (req, res) => {
             createdAt,
         } = req.body;
 
+        if (!userId || !items.length) {
+            return res.status(400).json({ message: "userId and items are required" });
+        }
+        if (totalPrice <= 0) {
+            return res.status(400).json({ message: "totalPrice must be greater than 0" });
+        }
+
         // 1. Create the total order in totalOrders collection
         const totalOrderData = {
             userId,
@@ -120,6 +127,16 @@ exports.getOrderById = async (req, res) => {
 
         const totalOrderData = {
             id: totalOrderSnap.id,
+            isPaid: false,
+            isDelivered: false,
+            totalPrice: 0,
+            totalAmount: 0,
+            totalShipping: 0,
+            totalTax: 0,
+            totalQuantity: 0,
+            billingInfo: {},
+            items: [],
+            sellerIds: [],
             ...totalOrderSnap.data(),
         };
 

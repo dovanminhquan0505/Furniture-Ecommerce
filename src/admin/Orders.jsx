@@ -23,9 +23,8 @@ const Orders = () => {
                 return;
             }
 
-            const token = await user.getIdToken();
             try {
-                const orders = await getAllOrdersAdmin(token);
+                const orders = await getAllOrdersAdmin();
                 setOrdersData(orders);
             } catch (error) {
                 toast.error("Failed to fetch orders: " + error.message);

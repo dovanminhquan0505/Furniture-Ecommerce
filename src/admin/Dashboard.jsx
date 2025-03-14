@@ -33,9 +33,8 @@ const Dashboard = () => {
                 return;
             }
 
-            const token = await user.getIdToken();
             try {
-                const data = await getDashboardDataAdmin(token);
+                const data = await getDashboardDataAdmin();
                 setDashboardData(data);
             } catch (error) {
                 toast.error("Failed to fetch dashboard data: " + error.message);

@@ -12,7 +12,9 @@ import { useDispatch } from "react-redux";
 import { userActions } from "../../redux/slices/userSlice";
 import { cartActions } from "../../redux/slices/cartSlice";
 import { wishListActions } from "../../redux/slices/wishListSlice";
-import { logoutUser, refreshToken as refreshTokenAPI } from "../../api";
+import { logoutUser } from "../../api";
+import { signOut } from "firebase/auth";
+import { auth } from "../../firebase.config";
 
 const nav__links = [
     {
@@ -61,50 +63,16 @@ const Header = () => {
 
     const logOut = async () => {
         try {
-            let token = localStorage.getItem("accessToken");
-            const refreshTokenValue = localStorage.getItem("refreshToken"); // Giả sử bạn lưu refreshToken
-
-            if (token) {
-                try {
-                    // Gọi API logout từ API client
-                    await logoutUser(token);
-                } catch (error) {
-                    if (
-                        error.message.includes("auth/id-token-expired") &&
-                        refreshTokenValue
-                    ) {
-                        const refreshedData = await refreshTokenAPI(
-                            refreshTokenValue
-                        );
-                        token = refreshedData.token; 
-                        localStorage.setItem("accessToken", token); 
-
-                        await logoutUser(token);
-                    } else {
-                        throw error; 
-                    }
-                }
-            }
-
-            clearStateAndNavigate();
+            await logoutUser();
+            dispatch(userActions.setUser(null));
+            dispatch(cartActions.clearCart());
+            dispatch(wishListActions.clearWishList());
+            await signOut(auth);
+            toast.success("Logged out successfully");
+            navigate("/login");
         } catch (error) {
             toast.error(error.message || "Logout failed");
         }
-    };
-
-    // Xóa trạng thái và diều hướng
-    const clearStateAndNavigate = () => {
-        dispatch(userActions.setUser(null));
-        dispatch(cartActions.clearCart());
-        dispatch(wishListActions.clearWishList());
-        if (typeof window !== "undefined") {
-            localStorage.removeItem("accessToken");
-            localStorage.removeItem("refreshToken");
-            localStorage.removeItem("authToken");
-            localStorage.removeItem("user");
-        }
-        toast.success("Logged out successfully");
-        navigate("/login");
     };
 
     useEffect(() => {

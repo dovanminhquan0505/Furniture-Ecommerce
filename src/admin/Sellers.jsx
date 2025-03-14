@@ -21,9 +21,8 @@ const Sellers = () => {
                 return;
             }
 
-            const token = await user.getIdToken();
             try {
-                const sellers = await getAllSellersAdmin(token);
+                const sellers = await getAllSellersAdmin();
                 setSellersData(sellers);
             } catch (error) {
                 toast.error("Failed to fetch sellers: " + error.message);
@@ -42,9 +41,8 @@ const Sellers = () => {
             return;
         }
 
-        const token = await user.getIdToken();
         try {
-            await deleteSellerAdmin(token, id);
+            await deleteSellerAdmin(id);
             setSellersData((prev) => prev.filter((seller) => seller.id !== id));
             toast.success("Seller deleted successfully!");
         } catch (error) {

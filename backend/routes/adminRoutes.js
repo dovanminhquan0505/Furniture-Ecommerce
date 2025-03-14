@@ -14,12 +14,15 @@ const {
     deleteUser,
     getDashboardData,
 } = require("../controllers/adminController");
+const multer = require("multer");
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = express.Router();
 
 // Profile Admin
 router.get("/:id/profile", getAdminProfileById);
-router.put(":id/photo", updateAdminPhoto);
+router.put("/:id/photo", upload.single("file"), updateAdminPhoto);
 router.put("/:id/password", updateAdminPassword);
 router.put("/:id/profile", updateAdminProfile);
 

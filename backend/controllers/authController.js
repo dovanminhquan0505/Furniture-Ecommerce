@@ -41,12 +41,20 @@ exports.registerUser = async (req, res) => {
             createdAt: admin.firestore.Timestamp.now(),
         });
 
-        // Tạo custom token
-        const customToken = await admin
-            .auth()
-            .createCustomToken(userRecord.uid, {
-                role,
-            });
+        // Tạo session token
+        const sessionToken = jwt.sign(
+            { uid: userRecord.uid, role },
+            process.env.JWT_SECRET,
+            { expiresIn: "1h" }
+        );
+
+        // Gửi cookie HTTP-only
+        res.cookie("session", sessionToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production", 
+            sameSite: "Strict",
+            maxAge: 3600000, // 1h
+        });
 
         return res.status(201).json({
             message: "User registered successfully",
@@ -57,8 +65,6 @@ exports.registerUser = async (req, res) => {
                 photoURL: fileURL,
                 role,
             },
-            token: customToken,
-            refreshToken: null,
         });
     } catch (error) {
         if (error.code === "auth/email-already-in-use") {
@@ -97,10 +103,19 @@ exports.loginUser = async (req, res) => {
 
         const userData = userDoc.data();
 
-        // Tạo custom token
-        const customToken = await admin.auth().createCustomToken(uid, {
-            role: userData.role,
-            sellerId: userData.sellerId || null,
+        // Tạo session token
+        const sessionToken = jwt.sign(
+            { uid, role: userData.role, sellerId: userData.sellerId || null },
+            process.env.JWT_SECRET,
+            { expiresIn: "1h" }
+        );
+
+        // Gửi cookie HTTP-only
+        res.cookie("session", sessionToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "Strict",
+            maxAge: 3600000,
         });
 
         return res.status(200).json({
@@ -113,49 +128,38 @@ exports.loginUser = async (req, res) => {
                 role: userData.role,
                 sellerId: userData.sellerId || null,
             },
-            token: customToken,
-            refreshToken: firebaseUser.refreshToken,
         });
     } catch (error) {
-        console.error("Login error details:", error);
         if (error.response?.data?.error) {
             const firebaseError = error.response.data.error;
-            if (
-                firebaseError.code === 400 &&
-                firebaseError.message.includes("EMAIL_NOT_FOUND")
-            ) {
+            if (firebaseError.message.includes("EMAIL_NOT_FOUND")) {
                 return res.status(404).json({ error: "Account not found" });
             } else if (firebaseError.message.includes("INVALID_PASSWORD")) {
                 return res.status(401).json({ error: "Wrong password" });
             }
         }
-        return res
-            .status(500)
-            .json({ error: "Server error: " + error.message });
+        return res.status(500).json({ error: "Server error: " + error.message });
     }
 };
 
 exports.logoutUser = async (req, res) => {
     try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return res
-                .status(401)
-                .json({ error: "Unauthorized: No token provided" });
+        const sessionToken = req.cookies.session;
+        if (!sessionToken) {
+            return res.status(200).json({ message: "Already logged out" });
         }
 
-        const token = authHeader.split(" ")[1];
-        const decodedToken = await admin.auth().verifyIdToken(token); // Xác minh idToken từ Firebase
-        await admin.auth().revokeRefreshTokens(decodedToken.uid);
+        res.cookie("session", "", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "Strict",
+            maxAge: 0,
+        });
 
-        return res
-            .status(200)
-            .json({ message: "User logged out successfully" });
+        return res.status(200).json({ message: "User logged out successfully" });
     } catch (error) {
         console.error("Logout error:", error);
-        return res
-            .status(500)
-            .json({ error: "Server error: " + error.message });
+        return res.status(500).json({ error: "Server error: " + error.message });
     }
 };
 
@@ -237,37 +241,35 @@ exports.googleLogin = async (req, res) => {
         let userDoc = await db.collection("users").doc(uid).get();
 
         if (!userDoc.exists) {
-            const role =
-                email === process.env.REACT_APP_FURNITURE_ECOMMERCE_ADMIN_EMAIL
-                    ? "admin"
-                    : "user";
-            await db
-                .collection("users")
-                .doc(uid)
-                .set({
-                    uid,
-                    displayName: name || email.split("@")[0],
-                    email,
-                    photoURL: picture || null,
-                    role,
-                    loginStatus: "Google",
-                    createdAt: admin.firestore.Timestamp.now(),
-                });
+            const role = email === process.env.REACT_APP_FURNITURE_ECOMMERCE_ADMIN_EMAIL ? "admin" : "user";
+            await db.collection("users").doc(uid).set({
+                uid,
+                displayName: name || email.split("@")[0],
+                email,
+                photoURL: picture || null,
+                role,
+                loginStatus: "Google",
+                createdAt: admin.firestore.Timestamp.now(),
+            });
             userDoc = await db.collection("users").doc(uid).get();
         }
 
         const userData = userDoc.data();
 
-        const token = jwt.sign(
-            { uid, email, role: userData.role },
+        // Tạo session token
+        const sessionToken = jwt.sign(
+            { uid, role: userData.role },
             process.env.JWT_SECRET,
-            { expiresIn: "1d" }
+            { expiresIn: "1h" }
         );
-        const refreshToken = jwt.sign(
-            { uid, email, role: userData.role },
-            process.env.REFRESH_TOKEN_SECRET || "your-refresh-secret-key",
-            { expiresIn: "7d" }
-        );
+
+        // Gửi cookie HTTP-only
+        res.cookie("session", sessionToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "Strict",
+            maxAge: 3600000,
+        });
 
         return res.status(200).json({
             message: "Google login successful",
@@ -278,8 +280,6 @@ exports.googleLogin = async (req, res) => {
                 photoURL: userData.photoURL,
                 role: userData.role,
             },
-            token,
-            refreshToken,
         });
     } catch (error) {
         console.error("Google login error:", error);
@@ -289,34 +289,16 @@ exports.googleLogin = async (req, res) => {
 
 exports.authenticateUser = async (req, res, next) => {
     try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        const sessionToken = req.cookies.session;
+        if (!sessionToken) {
             return res.status(401).json({ error: "Authentication required" });
         }
 
-        const tokenParts = authHeader.split(" ");
-        if (tokenParts.length !== 2 || !tokenParts[1]) {
-            return res
-                .status(401)
-                .json({ error: "Invalid Authorization header format" });
-        }
-
-        const token = tokenParts[1];
-        const decoded = await admin.auth().verifyIdToken(token);
+        const decoded = jwt.verify(sessionToken, process.env.JWT_SECRET);
         req.user = decoded;
         next();
     } catch (error) {
-        switch (error.code) {
-            case "auth/id-token-expired":
-                return res.status(401).json({ error: "Token expired" });
-            case "auth/invalid-id-token":
-                return res.status(401).json({ error: "Invalid token" });
-            case "auth/argument-error":
-                return res.status(400).json({ error: "Malformed token" });
-            default:
-                console.error("Authentication error:", error.message);
-                return res.status(401).json({ error: "Authentication failed" });
-        }
+        return res.status(401).json({ error: "Invalid or expired session" });
     }
 };
 

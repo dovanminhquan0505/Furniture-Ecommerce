@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import "../seller/styles/seller-nav.css";
 import { Bell } from "lucide-react";
-import { useLocation, NavLink, Link } from "react-router-dom";
+import { useLocation, NavLink, Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import useSeller from "../custom-hooks/useSeller";
 import { Container, Spinner } from "reactstrap";
@@ -35,6 +35,7 @@ const SellerNav = () => {
     const profileActionRef = useRef();
     const { currentUser } = useSelector((state) => state.user);
     const { isSeller, isLoading } = useSeller();
+    const navigate = useNavigate();
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -75,11 +76,10 @@ const SellerNav = () => {
 
     const logOut = async () => {
         try {
-            const idToken = await auth.currentUser.getIdToken();
-            await logoutUser(idToken);
-            await auth.signOut(); 
-            localStorage.clear();
-            toast.success("Logged out");
+            await logoutUser();
+            await signOut(auth);
+            toast.success("Logged out successfully");
+            navigate("/login");
         } catch (error) {
             toast.error("Logout failed: " + error.message);
         }

@@ -8,7 +8,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "../components/UI/ThemeContext";
 import Helmet from "../components/Helmet/Helmet";
 import { useProducts } from "../contexts/ProductContext";
-import { deleteProduct, fetchSellerProducts, getUserById, refreshToken } from "../api";
+import { deleteProduct, fetchSellerProducts, getUserById } from "../api";
 
 const AllProducts = () => {
     const { products, updateProducts } = useProducts();
@@ -26,8 +26,7 @@ const AllProducts = () => {
                 return;
             }
 
-            const idToken = await currentUser.getIdToken();
-            const userData = await getUserById(idToken, currentUser.uid);
+            const userData = await getUserById(currentUser.uid);
             setSellerId(userData.sellerId);
         };
 
@@ -40,27 +39,8 @@ const AllProducts = () => {
 
             setLoading(true);
             try {
-                let idToken = await auth.currentUser.getIdToken();
-                let fetchedProducts;
-                try {
-                    fetchedProducts = await fetchSellerProducts(idToken, sellerId);
-                    updateProducts(fetchedProducts);
-                } catch (error) {
-                    if (error.message.includes("auth/id-token-expired")) {
-                        const refreshTokenValue = localStorage.getItem("refreshToken");
-                        if (refreshTokenValue) {
-                            const refreshedData = await refreshToken(refreshTokenValue);
-                            idToken = refreshedData.token;
-                            localStorage.setItem("accessToken", idToken);
-                            const fetchedProducts = await fetchSellerProducts(idToken, sellerId);
-                            updateProducts(fetchedProducts);
-                        } else {
-                            throw new Error("No refresh token available");
-                        }
-                    } else {
-                        throw error;
-                    }
-                }
+                const fetchedProducts = await fetchSellerProducts(sellerId);
+                updateProducts(fetchedProducts);
             } catch (error) {
                 toast.error("Error fetching products: " + error.message);
                 updateProducts([]);
@@ -74,8 +54,7 @@ const AllProducts = () => {
 
     const deleteProductHandler = async (id) => {
         try {
-            const idToken = await auth.currentUser.getIdToken();
-            await deleteProduct(idToken, id); 
+            await deleteProduct(id); 
             updateProducts(products.filter((product) => product.id !== id)); 
             toast.success("Product deleted successfully!");
         } catch (error) {

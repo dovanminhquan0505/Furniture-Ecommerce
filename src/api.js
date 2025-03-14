@@ -7,8 +7,12 @@ export const registerUser = async (userData) => {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(userData),
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to register user");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to register user");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error registering user:", error);
@@ -22,8 +26,12 @@ export const loginUser = async (credentials) => {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(credentials),
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to login");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to login user");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error logging in:", error);
@@ -31,16 +39,17 @@ export const loginUser = async (credentials) => {
     }
 };
 
-export const logoutUser = async (token) => {
+export const logoutUser = async () => {
     try {
         const response = await fetch(`${BASE_URL}/auth/logout`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to logout");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to logout user");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error logging out:", error);
@@ -52,13 +61,13 @@ export const googleLogin = async (idToken) => {
     try {
         const response = await fetch(`${BASE_URL}/auth/google-login`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ idToken }),
+            credentials: "include",
         });
         if (!response.ok) {
-            throw new Error("Failed to login with Google");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to login with Google");
         }
         return await response.json();
     } catch (error) {
@@ -67,17 +76,16 @@ export const googleLogin = async (idToken) => {
     }
 };
 
-export const getUserById = async (token, id) => {
+export const getUserById = async (id) => {
     try {
         const response = await fetch(`${BASE_URL}/users/${id}`, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
         if (!response.ok) {
-            throw new Error("Failed to fetch user");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch user");
         }
         return await response.json();
     } catch (error) {
@@ -86,17 +94,16 @@ export const getUserById = async (token, id) => {
     }
 };
 
-export const getUserProfileById = async (token, id) => {
+export const getUserProfileById = async (id) => {
     try {
         const response = await fetch(`${BASE_URL}/users/${id}/profile`, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
         if (!response.ok) {
-            throw new Error("Failed to fetch user profile");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch user profile");
         }
         return await response.json();
     } catch (error) {
@@ -105,18 +112,17 @@ export const getUserProfileById = async (token, id) => {
     }
 };
 
-export const updateUserById = async (token, id, updateData) => {
+export const updateUserById = async (id, updateData) => {
     try {
         const response = await fetch(`${BASE_URL}/users/${id}`, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(updateData),
+            credentials: "include",
         });
         if (!response.ok) {
-            throw new Error("Failed to update user");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to update user");
         }
         return await response.json();
     } catch (error) {
@@ -125,17 +131,18 @@ export const updateUserById = async (token, id, updateData) => {
     }
 };
 
-export const updateUserPhoto = async (token, id, photoURL) => {
+export const updateUserPhoto = async (id, photoURL) => {
     try {
         const response = await fetch(`${BASE_URL}/users/${id}/photo`, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ photoURL }),
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to update user photo");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to update user photo");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error updating user photo:", error);
@@ -144,20 +151,20 @@ export const updateUserPhoto = async (token, id, photoURL) => {
 };
 
 export const updateUserPassword = async (
-    token,
     id,
     newPassword
 ) => {
     try {
         const response = await fetch(`${BASE_URL}/users/${id}/password`, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ newPassword }),
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to update password");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to update password");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error updating password:", error);
@@ -165,16 +172,17 @@ export const updateUserPassword = async (
     }
 };
 
-export const getUserOrders = async (token, id) => {
+export const getUserOrders = async (id) => {
     try {
         const response = await fetch(`${BASE_URL}/users/${id}/orders`, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to fetch user orders");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch user orders");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error fetching user orders:", error);
@@ -182,16 +190,17 @@ export const getUserOrders = async (token, id) => {
     }
 };
 
-export const deleteUserOrder = async (token, orderId) => {
+export const deleteUserOrder = async (orderId) => {
     try {
         const response = await fetch(`${BASE_URL}/users/orders/${orderId}`, {
             method: "DELETE",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to delete order");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to delete user");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error deleting order:", error);
@@ -207,6 +216,7 @@ export const uploadFile = async (file) => {
         const response = await fetch(`${BASE_URL}/upload`, {
             method: "POST",
             body: formData,
+            credentials: "include",
         });
 
         if (!response.ok) {
@@ -221,17 +231,16 @@ export const uploadFile = async (file) => {
     }
 };
 
-export const refreshToken = async (refreshToken) => {
+export const refreshToken = async () => {
     try {
         const response = await fetch(`${BASE_URL}/auth/refresh-token`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ refreshToken }),
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
         if (!response.ok) {
-            throw new Error("Failed to refresh token");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to refresh token");
         }
         return await response.json();
     } catch (error) {
@@ -240,17 +249,16 @@ export const refreshToken = async (refreshToken) => {
     }
 };
 
-export const getAllUsers = async (token) => {
+export const getAllUsers = async () => {
     try {
         const response = await fetch(`${BASE_URL}/users/`, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
         if (!response.ok) {
-            throw new Error("Failed to fetch all users");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch all users");
         }
         return await response.json();
     } catch (error) {
@@ -261,9 +269,14 @@ export const getAllUsers = async (token) => {
 
 export const fetchProduct = async (productId) => {
     try {
-        const response = await fetch(`${BASE_URL}/products/${productId}`);
+        const response = await fetch(`${BASE_URL}/products/${productId}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
         if (!response.ok) {
-            throw new Error("Failed to fetch product");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch product");
         }
         return await response.json();
     } catch (error) {
@@ -272,17 +285,18 @@ export const fetchProduct = async (productId) => {
     }
 };
 
-export const updateProduct = async (token, productId, updateData) => {
+export const updateProduct = async (productId, updateData) => {
     try {
         const response = await fetch(`${BASE_URL}/products/${productId}`, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify(updateData),
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to update product");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to update product");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error updating product:", error);
@@ -290,17 +304,15 @@ export const updateProduct = async (token, productId, updateData) => {
     }
 };
 
-export const createProduct = async (token, sellerId, productData) => {
+export const createProduct = async (sellerId, productData) => {
     try {
         const response = await fetch(
             `${BASE_URL}/sellers/${sellerId}/products`,
             {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
+                headers: {"Content-Type": "application/json"},
                 body: JSON.stringify(productData),
+                credentials: "include",
             }
         );
         if (!response.ok) {
@@ -318,16 +330,14 @@ export const createProduct = async (token, sellerId, productData) => {
 };
 
 // Seller Info for Product Details
-export const fetchSellerInfoByProduct = async (token, sellerId) => {
+export const fetchSellerInfoByProduct = async (sellerId) => {
     try {
         const response = await fetch(
             `${BASE_URL}/products/seller/${sellerId}`,
             {
                 method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
             }
         );
         if (!response.ok) {
@@ -351,12 +361,14 @@ export const registerSeller = async (sellerData) => {
         const response = await fetch(`${BASE_URL}/auth/seller/register`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json",
+                "Content-Type": "application/json"
             },
             body: JSON.stringify(sellerData),
+            credentials: "include",
         });
         if (!response.ok) {
-            throw new Error("Failed to register seller");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to register seller");
         }
         return await response.json();
     } catch (error) {
@@ -365,17 +377,16 @@ export const registerSeller = async (sellerData) => {
     }
 };
 
-export const getSellerById = async (token, sellerId) => {
+export const getSellerById = async (sellerId) => {
     try {
         const response = await fetch(`${BASE_URL}/sellers/${sellerId}`, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
         if (!response.ok) {
-            throw new Error("Failed to fetch seller info");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch seller info");
         }
         return await response.json();
     } catch (error) {
@@ -384,14 +395,12 @@ export const getSellerById = async (token, sellerId) => {
     }
 };
 
-export const fetchSellerInfo = async (token, sellerId) => {
+export const fetchSellerInfo = async (sellerId) => {
     try {
         const response = await fetch(`${BASE_URL}/sellers/${sellerId}/store`, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
         if (!response.ok) {
             const errorData = await response.json();
@@ -408,17 +417,18 @@ export const fetchSellerInfo = async (token, sellerId) => {
     }
 };
 
-export const updateSellerInfo = async (token, sellerId, updateData) => {
+export const updateSellerInfo = async (sellerId, updateData) => {
     try {
         const response = await fetch(`${BASE_URL}/sellers/${sellerId}/store`, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify(updateData),
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to update seller info");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to update seller info");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error updating seller info:", error);
@@ -426,16 +436,14 @@ export const updateSellerInfo = async (token, sellerId, updateData) => {
     }
 };
 
-export const fetchSellerProducts = async (token, sellerId) => {
+export const fetchSellerProducts = async (sellerId) => {
     try {
         const response = await fetch(
             `${BASE_URL}/sellers/${sellerId}/products`,
             {
                 method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
             }
         );
         if (!response.ok) {
@@ -452,16 +460,17 @@ export const fetchSellerProducts = async (token, sellerId) => {
     }
 };
 
-export const deleteProduct = async (token, productId) => {
+export const deleteProduct = async (productId) => {
     try {
         const response = await fetch(`${BASE_URL}/sellers/${productId}`, {
             method: "DELETE",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to delete product");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to delete product");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error deleting product:", error);
@@ -469,16 +478,17 @@ export const deleteProduct = async (token, productId) => {
     }
 };
 
-export const fetchSellerOrders = async (token, sellerId) => {
+export const fetchSellerOrders = async (sellerId) => {
     try {
         const response = await fetch(`${BASE_URL}/sellers/${sellerId}/orders`, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to fetch seller orders");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch seller orders");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error fetching seller orders:", error);
@@ -486,16 +496,17 @@ export const fetchSellerOrders = async (token, sellerId) => {
     }
 };
 
-export const confirmDelivery = async (token, orderId) => {
+export const confirmDelivery = async (orderId) => {
     try {
         const response = await fetch(`${BASE_URL}/sellers/${orderId}/deliver`, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to confirm delivery");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to confirm delivery");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error confirming delivery:", error);
@@ -503,19 +514,20 @@ export const confirmDelivery = async (token, orderId) => {
     }
 };
 
-export const deleteOrder = async (token, sellerId, orderId) => {
+export const deleteOrder = async (sellerId, orderId) => {
     try {
         const response = await fetch(
             `${BASE_URL}/sellers/${sellerId}/orders/${orderId}`,
             {
                 method: "DELETE",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
             }
         );
-        if (!response.ok) throw new Error("Failed to delete order");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to delete order");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error deleting order:", error);
@@ -523,19 +535,20 @@ export const deleteOrder = async (token, sellerId, orderId) => {
     }
 };
 
-export const getDashboardStats = async (token, sellerId) => {
+export const getDashboardStats = async (sellerId) => {
     try {
         const response = await fetch(
             `${BASE_URL}/sellers/${sellerId}/dashboard`,
             {
                 method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
             }
         );
-        if (!response.ok) throw new Error("Failed to fetch dashboard stats");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch dashboard stats");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error fetching dashboard stats:", error);
@@ -551,13 +564,15 @@ export const addReview = async (productId, reviewData) => {
             {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json",
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify(reviewData),
+                credentials: "include",
             }
         );
         if (!response.ok) {
-            throw new Error("Failed to add review");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to add review");
         }
         return await response.json();
     } catch (error) {
@@ -573,13 +588,15 @@ export const deleteReview = async (productId, review) => {
             {
                 method: "DELETE",
                 headers: {
-                    "Content-Type": "application/json",
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify({ review }),
+                credentials: "include",
             }
         );
         if (!response.ok) {
-            throw new Error("Failed to delete review");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to delete review");
         }
         return await response.json();
     } catch (error) {
@@ -595,13 +612,15 @@ export const toggleLikeReview = async (productId, reviewIndex, userId) => {
             {
                 method: "PUT",
                 headers: {
-                    "Content-Type": "application/json",
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify({ reviewIndex, userId }),
+                credentials: "include",
             }
         );
         if (!response.ok) {
-            throw new Error("Failed to toggle like");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to toggle like");
         }
         return await response.json();
     } catch (error) {
@@ -617,16 +636,18 @@ export const addReplyToReview = async (productId, reviewIndex, replyData) => {
             {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json",
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
                     reviewIndex,
                     ...replyData,
                 }),
+                credentials: "include",
             }
         );
         if (!response.ok) {
-            throw new Error("Failed to add reply");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to add reply");
         }
         return await response.json();
     } catch (error) {
@@ -647,13 +668,15 @@ export const toggleLikeReply = async (
             {
                 method: "PUT",
                 headers: {
-                    "Content-Type": "application/json",
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify({ reviewIndex, replyIndex, userId }),
+                credentials: "include",
             }
         );
         if (!response.ok) {
-            throw new Error("Failed to toggle like for reply");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to toggle like for reply");
         }
         return await response.json();
     } catch (error) {
@@ -663,15 +686,13 @@ export const toggleLikeReply = async (
 };
 
 // Orders
-export const createOrder = async (token, orderData) => {
+export const createOrder = async (orderData) => {
     try {
         const response = await fetch(`${BASE_URL}/orders`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify(orderData),
+            credentials: "include",
         });
         if (!response.ok) {
             const errorData = await response.json();
@@ -684,16 +705,17 @@ export const createOrder = async (token, orderData) => {
     }
 };
 
-export const getOrderById = async (token, orderId) => {
+export const getOrderById = async (orderId) => {
     try {
         const response = await fetch(`${BASE_URL}/orders/${orderId}`, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to fetch order details");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch order details");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error fetching order details:", error);
@@ -701,17 +723,18 @@ export const getOrderById = async (token, orderId) => {
     }
 };
 
-export const updateOrder = async (token, orderId, updateData) => {
+export const updateOrder = async (orderId, updateData) => {
     try {
         const response = await fetch(`${BASE_URL}/orders/${orderId}`, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify(updateData),
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to update order");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to update order");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error updating order:", error);
@@ -720,17 +743,16 @@ export const updateOrder = async (token, orderId, updateData) => {
 };
 
 // Admin
-export const getAdminProfileById = async (token, id) => {
+export const getAdminProfileById = async (id) => {
     try {
         const response = await fetch(`${BASE_URL}/admin/${id}/profile`, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
         if (!response.ok) {
-            throw new Error("Failed to fetch admin profile");
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch admin profile");
         }
         return await response.json();
     } catch (error) {
@@ -739,17 +761,18 @@ export const getAdminProfileById = async (token, id) => {
     }
 }
 
-export const updateAdminProfile = async (token, id, profileData) => {
+export const updateAdminProfile = async (id, profileData) => {
     try {
         const response = await fetch(`${BASE_URL}/admin/${id}/profile`, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify(profileData),
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to update admin profile");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to update admin profile.");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error updating admin profile:", error);
@@ -757,17 +780,18 @@ export const updateAdminProfile = async (token, id, profileData) => {
     }
 };
 
-export const updateAdminPhoto = async (token, id, photoURL) => {
+export const updateAdminPhoto = async (id, photoURL) => {
     try {
         const response = await fetch(`${BASE_URL}/admin/${id}/photo`, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ photoURL }),
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to update admin photo");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to admin photo.");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error updating admin photo:", error);
@@ -776,20 +800,20 @@ export const updateAdminPhoto = async (token, id, photoURL) => {
 };
 
 export const updateAdminPassword = async (
-    token,
     id,
     newPassword
 ) => {
     try {
         const response = await fetch(`${BASE_URL}/admin/${id}/password`, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ newPassword }),
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to update password");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch password");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error updating password:", error);
@@ -797,16 +821,17 @@ export const updateAdminPassword = async (
     }
 };
 
-export const getPendingOrders = async (token) => {
+export const getPendingOrders = async () => {
     try {
         const response = await fetch(`${BASE_URL}/admin/pending-orders`, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to fetch pending orders");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch pending orders");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error fetching pending orders:", error);
@@ -814,16 +839,17 @@ export const getPendingOrders = async (token) => {
     }
 };
 
-export const approvePendingOrder = async (token, id) => {
+export const approvePendingOrder = async (id) => {
     try {
         const response = await fetch(`${BASE_URL}/admin/pending-orders/${id}/approve`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to approve pending order");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to approve pending order.");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error approving pending order:", error);
@@ -831,16 +857,17 @@ export const approvePendingOrder = async (token, id) => {
     }
 };
 
-export const rejectPendingOrder = async (token, id) => {
+export const rejectPendingOrder = async (id) => {
     try {
         const response = await fetch(`${BASE_URL}/admin/pending-orders/${id}/reject`, {
             method: "DELETE",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to reject pending order");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to reject pending order.");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error rejecting pending order:", error);
@@ -848,16 +875,17 @@ export const rejectPendingOrder = async (token, id) => {
     }
 };
 
-export const getAllOrdersAdmin = async (token) => {
+export const getAllOrdersAdmin = async () => {
     try {
         const response = await fetch(`${BASE_URL}/admin/orders`, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to fetch orders");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch orders");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error fetching orders:", error);
@@ -865,16 +893,17 @@ export const getAllOrdersAdmin = async (token) => {
     }
 };
 
-export const getAllSellersAdmin = async (token) => {
+export const getAllSellersAdmin = async () => {
     try {
         const response = await fetch(`${BASE_URL}/admin/sellers`, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to fetch sellers");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch sellers");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error fetching sellers:", error);
@@ -882,16 +911,17 @@ export const getAllSellersAdmin = async (token) => {
     }
 };
 
-export const deleteSellerAdmin = async (token, id) => {
+export const deleteSellerAdmin = async (id) => {
     try {
         const response = await fetch(`${BASE_URL}/admin/sellers/${id}`, {
             method: "DELETE",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to delete seller");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to delete seller");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error deleting seller:", error);
@@ -899,16 +929,17 @@ export const deleteSellerAdmin = async (token, id) => {
     }
 };
 
-export const getAllUsersAdmin = async (token) => {
+export const getAllUsersAdmin = async () => {
     try {
         const response = await fetch(`${BASE_URL}/admin/users`, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to fetch users");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch users");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error fetching users:", error);
@@ -916,16 +947,17 @@ export const getAllUsersAdmin = async (token) => {
     }
 };
 
-export const deleteUserAdmin = async (token, id) => {
+export const deleteUserAdmin = async (id) => {
     try {
         const response = await fetch(`${BASE_URL}/admin/users/${id}`, {
             method: "DELETE",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to delete user");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to delete user");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error deleting user:", error);
@@ -933,16 +965,17 @@ export const deleteUserAdmin = async (token, id) => {
     }
 };
 
-export const getDashboardDataAdmin = async (token) => {
+export const getDashboardDataAdmin = async () => {
     try {
         const response = await fetch(`${BASE_URL}/admin/dashboard`, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to fetch dashboard data");
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch dashboard data.");
+        }
         return await response.json();
     } catch (error) {
         console.error("Error fetching dashboard data:", error);

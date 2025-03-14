@@ -44,7 +44,6 @@ const DashboardSeller = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        console.log("Checking auth state on mount:", auth.currentUser);
         const fetchSellerId = async () => {
             const currentUser = auth.currentUser;
             if (!currentUser) {
@@ -52,8 +51,8 @@ const DashboardSeller = () => {
               navigate("/login");
               return;
             }
-            const idToken = await currentUser.getIdToken();
-            const userData = await getUserById(idToken, currentUser.uid);
+
+            const userData = await getUserById(currentUser.uid);
             setSellerId(userData.sellerId);
           };
           fetchSellerId();
@@ -63,8 +62,7 @@ const DashboardSeller = () => {
         const fetchStats = async () => {
             if (!sellerId) return;
             try {
-              const idToken = await auth.currentUser.getIdToken();
-              const data = await getDashboardStats(idToken, sellerId);
+              const data = await getDashboardStats(sellerId);
               setStats({
                 dailyRevenue: data.dailyRevenue,
                 weeklyRevenue: data.weeklyRevenue,

@@ -124,8 +124,7 @@ const Checkout = () => {
         };
 
         try {
-            const token = await auth.currentUser.getIdToken();
-            const response = await createOrder(token, totalOrdersData);
+            const response = await createOrder(totalOrdersData);
             const orderId = response.id; 
 
             navigate(`/placeorder/${orderId}`, {

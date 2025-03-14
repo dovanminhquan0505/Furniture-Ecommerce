@@ -18,6 +18,7 @@ const useAdmin = () => {
     } else {
         setIsAdmin(false);
         setIsLoading(false);
+        return;
     }
 }, [currentUser, authLoading]);
 

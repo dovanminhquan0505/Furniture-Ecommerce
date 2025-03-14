@@ -25,8 +25,7 @@ const Orders = () => {
                 return;
             }
 
-            const idToken = await currentUser.getIdToken();
-            const userData = await getUserById(idToken, currentUser.uid);
+            const userData = await getUserById(currentUser.uid);
             setSellerId(userData.sellerId);
         };
 
@@ -39,8 +38,7 @@ const Orders = () => {
 
             try {
                 setLoading(true);
-                const idToken = await auth.currentUser.getIdToken();
-                const ordersData = await fetchSellerOrders(idToken, sellerId);
+                const ordersData = await fetchSellerOrders(sellerId);
                 setOrders(ordersData);
             } catch (error) {
                 toast.error("Error fetching orders: " + error.message);
@@ -55,8 +53,7 @@ const Orders = () => {
     // Handle Deliver orders for each seller
     const handleConfirmDelivery = async (orderId) => {
         try {
-            const idToken = await auth.currentUser.getIdToken();
-            await confirmDelivery(idToken, orderId); 
+            await confirmDelivery(orderId); 
             setOrders((prevOrders) =>
               prevOrders.map((order) =>
                 order.id === orderId ? { ...order, isDelivered: true, deliveredAt: new Date() } : order
@@ -71,8 +68,7 @@ const Orders = () => {
     // Handle delete orders
     const deleteOrderHandler = async (orderId) => {
         try {
-            const idToken = await auth.currentUser.getIdToken();
-            await deleteOrder(idToken, sellerId, orderId);
+            await deleteOrder(sellerId, orderId);
             setOrders((prevOrders) => prevOrders.filter((order) => order.id !== orderId));
             toast.success("Order deleted successfully!");
           } catch (error) {

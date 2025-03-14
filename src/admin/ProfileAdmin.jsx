@@ -74,12 +74,8 @@ const ProfileAdmin = () => {
     useEffect(() => {
         if (isAdmin) {
             const fetchPendingOrders = async () => {
-                const user = auth.currentUser;
-                if (!user) return;
-
-                const token = await user.getIdToken();
                 try {
-                    const requests = await getPendingOrders(token);
+                    const requests = await getPendingOrders();
                     setPendingRequests(requests);
                 } catch (error) {
                     toast.error("Failed to fetch pending orders: " + error.message);
@@ -101,11 +97,10 @@ const ProfileAdmin = () => {
                 return;
             }
 
-            const token = await user.getIdToken();
             const userId = user.uid;
 
             try {
-                const data = await getAdminProfileById(token, userId);
+                const data = await getAdminProfileById(userId);
                 if (!data) {
                     setIsEmpty(true);
                     return;
@@ -148,11 +143,10 @@ const ProfileAdmin = () => {
             return;
         }
 
-        const token = await user.getIdToken();
         const userId = user.uid;
 
         try {
-            await updateAdminProfile(token, userId, {
+            await updateAdminProfile(userId, {
                 displayName: adminInfo.displayName,
                 birthDate: adminInfo.birthDate,
                 phone: adminInfo.phone,
@@ -186,7 +180,6 @@ const ProfileAdmin = () => {
             return;
         }
 
-        const token = await user.getIdToken();
         const userId = user.uid;
         const currentPassword = e.target.currentPassword.value;
         const newPassword = e.target.newPassword.value;
@@ -214,7 +207,7 @@ const ProfileAdmin = () => {
             );
             await reauthenticateWithCredential(user, credential);
 
-            await updateAdminPassword(token, userId, newPassword);
+            await updateAdminPassword(userId, newPassword);
             toast.success("Password updated successfully!");
             e.target.reset();
         } catch (error) {
@@ -240,10 +233,8 @@ const ProfileAdmin = () => {
             return;
         }
 
-        const token = await user.getIdToken(); // Lấy token từ Firebase
-
         try {
-            await logoutUser(token);
+            await logoutUser();
             await signOut(auth);
             toast.success("Logged out");
             navigate("/login");
@@ -269,13 +260,12 @@ const ProfileAdmin = () => {
                 return;
             }
 
-            const token = await user.getIdToken(); 
             const userId = user.uid;
 
             try {
                 const uploadResponse = await uploadFile(file);
                 const photoURL = uploadResponse.fileURL;
-                await updateAdminPhoto(token, userId, photoURL);
+                await updateAdminPhoto(userId, photoURL);
                 toast.success("Avatar uploaded successfully!");
             } catch (error) {
                 toast.error("Failed to upload avatar: " + error.message);

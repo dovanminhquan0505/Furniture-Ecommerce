@@ -8,8 +8,10 @@ import useAdmin from "../custom-hooks/useAdmin";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { getPendingOrders, logoutUser } from "../api";
+import { userActions } from "../redux/slices/userSlice";
+import defaultAvatar from "../assets/images/user-icon.png";
 
 const admin_nav = [
     {
@@ -46,25 +48,23 @@ const AdminNav = () => {
     const [pendingRequests, setPendingRequests] = useState([]);
     const [showNotifications, setShowNotifications] = useState(false);
     const navigate = useNavigate();
+    const dispatch = useDispatch();
 
     useEffect(() => {
-        if (isAdmin) {
+        if (isAdmin && currentUser) {
             const fetchPendingOrders = async () => {
-                const user = auth.currentUser;
-                if (!user) return;
-
-                const token = await user.getIdToken();
                 try {
-                    const requests = await getPendingOrders(token);
+                    const requests = await getPendingOrders();
                     setPendingRequests(requests);
                 } catch (error) {
-                    toast.error("Failed to fetch pending orders: " + error.message);
+                    toast.error(
+                        "Failed to fetch pending orders: " + error.message
+                    );
                 }
             };
-
             fetchPendingOrders();
         }
-    }, [isAdmin]);
+    }, [isAdmin, currentUser]);
 
     // Handle auto turn off profile actions when user clicks on outside.
     useEffect(() => {
@@ -99,24 +99,16 @@ const AdminNav = () => {
         return null;
     }
 
-    const logOut = async () => {
-            const user = auth.currentUser;
-            if (!user) {
-                toast.error("No authenticated user found!");
-                return;
-            }
-    
-            const token = await user.getIdToken();
-    
-            try {
-                await logoutUser(token);
-                await signOut(auth);
-                toast.success("Logged out");
-                navigate("/login");
-            } catch (error) {
-                toast.error(error.message);
-            }
-        };
+    const handleLogOut = async () => {
+        try {
+            await logoutUser();
+            await signOut(auth);
+            toast.success("Logged out successfully");
+            navigate("/login");
+        } catch (error) {
+            toast.error(error.message || "Logout failed");
+        }
+    };
 
     const toggleProfileActions = () => {
         if (profileActionRef.current) {
@@ -131,13 +123,15 @@ const AdminNav = () => {
     };
 
     if (isLoading) {
-        <Container
-            className="d-flex justify-content-center align-items-center"
-            style={{ height: "100vh" }}
-        >
-            <Spinner style={{ width: "3rem", height: "3rem" }} />
-            <span className="visually-hidden">Loading...</span>
-        </Container>;
+        return (
+            <Container
+                className="d-flex justify-content-center align-items-center"
+                style={{ height: "100vh" }}
+            >
+                <Spinner style={{ width: "3rem", height: "3rem" }} />
+                <span className="visually-hidden">Loading...</span>
+            </Container>
+        );
     }
     return (
         <>
@@ -187,7 +181,10 @@ const AdminNav = () => {
                                 <div className="profile">
                                     <motion.img
                                         whileTap={{ scale: 1.2 }}
-                                        src={currentUser.photoURL}
+                                        src={
+                                            currentUser?.photoURL ||
+                                            defaultAvatar
+                                        }
                                         alt=""
                                         className="admin__avatar"
                                         onClick={toggleProfileActions}
@@ -201,7 +198,7 @@ const AdminNav = () => {
                                         <div className="d-flex align-items-center justify-content-center flex-column">
                                             <span
                                                 className="logout d-flex align-items-center"
-                                                onClick={logOut}
+                                                onClick={handleLogOut}
                                             >
                                                 <Link
                                                     to="/login"
@@ -227,17 +224,33 @@ const AdminNav = () => {
                     ) : (
                         <ul className="notifications__list">
                             {pendingRequests.map((request) => (
-                                <li key={request.id} className="notification__item" ref={notificationsRef}>
-                                    <Link to="/admin/pending-orders" className="notification__link">
+                                <li
+                                    key={request.id}
+                                    className="notification__item"
+                                    ref={notificationsRef}
+                                >
+                                    <Link
+                                        to="/admin/pending-orders"
+                                        className="notification__link"
+                                    >
                                         <div className="notification__content">
-                                            <img src={request.avatarURL} alt="User Avatar" className="notification__avatar" />
+                                            <img
+                                                src={request.avatarURL}
+                                                alt="User Avatar"
+                                                className="notification__avatar"
+                                            />
                                             <div className="notification__text">
-                                                <h4 className="notification__title">New seller register requests</h4>
+                                                <h4 className="notification__title">
+                                                    New seller register requests
+                                                </h4>
                                                 <p className="notification__details">
-                                                    {request.storeName} - {request.fullName}
+                                                    {request.storeName} -{" "}
+                                                    {request.fullName}
                                                 </p>
                                                 <small className="notification__time">
-                                                    {new Date(request.createdAt).toLocaleString()}
+                                                    {new Date(
+                                                        request.createdAt
+                                                    ).toLocaleString()}
                                                 </small>
                                             </div>
                                         </div>

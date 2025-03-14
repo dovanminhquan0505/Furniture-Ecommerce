@@ -78,18 +78,17 @@ const ProfileUser = () => {
                 return;
             }
 
-            const token = await user.getIdToken();
             const userId = user.uid;
 
             try {
-                const userData = await getUserProfileById(token, userId);
+                const userData = await getUserProfileById(userId);
                 if (!userData) {
                     setIsEmpty(true);
                     return;
                 }
                 setUserInfo(userData);
                 setOriginalUserInfo(userData);
-                const orders = await getUserOrders(token, userId);
+                const orders = await getUserOrders(userId);
                 setOrderInfo(orders);
             } catch (error) {
                 toast.error("Failed to fetch user data: " + error.message);
@@ -118,11 +117,10 @@ const ProfileUser = () => {
             return;
         }
 
-        const token = await user.getIdToken();
         const userId = user.uid;
 
         try {
-            await updateUserById(token, userId, {
+            await updateUserById(userId, {
                 displayName: userInfo.displayName,
                 birthDate: userInfo.birthDate,
                 phone: userInfo.phone,
@@ -156,10 +154,8 @@ const ProfileUser = () => {
             return;
         }
 
-        const token = await user.getIdToken();
-
         try {
-            await deleteUserOrder(token, orderId);
+            await deleteUserOrder(orderId);
             setOrderInfo((prevOrders) =>
                 prevOrders.filter((order) => order.orderId !== orderId)
             );
@@ -177,7 +173,6 @@ const ProfileUser = () => {
             return;
         }
 
-        const token = await user.getIdToken();
         const userId = user.uid;
         const currentPassword = e.target.currentPassword.value;
         const newPassword = e.target.newPassword.value;
@@ -208,7 +203,6 @@ const ProfileUser = () => {
             await reauthenticateWithCredential(user, credential);
 
             await updateUserPassword(
-                token,
                 userId,
                 newPassword
             );
@@ -236,10 +230,7 @@ const ProfileUser = () => {
             return;
         }
 
-        const token = await user.getIdToken();
-
         try {
-            await logoutUser(token);
             await signOut(auth);
             toast.success("Logged out");
             navigate("/login");
@@ -266,7 +257,6 @@ const ProfileUser = () => {
                 return;
             }
 
-            const token = await user.getIdToken();
             const userId = user.uid;
 
             // Upload image to Firebase Storage
@@ -274,7 +264,7 @@ const ProfileUser = () => {
                 const uploadResponse = await uploadFile(file);
                 const photoURL = uploadResponse.fileURL;
           
-                await updateUserPhoto(token, userId, photoURL);
+                await updateUserPhoto(userId, photoURL);
                 dispatch(userActions.updateUserPhoto(photoURL));
           
                 toast.success("Avatar uploaded successfully!");

@@ -8,7 +8,7 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { userActions } from "../redux/slices/userSlice";
-import { signInWithCustomToken } from "firebase/auth";
+import { signInWithCustomToken, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase.config";
 import { registerUser, uploadFile } from "../api";
 
@@ -49,6 +49,8 @@ const Signup = () => {
         try {
             const uploadResponse = await uploadFile(file);
             const fileURL = uploadResponse.fileURL;
+
+            // Gửi thông tin đăng ký lên backend
             const registerResponse = await registerUser({
                 username,
                 email,
@@ -56,26 +58,16 @@ const Signup = () => {
                 fileURL,
             });
 
-            const { user, token: customToken } = registerResponse;
-            const userCredential = await signInWithCustomToken(
-                auth,
-                customToken
-            );
-            const idToken = await userCredential.user.getIdToken();
+            // Đăng nhập bằng Firebase để đồng bộ trạng thái
+            await signInWithEmailAndPassword(auth, email, password);
 
-            localStorage.setItem("authToken", idToken);
-            localStorage.setItem("accessToken", idToken);
-            localStorage.setItem("user", JSON.stringify(user));
-
-            dispatch(userActions.setUser(user));
-
+            dispatch(userActions.setUser(registerResponse.user));
             setLoading(false);
             toast.success("Account created successfully!");
             navigate("/checkout");
         } catch (error) {
             setLoading(false);
-            const errorMessage = error.message || "Something went wrong!";
-            toast.error(errorMessage);
+            toast.error(error.message || "Something went wrong!");
         }
     };
 

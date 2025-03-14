@@ -9,9 +9,9 @@ import logoGoogle from "../assets/images/logoGoogle.jpg";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { userActions } from "../redux/slices/userSlice";
-import { GoogleAuthProvider, signInWithCustomToken, signInWithPopup } from "firebase/auth";
+import { GoogleAuthProvider, signInWithCustomToken, signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { auth } from "../firebase.config";
-import { googleLogin } from "../api";
+import { googleLogin, loginUser } from "../api";
 
 const Login = () => {
     const [email, setEmail] = useState("");
@@ -38,71 +38,44 @@ const Login = () => {
         }
 
         try {
-            const response = await axios.post(
-                "http://localhost:5000/api/auth/login",
-                { email, password }
-            );
-            const { token: customToken, refreshToken, user } = response.data;
-
-            // Đăng nhập vào Firebase với custom token
-            const userCredential = await signInWithCustomToken(
-                auth,
-                customToken
-            );
+            // Đăng nhập Firebase để lấy idToken
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const idToken = await userCredential.user.getIdToken();
 
-            // Lưu thông tin vào localStorage
-            localStorage.setItem("accessToken", idToken);
-            localStorage.setItem("authToken", idToken);
-            localStorage.setItem("refreshToken", refreshToken);
-            localStorage.setItem("user", JSON.stringify(user));
+            // Gửi idToken lên backend để nhận cookie
+            const response = await loginUser({ email, password });
 
-            dispatch(userActions.setUser(user));
-
+            dispatch(userActions.setUser(response.user));
             setLoading(false);
             toast.success("Successfully logged in!");
         } catch (error) {
             setLoading(false);
-            console.error("Login error:", error);
-            const errorMessage =
-                error.response?.data?.error || error.message || "Login failed!";
-            toast.error(errorMessage);
+            toast.error(error.message || "Login failed!");
         }
     };
 
     // Sign In for Google account.
     const signInWithGoogle = async () => {
         setLoading(true);
-        try {
-          const provider = new GoogleAuthProvider();
-          const result = await signInWithPopup(auth, provider);
-          const idToken = await result.user.getIdToken();
-      
-          // Gửi idToken lên backend qua googleLogin
-          const response = await googleLogin(idToken);
-          const { token, refreshToken, user } = response;
-      
-          // Lưu thông tin vào localStorage
-          localStorage.setItem("accessToken", idToken);
-          localStorage.setItem("authToken", idToken);
-          localStorage.setItem("refreshToken", refreshToken);
-          localStorage.setItem("user", JSON.stringify(user));
-      
-          dispatch(userActions.setUser(user));
-      
-          setLoading(false);
-          toast.success("Successfully logged in with Google!");
-          navigate("/checkout");
-        } catch (error) {
-          setLoading(false);
-          console.error("Google login error:", error);
-          toast.error(error.message || "Failed to login with Google!");
-        }
+    try {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
+        const idToken = await result.user.getIdToken();
+
+        const response = await googleLogin(idToken);
+
+        dispatch(userActions.setUser(response.user));
+        setLoading(false);
+        toast.success("Successfully logged in with Google!");
+        navigate("/checkout");
+    } catch (error) {
+        setLoading(false);
+        toast.error(error.message || "Failed to login with Google!");
+    }
     };
     
     useEffect(() => {
         if (reduxUser) {
-            console.log("Redux user updated:", reduxUser);
             if (reduxUser.role === "admin") {
                 navigate("/admin/dashboard");
             } else {

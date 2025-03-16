@@ -1,7 +1,7 @@
 /* Product Details */
 :root {
-    --border-color: #ddd; 
-    --accent-color: #ff6600; 
+    --border-color: #ddd;
+    --accent-color: #ff6600;
     --shadow-color: rgba(0, 0, 0, 0.1);
 }
 
@@ -67,6 +67,19 @@
     font-size: 1rem;
     color: var(--light-text-color);
     margin-left: 0.5rem;
+}
+
+.review__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 10px;
+}
+
+.replies-list .review__avatar {
+    width: 30px;
+    height: 30px;
 }
 
 /* Price and Category */
@@ -152,6 +165,7 @@
     font-weight: 700;
     margin-bottom: 0.5rem;
     color: var(--primary-color);
+    padding-top: 6px;
 }
 
 .review__wrapper ul li span {
@@ -167,7 +181,7 @@
 }
 
 .review__wrapper .stars {
-    color: #ffc107; 
+    color: #ffc107;
     font-size: 1.2rem;
     margin-right: 0.2rem;
 }
@@ -181,7 +195,7 @@
     font-size: 1.2rem;
 }
 
-.review__item .review__actions{
+.review__item .review__actions {
     display: flex;
     align-items: center;
     cursor: pointer;
@@ -204,7 +218,7 @@
 
 .rating__stars {
     display: inline-flex;
-    color: #FFD700;
+    color: #ffd700;
     font-size: 0.9rem;
 }
 
@@ -242,6 +256,10 @@
     color: var(--primary-color);
 }
 
+.review__form button {
+    margin-top: -10px;
+}
+
 .form__group {
     margin-bottom: 1.5rem;
 }
@@ -273,8 +291,8 @@
 .star__rating-item {
     display: inline-flex;
     align-items: center;
-    justify-content: flex-start; 
-    width: 2.5rem; 
+    justify-content: flex-start;
+    width: 2.5rem;
     height: 2rem;
     font-size: 1rem;
     position: relative;
@@ -289,9 +307,9 @@
 
 .star__rating-item i {
     position: absolute;
-    left: 0.7rem; 
+    left: 0.7rem;
     bottom: 0.45rem;
-    font-size: 1.1rem; 
+    font-size: 1.1rem;
 }
 /* Related Products */
 .related__title {
@@ -376,6 +394,7 @@
     transition: background-color 0.3s;
     font-size: 1rem;
     font-weight: 600;
+    margin-top: -9px;
 }
 
 .reply-form button:hover {
@@ -401,7 +420,7 @@
 }
 
 .toggle__replies::before {
-    content: '\25B6'; /* Right-pointing triangle */
+    content: "\25B6"; /* Right-pointing triangle */
     display: inline-block;
     margin-right: 5px;
     font-size: 0.8em;

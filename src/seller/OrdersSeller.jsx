@@ -181,7 +181,7 @@ const Orders = () => {
                                                                 )}
                                                             </td>
                                                             <td>
-                                                                {!order.isDelivered && (
+                                                                {!order.isDelivered && order.isPaid && (
                                                                     <motion.button
                                                                         whileTap={{
                                                                             scale: 0.9,

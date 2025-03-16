@@ -30,7 +30,7 @@ exports.getProductById = async (req, res) => {
 exports.addReview = async (req, res) => {
     try {
         const productId = req.params.id;
-        const { userName, message, rating } = req.body;
+        const { userName, message, rating, avatar } = req.body;
         
         const productRef = db.collection("products").doc(productId);
         const productDoc = await productRef.get();
@@ -43,6 +43,7 @@ exports.addReview = async (req, res) => {
             userName,
             message,
             rating,
+            avatar,
             createdAt: new Date().toISOString(),
             likes: []
         };
@@ -116,7 +117,7 @@ exports.toggleLikeReview = async (req, res) => {
 exports.addReplyToReview = async (req, res) => {
     try {
         const productId = req.params.id;
-        const { reviewIndex, userName, message } = req.body;
+        const { reviewIndex, userName, message, avatar } = req.body;
         
         const productRef = db.collection("products").doc(productId);
         const productDoc = await productRef.get();
@@ -139,6 +140,7 @@ exports.addReplyToReview = async (req, res) => {
         updatedReviews[reviewIndex].replies.push({
             userName,
             message,
+            avatar,
             createdAt: new Date().toISOString(),
             likes: []
         });

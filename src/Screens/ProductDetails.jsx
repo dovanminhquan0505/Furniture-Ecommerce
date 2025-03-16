@@ -19,13 +19,14 @@ import {
     toggleLikeReview, 
     addReplyToReview, 
     toggleLikeReply, 
-    fetchSellerInfoByProduct
+    fetchSellerInfoByProduct,
+    getUserById
 } from "../api.js";
 import { auth } from "../firebase.config.js";
+import DefaultAvatar from "../assets/images/user-icon.png";
 
 const ProductDetails = () => {
     const [tab, setTab] = useState("desc");
-    const reviewUser = useRef("");
     const reviewMessage = useRef("");
     const dispatch = useDispatch();
     //Handle quality of products
@@ -40,10 +41,29 @@ const ProductDetails = () => {
     // Set Reviews Comment State
     const [replyingTo, setReplyingTo] = useState(null);
     const [replyMessage, setReplyMessage] = useState("");
-    const [replyUserName, setReplyUserName] = useState("");
     const [reviewSubmitted, setReviewSubmitted] = useState(false);
     const [expandedReplies, setExpandedReplies] = useState({});
     const [storeName, setStoreName] = useState("");
+    const [userData, setUserData] = useState(null);
+
+    // Fetch thông tin người dùng từ Firestore khi có currentUser
+    useEffect(() => {
+        const fetchUserData = async () => {
+            if (currentUser) {
+                try {
+                    const user = await getUserById(currentUser.uid);
+                    setUserData({
+                        userName: user.displayName || "Anonymous",
+                        avatar: user.photoURL || DefaultAvatar,
+                    });
+                } catch (error) {
+                    console.error("Error fetching user data:", error);
+                    toast.error("Failed to load user data");
+                }
+            }
+        };
+        fetchUserData();
+    }, [currentUser]);
 
     // Fetch product data using API
     useEffect(() => {
@@ -116,17 +136,20 @@ const ProductDetails = () => {
             return;
         }
 
-        const reviewUserName = reviewUser.current.value;
-        const reviewUserMessage = reviewMessage.current.value;
-
         if (!rating) {
             toast.error("Please select a rating");
             return;
         }
 
+        if (!userData) {
+            toast.error("User data not loaded yet. Please try again.");
+            return;
+        }
+
         const reviewObject = {
-            userName: reviewUserName,
-            message: reviewUserMessage,
+            userName: userData.userName, 
+            avatar: userData.avatar,     
+            message: reviewMessage.current.value,
             rating: rating,
             createdAt: new Date().toISOString(),
             likes: []
@@ -134,21 +157,16 @@ const ProductDetails = () => {
 
         try {
             await addReview(id, reviewObject);
+            const updatedProduct = await fetchProduct(id);
+            setProduct(updatedProduct);
             toast.success("Review sent successfully!");
-            
-            // Cập nhật state sau khi lưu thành công
-            setProduct(prev => ({
-                ...prev,
-                reviews: prev.reviews ? [...prev.reviews, reviewObject] : [reviewObject]
-            }));
         } catch (apiError) {
             console.error("API error:", apiError);
             toast.error("Failed to save review to server: " + apiError.message);
-            return; // Không hiển thị local nếu server thất bại
+            return; 
         }
 
         // Reset form
-        reviewUser.current.value = "";
         reviewMessage.current.value = "";
         setRating(null);
         setReviewSubmitted(true);
@@ -158,17 +176,8 @@ const ProductDetails = () => {
     const deleteReviewHandler = async (reviewToDelete, index) => {
         try {
             await deleteReview(id, reviewToDelete);
-            
-            // Update local state for immediate UI update
-            setProduct(prev => {
-                const updatedReviews = [...prev.reviews];
-                updatedReviews.splice(index, 1);
-                return {
-                    ...prev,
-                    reviews: updatedReviews
-                };
-            });
-            
+            const updatedProduct = await fetchProduct(id);
+            setProduct(updatedProduct);
             toast.success("Review deleted successfully!");
         } catch (error) {
             console.error("Error deleting review:", error);
@@ -207,28 +216,10 @@ const ProductDetails = () => {
                     reviews: updatedReviews
                 }));
             } else {
-                // Handle with API
                 await toggleLikeReview(id, index, userId);
-                
-                // Update local state for immediate UI update
-                const updatedReviews = [...product.reviews];
-                const likes = updatedReviews[index].likes || [];
-                const userLikeIndex = likes.indexOf(userId);
-                
-                if (userLikeIndex > -1) {
-                    likes.splice(userLikeIndex, 1);
-                    toast.info("You have disliked this review!");
-                } else {
-                    likes.push(userId);
-                    toast.success("You have liked this review!");
-                }
-                
-                updatedReviews[index].likes = likes;
-                
-                setProduct(prev => ({
-                    ...prev,
-                    reviews: updatedReviews
-                }));
+                const updatedProduct = await fetchProduct(id); 
+                setProduct(updatedProduct);
+                toast.success("Like updated successfully!");
             }
         } catch (error) {
             console.error("Error toggling like:", error);
@@ -247,28 +238,9 @@ const ProductDetails = () => {
 
         try {
             await toggleLikeReply(id, reviewIndex, replyIndex, userId);
-            
-            // Update local state for immediate UI update
-            const updatedReviews = [...product.reviews];
-            const targetReply = updatedReviews[reviewIndex].replies[replyIndex];
-            
-            if (!targetReply.likes) {
-                targetReply.likes = [];
-            }
-            
-            const userLikeIndex = targetReply.likes.indexOf(userId);
-            if (userLikeIndex > -1) {
-                targetReply.likes.splice(userLikeIndex, 1);
-                toast.info("You unliked this reply!");
-            } else {
-                targetReply.likes.push(userId);
-                toast.success("You liked this reply!");
-            }
-            
-            setProduct(prev => ({
-                ...prev,
-                reviews: updatedReviews
-            }));
+            const updatedProduct = await fetchProduct(id); 
+            setProduct(updatedProduct);
+            toast.success("Like updated successfully!");
         } catch (error) {
             console.error("Error toggling like for reply:", error);
             toast.error("Failed to update like. Please try again");
@@ -293,12 +265,11 @@ const ProductDetails = () => {
             setReplyingTo(reviewIndex);
         }
         setReplyMessage("");
-        setReplyUserName("");
     }
 
     // Handle submit reply comment
     const handleReplySubmit = async (reviewIndex) => {
-        if(!replyMessage.trim() || !replyUserName.trim()) {
+        if(!replyMessage.trim()) {
             toast.error("Please fill in both name and message fields.")
             return;
         }
@@ -308,8 +279,14 @@ const ProductDetails = () => {
             return;
         }
 
+        if (!userData) {
+            toast.error("User data not loaded yet. Please try again.");
+            return;
+        }
+
         const replyObject = {
-            userName: replyUserName,
+            userName: userData.userName,
+            avatar: userData.avatar,    
             message: replyMessage,
             createdAt: new Date().toISOString(),
             likes: []
@@ -317,31 +294,23 @@ const ProductDetails = () => {
 
         try {
             await addReplyToReview(id, reviewIndex, {
-                userName: replyUserName,
-                message: replyMessage
+                userName: userData.userName,
+                message: replyMessage,
+                avatar: userData.avatar,
             });
     
-            // Cập nhật state sau khi lưu thành công
-            setProduct(prev => {
-                const updatedReviews = [...prev.reviews];
-                if (!updatedReviews[reviewIndex].replies) {
-                    updatedReviews[reviewIndex].replies = [];
-                }
-                updatedReviews[reviewIndex].replies.push(replyObject);
-                return { ...prev, reviews: updatedReviews };
-            });
-    
+            const updatedProduct = await fetchProduct(id);
+            setProduct(updatedProduct);
             toast.success("Reply sent successfully!");
         } catch (error) {
             console.error("Error adding reply:", error);
             toast.error("Failed to save reply to server: " + error.message);
-            return; // Không hiển thị local nếu server thất bại
+            return; 
         }
 
         // Reset form
         setReplyingTo(null);
         setReplyMessage("");
-        setReplyUserName("");
     } 
 
     const addToCart = () => {
@@ -501,9 +470,17 @@ const ProductDetails = () => {
                                                             className="review__item mb-4"
                                                         >
                                                             <div className="review__content">
-                                                                <h6 className="mt-2">
-                                                                    {item.userName}
-                                                                </h6>
+                                                                <div className="d-flex align-items-center">
+                                                                    {item.avatar && (
+                                                                        <img
+                                                                            src={item.avatar}
+                                                                            alt="avatar"
+                                                                            className="review__avatar"
+                                                                            style={{ width: "40px", height: "40px", borderRadius: "50%", marginRight: "10px" }}
+                                                                        />
+                                                                    )}
+                                                                    <h6 className="mt-2">{item.userName}</h6>
+                                                                </div>
                                                                 <div
                                                                     className="stars"
                                                                     style={{
@@ -586,7 +563,17 @@ const ProductDetails = () => {
                                                                 <ul className="replies-list">
                                                                 {item.replies.map((reply, replyIndex) => (
                                                                     <li key={replyIndex} className="reply-item">
-                                                                        <h6>{reply.userName}</h6>
+                                                                        <div className="d-flex align-items-center">
+                                                                            {reply.avatar && (
+                                                                                <img
+                                                                                    src={reply.avatar}
+                                                                                    alt="avatar"
+                                                                                    className="review__avatar"
+                                                                                    style={{ width: "30px", height: "30px", borderRadius: "50%", marginRight: "10px" }}
+                                                                                />
+                                                                            )}
+                                                                            <h6>{reply.userName}</h6>
+                                                                        </div>
                                                                         <p>{reply.message}</p>
                                                                         <small className="text-muted">
                                                                             {formatTime(reply.createdAt)}
@@ -615,13 +602,6 @@ const ProductDetails = () => {
                                                             {/* Reply form */}
                                                             {replyingTo === index && (
                                                                 <div className="reply-form">
-                                                                    <input
-                                                                        type="text"
-                                                                        placeholder="Your name"
-                                                                        value={replyUserName}
-                                                                        onChange={(e) => setReplyUserName(e.target.value)}
-                                                                        required
-                                                                    />
                                                                     <textarea
                                                                         placeholder="Your reply"
                                                                         value={replyMessage}
@@ -661,15 +641,6 @@ const ProductDetails = () => {
                                         <div className="review__form">
                                             <h4>Leave Your Experience</h4>
                                             <form onSubmit={submitHandler}>
-                                                <div className="form__group">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Enter name"
-                                                        ref={reviewUser}
-                                                        required
-                                                    />
-                                                </div>
-
                                                 <div className="form__group rating__group">
                                                     {[1, 2, 3, 4, 5].map(
                                                         (star) => (

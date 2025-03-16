@@ -21,6 +21,14 @@ exports.getProductById = async (req, res) => {
         }
         
         const product = { id: productDoc.id, ...productDoc.data() };
+
+        if (Array.isArray(product.reviews) && product.reviews.length > 0) {
+            const avgRating = product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length;
+            product.avgRating = avgRating.toFixed(1);
+        } else {
+            product.avgRating = "0.0";
+        }
+
         res.status(200).json(product);
     } catch (error) {
         res.status(500).json({ message: "Error fetching product", error });
@@ -31,6 +39,7 @@ exports.addReview = async (req, res) => {
     try {
         const productId = req.params.id;
         const { userName, message, rating, avatar } = req.body;
+        const userId = req.body.userId;
         
         const productRef = db.collection("products").doc(productId);
         const productDoc = await productRef.get();
@@ -40,6 +49,7 @@ exports.addReview = async (req, res) => {
         }
         
         const reviewObject = {
+            userId,
             userName,
             message,
             rating,
@@ -65,14 +75,41 @@ exports.addReview = async (req, res) => {
 exports.deleteReview = async (req, res) => {
     try {
         const productId = req.params.id;
-        const reviewToDelete = req.body.review;
-        
-        await db.collection("products").doc(productId).update({
+        const { review, userId, userSellerId } = req.body;
+
+        // Lấy thông tin sản phẩm
+        const productRef = db.collection("products").doc(productId);
+        const productDoc = await productRef.get();
+
+        if (!productDoc.exists) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        const product = productDoc.data();
+        const productSellerId = product.sellerId;
+
+        // Kiểm tra quyền xóa
+        const reviewToDelete = review;
+
+        // Kiểm tra xem user có phải là chủ sản phẩm (seller) không
+        const isProductSeller = userSellerId && productSellerId === userSellerId;
+
+        // Kiểm tra xem user có phải là người tạo review không (dựa vào userId)
+        const isReviewOwner = reviewToDelete.userId === userId;
+
+        // Kiểm tra quyền
+        if (!isProductSeller && !isReviewOwner) {
+            return res.status(403).json({ message: "You do not have permission to delete this review" });
+        }
+
+        // Xóa review
+        await productRef.update({
             reviews: admin.firestore.FieldValue.arrayRemove(reviewToDelete)
         });
-        
+
         res.status(200).json({ message: "Review deleted successfully" });
     } catch (error) {
+        console.error("Error deleting review:", error);
         res.status(500).json({ message: "Error deleting review", error });
     }
 };

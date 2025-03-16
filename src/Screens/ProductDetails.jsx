@@ -20,7 +20,8 @@ import {
     addReplyToReview, 
     toggleLikeReply, 
     fetchSellerInfoByProduct,
-    getUserById
+    getUserById,
+    getSellerIdByUserId
 } from "../api.js";
 import { auth } from "../firebase.config.js";
 import DefaultAvatar from "../assets/images/user-icon.png";
@@ -45,6 +46,7 @@ const ProductDetails = () => {
     const [expandedReplies, setExpandedReplies] = useState({});
     const [storeName, setStoreName] = useState("");
     const [userData, setUserData] = useState(null);
+    const [currentUserSellerId, setCurrentUserSellerId] = useState(null);
 
     // Fetch thông tin người dùng từ Firestore khi có currentUser
     useEffect(() => {
@@ -53,12 +55,16 @@ const ProductDetails = () => {
                 try {
                     const user = await getUserById(currentUser.uid);
                     setUserData({
+                        userId: currentUser.uid,
                         userName: user.displayName || "Anonymous",
                         avatar: user.photoURL || DefaultAvatar,
                     });
+                    const sellerData = await getSellerIdByUserId(currentUser.uid);
+                    setCurrentUserSellerId(sellerData.sellerId || null);
                 } catch (error) {
                     console.error("Error fetching user data:", error);
                     toast.error("Failed to load user data");
+                    setCurrentUserSellerId(null);
                 }
             }
         };
@@ -77,6 +83,8 @@ const ProductDetails = () => {
                 if (Array.isArray(productData.reviews) && productData.reviews.length > 0) {
                     const avgRating = productData.reviews.reduce((sum, review) => sum + review.rating, 0) / productData.reviews.length;
                     setProduct(prev => ({ ...prev, avgRating: avgRating.toFixed(1) }));
+                } else {
+                    setProduct(prev => ({ ...prev, avgRating: "0.0" }));
                 }
             } catch (error) {
                 console.error("Error fetching product:", error);
@@ -119,6 +127,7 @@ const ProductDetails = () => {
         category,
         reviews,
         avgRating,
+        sellerId,
     } = product;
 
     const totalReviews = Array.isArray(reviews) ? reviews.length : 0;
@@ -147,6 +156,7 @@ const ProductDetails = () => {
         }
 
         const reviewObject = {
+            userId: userData.userId,
             userName: userData.userName, 
             avatar: userData.avatar,     
             message: reviewMessage.current.value,
@@ -156,9 +166,21 @@ const ProductDetails = () => {
         };
 
         try {
-            await addReview(id, reviewObject);
-            const updatedProduct = await fetchProduct(id);
-            setProduct(updatedProduct);
+            await addReview(id, { ...reviewObject, userId: userData.userId });
+            
+            // Cập nhật state ngay lập tức với review mới và tính toán avgRating
+            setProduct(prev => {
+                const updatedReviews = prev.reviews ? [...prev.reviews, reviewObject] : [reviewObject];
+                const newAvgRating = updatedReviews.length > 0 
+                    ? (updatedReviews.reduce((sum, review) => sum + review.rating, 0) / updatedReviews.length).toFixed(1)
+                    : "0.0";
+                return {
+                    ...prev,
+                    reviews: updatedReviews,
+                    avgRating: newAvgRating
+                };
+            });
+        
             toast.success("Review sent successfully!");
         } catch (apiError) {
             console.error("API error:", apiError);
@@ -174,14 +196,38 @@ const ProductDetails = () => {
 
     // Handle Delete reviews for admin only
     const deleteReviewHandler = async (reviewToDelete, index) => {
+        if (!currentUser) {
+            toast.error("Please log in to delete reviews.");
+            return;
+        }
+
+        // Kiểm tra quyền xóa
+        const isReviewOwner = reviewToDelete.userId === currentUser.uid;
+        const isProductSeller = currentUserSellerId && sellerId === currentUserSellerId;
+
+        if (!isReviewOwner && !isProductSeller) {
+            toast.error("You do not have permission to delete this review.");
+            return;
+        }
+
         try {
-            await deleteReview(id, reviewToDelete);
+            await deleteReview(id, {
+                review: reviewToDelete,
+                userId: currentUser.uid,
+                userSellerId: currentUserSellerId
+            });
+
             const updatedProduct = await fetchProduct(id);
-            setProduct(updatedProduct);
+            if (Array.isArray(updatedProduct.reviews) && updatedProduct.reviews.length > 0) {
+                const avgRating = updatedProduct.reviews.reduce((sum, review) => sum + review.rating, 0) / updatedProduct.reviews.length;
+                setProduct({ ...updatedProduct, avgRating: avgRating.toFixed(1) });
+            } else {
+                setProduct({ ...updatedProduct, avgRating: "0.0" });
+            }
             toast.success("Review deleted successfully!");
         } catch (error) {
             console.error("Error deleting review:", error);
-            toast.error("Failed to delete review. Please try again");
+            toast.error(error.message || "Failed to delete review. Please try again");
         }
     };
 
@@ -218,7 +264,12 @@ const ProductDetails = () => {
             } else {
                 await toggleLikeReview(id, index, userId);
                 const updatedProduct = await fetchProduct(id); 
-                setProduct(updatedProduct);
+                if (Array.isArray(updatedProduct.reviews) && updatedProduct.reviews.length > 0) {
+                    const avgRating = updatedProduct.reviews.reduce((sum, review) => sum + review.rating, 0) / updatedProduct.reviews.length;
+                    setProduct({ ...updatedProduct, avgRating: avgRating.toFixed(1) });
+                } else {
+                    setProduct({ ...updatedProduct, avgRating: "0.0" });
+                }
                 toast.success("Like updated successfully!");
             }
         } catch (error) {
@@ -239,7 +290,12 @@ const ProductDetails = () => {
         try {
             await toggleLikeReply(id, reviewIndex, replyIndex, userId);
             const updatedProduct = await fetchProduct(id); 
-            setProduct(updatedProduct);
+            if (Array.isArray(updatedProduct.reviews) && updatedProduct.reviews.length > 0) {
+                const avgRating = updatedProduct.reviews.reduce((sum, review) => sum + review.rating, 0) / updatedProduct.reviews.length;
+                setProduct({ ...updatedProduct, avgRating: avgRating.toFixed(1) });
+            } else {
+                setProduct({ ...updatedProduct, avgRating: "0.0" });
+            }
             toast.success("Like updated successfully!");
         } catch (error) {
             console.error("Error toggling like for reply:", error);
@@ -285,6 +341,7 @@ const ProductDetails = () => {
         }
 
         const replyObject = {
+            userId: userData.userId,
             userName: userData.userName,
             avatar: userData.avatar,    
             message: replyMessage,
@@ -294,13 +351,19 @@ const ProductDetails = () => {
 
         try {
             await addReplyToReview(id, reviewIndex, {
+                userId: userData.userId,
                 userName: userData.userName,
                 message: replyMessage,
                 avatar: userData.avatar,
             });
     
             const updatedProduct = await fetchProduct(id);
-            setProduct(updatedProduct);
+            if (Array.isArray(updatedProduct.reviews) && updatedProduct.reviews.length > 0) {
+                const avgRating = updatedProduct.reviews.reduce((sum, review) => sum + review.rating, 0) / updatedProduct.reviews.length;
+                setProduct({ ...updatedProduct, avgRating: avgRating.toFixed(1) });
+            } else {
+                setProduct({ ...updatedProduct, avgRating: "0.0" });
+            }
             toast.success("Reply sent successfully!");
         } catch (error) {
             console.error("Error adding reply:", error);
@@ -385,7 +448,7 @@ const ProductDetails = () => {
                                                     className={`ri-star-${
                                                         star <=
                                                         Math.floor(
-                                                            avgRating || 0
+                                                            parseFloat(avgRating) || 0
                                                         )
                                                             ? "fill"
                                                             : "line"
@@ -464,6 +527,9 @@ const ProductDetails = () => {
                                         <ul>
                                             {Array.isArray(reviews) &&
                                                 reviews.map((item, index) => {
+                                                    const isReviewOwner = item.userId === userData?.userId;
+                                                    const isProductSeller = currentUserSellerId && sellerId === currentUserSellerId;
+                                                    const canDelete = isReviewOwner || isProductSeller;
                                                     return (
                                                         <li
                                                             key={index}
@@ -618,21 +684,15 @@ const ProductDetails = () => {
                                                                 </div>
                                                             )}
 
-                                                            {/* Delete icon for admin only */}
-                                                            {!adminLoading &&
-                                                                isAdmin && (
-                                                                    <span
-                                                                        className="delete-review-btn"
-                                                                        onClick={() =>
-                                                                            deleteReviewHandler(
-                                                                                item
-                                                                            )
-                                                                        }
-                                                                        title="Delete review"
-                                                                    >
-                                                                        <i className="ri-delete-bin-line"></i>
-                                                                    </span>
-                                                                )}
+                                                            {canDelete && (
+                                                                <span
+                                                                    className="delete-review-btn"
+                                                                    onClick={() => deleteReviewHandler(item, index)}
+                                                                    title="Delete review"
+                                                                >
+                                                                    <i className="ri-delete-bin-line"></i>
+                                                                </span>
+                                                            )}
                                                         </li>
                                                     );
                                                 })}

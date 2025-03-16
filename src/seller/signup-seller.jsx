@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     Container,
     Row,
@@ -15,6 +15,7 @@ import "../seller/styles/signupseller.css";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { registerSeller } from "../api";
+import { auth } from "../firebase.config";
 
 const SignupSeller = () => {
     const navigate = useNavigate();
@@ -32,7 +33,19 @@ const SignupSeller = () => {
         address: "",
         city: "",
         storeEmail: "",
+        userId: "", 
     });
+
+    useEffect(() => {
+        const user = auth.currentUser;
+        if (user) {
+            setFormData((prev) => ({
+                ...prev,
+                userId: user.uid, 
+                email: user.email || "", 
+            }));
+        }
+    }, []);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });

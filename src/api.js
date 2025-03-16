@@ -556,6 +556,24 @@ export const getDashboardStats = async (sellerId) => {
     }
 };
 
+export const getSellerIdByUserId = async (userId) => {
+    try {
+        const response = await fetch(`${BASE_URL}/sellers/by-user/${userId}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch seller ID");
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching seller ID by user ID:", error);
+        throw error;
+    }
+};
+
 /* Review for Product Details */
 export const addReview = async (productId, reviewData) => {
     try {
@@ -581,7 +599,7 @@ export const addReview = async (productId, reviewData) => {
     }
 };
 
-export const deleteReview = async (productId, review) => {
+export const deleteReview = async (productId, { review, userId, userSellerId }) => {
     try {
         const response = await fetch(
             `${BASE_URL}/products/${productId}/reviews`,
@@ -590,7 +608,7 @@ export const deleteReview = async (productId, review) => {
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ review }),
+                body: JSON.stringify({ review, userId, userSellerId }),
                 credentials: "include",
             }
         );

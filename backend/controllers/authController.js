@@ -165,42 +165,35 @@ exports.logoutUser = async (req, res) => {
 
 //Seller
 exports.registerSeller = async (req, res) => {
-    const {
-        fullName,
-        phoneNumber,
-        email,
-        password,
-        storeName,
-        storeDescription,
-        businessType,
-        address,
-        city,
-        storeEmail,
-    } = req.body;
-
     try {
-        const pendingQuery = db
-            .collection("pendingOrders")
-            .where("email", "==", email);
-        const sellersQuery = db
-            .collection("sellers")
-            .where("email", "==", email);
-        const [pendingSnapshot, sellersSnapshot] = await Promise.all([
-            pendingQuery.get(),
-            sellersQuery.get(),
-        ]);
+        const {
+            fullName,
+            phoneNumber,
+            email,
+            password,
+            confirmPassword,
+            storeName,
+            storeDescription,
+            businessType,
+            address,
+            city,
+            storeEmail,
+            userId,
+        } = req.body;
 
-        if (!pendingSnapshot.empty || !sellersSnapshot.empty) {
-            return res.status(400).json({
-                message: "Email already exists or is pending approval",
-            });
+        if (password !== confirmPassword) {
+            return res.status(400).json({ message: "Passwords do not match" });
         }
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+        // Kiểm tra nếu email đã tồn tại trong pendingOrders
+        const pendingSnapshot = await db.collection("pendingOrders")
+            .where("email", "==", email)
+            .get();
+        if (!pendingSnapshot.empty) {
+            return res.status(400).json({ message: "Email already registered" });
+        }
 
-        const pendingOrderRef = db.collection("pendingOrders").doc();
-        await pendingOrderRef.set({
+        const pendingOrderData = {
             fullName,
             phoneNumber,
             email,
@@ -210,22 +203,13 @@ exports.registerSeller = async (req, res) => {
             address,
             city,
             storeEmail,
-            hashedPassword,
+            userId, 
             status: "pending",
             createdAt: new Date(),
-            notification: false,
-        });
+        };
 
-        await db.collection("adminNotifications").add({
-            type: "newSellerRequest",
-            sellerId: pendingOrderRef.id,
-            createdAt: new Date(),
-            read: false,
-        });
-
-        res.status(201).json({
-            message: "Seller registration submitted, awaiting approval",
-        });
+        await db.collection("pendingOrders").add(pendingOrderData);
+        res.status(200).json({ message: "Seller registration submitted successfully" });
     } catch (error) {
         res.status(500).json({ message: "Error registering seller", error });
     }

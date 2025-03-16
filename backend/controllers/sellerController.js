@@ -208,3 +208,23 @@ exports.getCurrentSeller = async (req, res) => {
         });
     }
 };
+
+exports.getSellerIdByUserId = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const sellerSnapshot = await db.collection("sellers")
+            .where("userId", "==", userId)
+            .limit(1)
+            .get();
+
+        if (sellerSnapshot.empty) {
+            return res.status(200).json({ sellerId: null }); // Trả về null nếu không tìm thấy
+        }
+
+        const sellerData = sellerSnapshot.docs[0].data();
+        res.status(200).json({ sellerId: sellerData.sellerId || sellerSnapshot.docs[0].id }); // Trả về sellerId hoặc Document ID
+    } catch (error) {
+        console.error("Error fetching seller by user:", error);
+        res.status(500).json({ message: "Error fetching seller info", error });
+    }
+};

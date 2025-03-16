@@ -147,9 +147,18 @@ exports.approvePendingOrder = async (req, res) => {
         }
 
         const orderData = orderDoc.data();
-        const sellerId = db.collection("sellers").doc().id;
+        const userSnapshot = await db.collection("users").where("email", "==", orderData.email).get();
+        if (userSnapshot.empty) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const userDoc = userSnapshot.docs[0];
+        const userId = userDoc.id;
+        const sellerId = db.collection("sellers").doc().id; 
 
         await db.collection("sellers").doc(sellerId).set({
+            userId: userId, 
+            sellerId: sellerId,
             fullName: orderData.fullName,
             phoneNumber: orderData.phoneNumber,
             email: orderData.email,
@@ -165,14 +174,10 @@ exports.approvePendingOrder = async (req, res) => {
             approvedAt: new Date(),
         });
 
-        const userSnapshot = await db.collection("users").where("email", "==", orderData.email).get();
-        if (!userSnapshot.empty) {
-            const userDoc = userSnapshot.docs[0];
-            await db.collection("users").doc(userDoc.id).update({
-                status: "seller",
-                sellerId,
-            });
-        }
+        await db.collection("users").doc(userId).update({
+            status: "seller",
+            sellerId: sellerId,
+        });
 
         await db.collection("pendingOrders").doc(id).delete();
         res.status(200).json({ message: "Seller account approved and created successfully" });

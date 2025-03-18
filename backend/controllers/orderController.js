@@ -29,6 +29,7 @@ exports.createOrder = async (req, res) => {
             isDelivered = false,
             sellerIds,
             createdAt,
+            paymentMethod = "paypal",
         } = req.body;
 
         if (!userId || !items.length) {
@@ -54,6 +55,7 @@ exports.createOrder = async (req, res) => {
                 ? new Date(createdAt)
                 : admin.firestore.Timestamp.now(),
             sellerIds,
+            paymentMethod,
         };
 
         const totalOrderRef = await db
@@ -77,6 +79,7 @@ exports.createOrder = async (req, res) => {
                     createdAt: createdAt
                         ? new Date(createdAt)
                         : admin.firestore.Timestamp.now(),
+                    paymentMethod,
                 };
             }
 

@@ -43,11 +43,15 @@ exports.getUserById = async (req, res) => {
 exports.updateUserById = async (req, res) => {
     try {
         const { id } = req.params;
-        const { displayName, photoURL } = req.body;
+        const { displayName, birthDate, phone, address } = req.body;
 
         const updateData = {};
         if (displayName) updateData.displayName = displayName;
-        if (photoURL) updateData.photoURL = photoURL;
+        if (birthDate) {
+            updateData.birthDate = admin.firestore.Timestamp.fromDate(new Date(birthDate));
+        }
+        if (phone) updateData.phone = phone;
+        if (address) updateData.address = address;
 
         if (Object.keys(updateData).length === 0) {
             return res.status(400).json({ error: "No valid fields to update" });
@@ -55,11 +59,8 @@ exports.updateUserById = async (req, res) => {
 
         await db.collection("users").doc(id).update(updateData);
 
-        if (displayName || photoURL) {
-            const updateAuthData = {};
-            if (displayName) updateAuthData.displayName = displayName;
-            if (photoURL) updateAuthData.photoURL = photoURL;
-
+        if (displayName) {
+            const updateAuthData = { displayName };
             await admin.auth().updateUser(id, updateAuthData);
         }
 

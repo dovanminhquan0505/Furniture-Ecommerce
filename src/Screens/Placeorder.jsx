@@ -3,7 +3,7 @@ import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col, Spinner } from "reactstrap";
 import { motion } from "framer-motion";
 import CommonSection from "../components/UI/CommonSection";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import "../styles/checkout.css";
 import "../styles/placeorder.css";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
@@ -18,13 +18,15 @@ const clientId = process.env.REACT_APP_PAYPAL_CLIENT_ID;
 
 const PlaceOrder = () => {
     const { orderId } = useParams();
+    const { state } = useLocation();
     const [loading, setLoading] = useState(false);
     const [isFetchingOrder, setIsFetchingOrder] = useState(true);
     const navigate = useNavigate();
     const { isSeller, isLoading: sellerLoading } = useSeller();
     const [orderDetails, setOrderDetails] = useState(null);
-    const [showPaypal, setShowPaypal] = useState(false);
+    const [showPayment, setShowPayment] = useState(false);
     const dispatch = useDispatch();
+    const paymentMethod = state?.paymentMethod || "paypal";
 
     useEffect(() => {
         if (!orderId) {
@@ -80,7 +82,7 @@ const PlaceOrder = () => {
     const cartItems = totalOrder.items || [];
 
     const handleConfirmOrder = () => {
-        setShowPaypal(true);
+        setShowPayment(true);
     };
 
     // Handle Payment
@@ -118,7 +120,41 @@ const PlaceOrder = () => {
         }
     };
 
-    // Handle Deliver Order, only admin
+    // Handle MoMo Payment (Giả lập)
+    const handleMoMoPayment = async () => {
+        try {
+            setLoading(true);
+            const paidAt = new Date().toISOString();
+
+            // Giả lập thanh toán thành công (thay bằng API MoMo thực tế sau)
+            await updateOrder(orderId, {
+                isPaid: true,
+                paidAt,
+                paymentResult: {
+                    method: "momo",
+                    status: "completed",
+                },
+            });
+
+            setOrderDetails((prevDetails) => ({
+                ...prevDetails,
+                totalOrder: {
+                    ...prevDetails.totalOrder,
+                    isPaid: true,
+                    paidAt: new Date(paidAt),
+                },
+            }));
+
+            dispatch(cartActions.clearCart());
+            toast.success("MoMo payment successful!");
+        } catch (error) {
+            toast.error("Error processing MoMo payment: " + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Handle Deliver Order, only seller
     const handleDeliveryConfirmation = async () => {
         if (!isSeller) {
             toast.error("Only sellers can confirm delivery");
@@ -155,11 +191,10 @@ const PlaceOrder = () => {
         return date instanceof Date ? date.toLocaleString() : "N/A";
     };
 
-    const shouldShowPaypal = totalOrder && !totalOrder.isPaid && showPaypal;
-    const shouldShowConfirmOrderBtn =
-        !isSeller && totalOrder && !totalOrder.isPaid && !showPaypal;
-    const shouldShowConfirmDeliverBtn =
-        isSeller && totalOrder && totalOrder.isPaid && !totalOrder.isDelivered;
+    const shouldShowConfirmOrderBtn = !isSeller && totalOrder && !totalOrder.isPaid && !showPayment;
+    const shouldShowPaypal = totalOrder && !totalOrder.isPaid && showPayment && paymentMethod === "paypal";
+    const shouldShowMomo = totalOrder && !totalOrder.isPaid && showPayment && paymentMethod === "momo";
+    const shouldShowConfirmDeliverBtn = isSeller && totalOrder && totalOrder.isPaid && !totalOrder.isDelivered;
 
     return (
         <Helmet title=" Place Order">
@@ -229,7 +264,7 @@ const PlaceOrder = () => {
 
                             <div className="border rounded p-3 mb-4">
                                 <h6 className="mb-3 fw-bold">Payment</h6>
-                                <p className="mb-0">Payment Method: Paypal</p>
+                                <p className="mb-0">Payment Method: {totalOrder.paymentMethod === "momo" ? "Momo" : "PayPal"}</p>
                                 <p
                                     className={
                                         totalOrder.isPaid
@@ -338,6 +373,17 @@ const PlaceOrder = () => {
                                             }}
                                         />
                                     </PayPalScriptProvider>
+                                )}
+
+                                {/* Display MoMo payment button if payment method is MoMo */}
+                                {shouldShowMomo && (
+                                    <motion.button
+                                        whileTap={{ scale: 1.1 }}
+                                        className="buy__btn auth__btn w-100"
+                                        onClick={handleMoMoPayment}
+                                    >
+                                        Confirm MoMo Payment
+                                    </motion.button>
                                 )}
 
                                 {shouldShowConfirmDeliverBtn && (

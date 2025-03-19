@@ -1000,3 +1000,23 @@ export const getDashboardDataAdmin = async () => {
         throw error;
     }
 };
+
+//Stripe payment method
+export const createStripePaymentIntent = async (orderId, amount) => {
+    try {
+        const response = await fetch(`${BASE_URL}/orders/${orderId}/stripe-payment-intent`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amount }),
+            credentials: "include",
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to create Stripe payment intent");
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error creating Stripe payment intent:", error);
+        throw error;
+    }
+};

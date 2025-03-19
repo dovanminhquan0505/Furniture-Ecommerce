@@ -11,10 +11,94 @@ import { toast } from "react-toastify";
 import { cartActions } from "../redux/slices/cartSlice";
 import { useDispatch } from "react-redux";
 import useSeller from "../custom-hooks/useSeller";
-import { getOrderById, updateOrder } from "../api";
+import { createStripePaymentIntent, getOrderById, updateOrder } from "../api";
+import {
+    CardElement,
+    Elements,
+    useElements,
+    useStripe,
+} from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 
+// eslint-disable-next-line no-undef
 // Get Paypal Client from your environment
 const clientId = process.env.REACT_APP_PAYPAL_CLIENT_ID;
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
+
+const CheckoutForm = ({ orderId, totalPrice, onSuccess, billingInfo }) => {
+    const stripe = useStripe();
+    const elements = useElements();
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!stripe || !elements) return;
+
+        setLoading(true);
+
+        try {
+            const { clientSecret } = await createStripePaymentIntent(
+                orderId,
+                totalPrice * 100
+            );
+
+            const result = await stripe.confirmCardPayment(clientSecret, {
+                payment_method: {
+                    card: elements.getElement(CardElement),
+                    billing_details: {
+                        email: billingInfo?.email || "unknown@example.com",
+                        name: billingInfo?.name,
+                        address: {
+                            city: billingInfo?.city,
+                            country: billingInfo?.country,
+                            line1: billingInfo?.address,
+                            postal_code: billingInfo?.postalCode,
+                        },
+                    },
+                },
+            });
+
+            if (result.error) {
+                toast.error(result.error.message);
+            } else if (result.paymentIntent.status === "succeeded") {
+                onSuccess(result.paymentIntent);
+            }
+        } catch (error) {
+            toast.error("Error processing Stripe payment: " + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit}>
+            <CardElement
+                options={{
+                    style: {
+                        base: {
+                            fontSize: "16px",
+                            color: "#424770",
+                            "::placeholder": {
+                                color: "#aab7c4",
+                            },
+                        },
+                        invalid: {
+                            color: "#9e2146",
+                        },
+                    },
+                    hidePostalCode: false,
+                }}
+            />
+            <motion.button
+                whileTap={{ scale: 1.1 }}
+                className="buy__btn auth__btn w-100 mt-3"
+                disabled={!stripe || loading}
+            >
+                {loading ? "Processing..." : "Pay with Stripe"}
+            </motion.button>
+        </form>
+    );
+};
 
 const PlaceOrder = () => {
     const { orderId } = useParams();
@@ -38,8 +122,19 @@ const PlaceOrder = () => {
             try {
                 setIsFetchingOrder(true);
                 const response = await getOrderById(orderId);
+
+                let paidAt = response.totalOrder.paidAt;
+                if (typeof paidAt === "string") {
+                    paidAt = new Date(paidAt.replace(" at ", " ").replace(" UTC+7", "+0700"));
+                } else if (paidAt && paidAt.toDate) {
+                    paidAt = paidAt.toDate();
+                }
+
                 setOrderDetails({
-                    totalOrder: response.totalOrder,
+                    totalOrder: {
+                        ...response.totalOrder,
+                        paidAt,
+                    },
                     subOrders: response.subOrders,
                 });
             } catch (error) {
@@ -86,20 +181,50 @@ const PlaceOrder = () => {
     };
 
     // Handle Payment
-    const handlePaymentSuccess = async (details) => {
+    const handlePaymentSuccess = async (details, paymentMethod) => {
         try {
             setLoading(true);
             const paidAt = new Date().toISOString();
+            let paymentResult;
+
+            // Xử lý paymentResult dựa trên phương thức thanh toán
+            switch (paymentMethod) {
+                case "paypal":
+                    paymentResult = {
+                        id: details.id,
+                        status: details.status,
+                        update_time: details.update_time || paidAt,
+                        email_address: details.payer?.email_address || "N/A",
+                    };
+                    break;
+                case "stripe":
+                    paymentResult = {
+                        id: details.id,
+                        status: details.status,
+                        update_time: details.created || paidAt,
+                        email_address: details.billing_details?.email || "N/A",
+                    };
+                    break;
+                case "momo":
+                    paymentResult = {
+                        method: "momo",
+                        status: "completed",
+                        update_time: paidAt,
+                    };
+                    break;
+                default:
+                    paymentResult = {
+                        id: details.id || "unknown",
+                        status: details.status || "unknown",
+                        update_time: paidAt,
+                        email_address: "N/A",
+                    };
+            }
 
             await updateOrder(orderId, {
                 isPaid: true,
                 paidAt,
-                paymentResult: {
-                    id: details.id,
-                    status: details.status,
-                    update_time: details.update_time,
-                    email_address: details.payer.email_address,
-                },
+                paymentResult,
             });
 
             setOrderDetails((prevDetails) => ({
@@ -188,13 +313,42 @@ const PlaceOrder = () => {
 
     // Handle display Date
     const formatDate = (date) => {
-        return date instanceof Date ? date.toLocaleString() : "N/A";
+        if (!date) return "N/A";
+    
+        let parsedDate;
+        if (typeof date === "string") {
+            parsedDate = new Date(date.replace(" at ", " ").replace(" UTC+7", "+0700"));
+        } else if (date instanceof Date) {
+            parsedDate = date;
+        } else if (date.toDate) { 
+            parsedDate = date.toDate();
+        } else {
+            return "N/A";
+        }
+    
+        if (isNaN(parsedDate.getTime())) return "N/A";
+        return parsedDate.toLocaleString();
     };
 
-    const shouldShowConfirmOrderBtn = !isSeller && totalOrder && !totalOrder.isPaid && !showPayment;
-    const shouldShowPaypal = totalOrder && !totalOrder.isPaid && showPayment && paymentMethod === "paypal";
-    const shouldShowMomo = totalOrder && !totalOrder.isPaid && showPayment && paymentMethod === "momo";
-    const shouldShowConfirmDeliverBtn = isSeller && totalOrder && totalOrder.isPaid && !totalOrder.isDelivered;
+    const shouldShowConfirmOrderBtn =
+        !isSeller && totalOrder && !totalOrder.isPaid && !showPayment;
+    const shouldShowPaypal =
+        totalOrder &&
+        !totalOrder.isPaid &&
+        showPayment &&
+        paymentMethod === "paypal";
+    const shouldShowMomo =
+        totalOrder &&
+        !totalOrder.isPaid &&
+        showPayment &&
+        paymentMethod === "momo";
+    const shouldShowStripe =
+        totalOrder &&
+        !totalOrder.isPaid &&
+        showPayment &&
+        paymentMethod === "stripe";
+    const shouldShowConfirmDeliverBtn =
+        isSeller && totalOrder && totalOrder.isPaid && !totalOrder.isDelivered;
 
     return (
         <Helmet title=" Place Order">
@@ -238,7 +392,7 @@ const PlaceOrder = () => {
                                         {totalOrder.billingInfo?.postalCode ||
                                             "No postal code available"}
                                     </p>
-                                    <p> 
+                                    <p>
                                         <strong>Country: </strong>
                                         {totalOrder.billingInfo?.country ||
                                             "No country available country"}
@@ -264,7 +418,14 @@ const PlaceOrder = () => {
 
                             <div className="border rounded p-3 mb-4">
                                 <h6 className="mb-3 fw-bold">Payment</h6>
-                                <p className="mb-0">Payment Method: {totalOrder.paymentMethod === "momo" ? "Momo" : "PayPal"}</p>
+                                <p className="mb-0">
+                                    Payment Method:{" "}
+                                    {totalOrder.paymentMethod === "momo"
+                                        ? "MoMo"
+                                        : totalOrder.paymentMethod === "stripe"
+                                        ? "Stripe"
+                                        : "PayPal"}
+                                </p>
                                 <p
                                     className={
                                         totalOrder.isPaid
@@ -272,7 +433,7 @@ const PlaceOrder = () => {
                                             : "text-danger mt-2"
                                     }
                                 >
-                                    {totalOrder.isPaid
+                                    {totalOrder.isPaid && totalOrder.paidAt
                                         ? `Paid at ${formatDate(
                                               totalOrder.paidAt
                                           )}`
@@ -367,7 +528,8 @@ const PlaceOrder = () => {
                                                     .capture()
                                                     .then((details) => {
                                                         handlePaymentSuccess(
-                                                            details
+                                                            details,
+                                                            "paypal"
                                                         );
                                                     });
                                             }}
@@ -380,10 +542,34 @@ const PlaceOrder = () => {
                                     <motion.button
                                         whileTap={{ scale: 1.1 }}
                                         className="buy__btn auth__btn w-100"
-                                        onClick={handleMoMoPayment}
+                                        onClick={() =>
+                                            handlePaymentSuccess(
+                                                {
+                                                    id: "momo_" + Date.now(),
+                                                    status: "completed",
+                                                },
+                                                "momo"
+                                            )
+                                        }
                                     >
                                         Confirm MoMo Payment
                                     </motion.button>
+                                )}
+
+                                {shouldShowStripe && (
+                                    <Elements stripe={stripePromise}>
+                                        <CheckoutForm
+                                            orderId={orderId}
+                                            totalPrice={totalOrder.totalPrice}
+                                            onSuccess={(paymentIntent) =>
+                                                handlePaymentSuccess(
+                                                    paymentIntent,
+                                                    "stripe"
+                                                )
+                                            }
+                                            billingInfo={totalOrder.billingInfo}
+                                        />
+                                    </Elements>
                                 )}
 
                                 {shouldShowConfirmDeliverBtn && (

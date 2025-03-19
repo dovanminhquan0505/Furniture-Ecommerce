@@ -43,7 +43,6 @@ import {
     deleteUserOrder,
     getUserOrders,
     getUserProfileById,
-    logoutUser,
     updateUserById,
     updateUserPassword,
     updateUserPhoto,
@@ -202,10 +201,7 @@ const ProfileUser = () => {
             // Xác thực lại người dùng
             await reauthenticateWithCredential(user, credential);
 
-            await updateUserPassword(
-                userId,
-                newPassword
-            );
+            await updateUserPassword(userId, newPassword);
             toast.success("Password updated successfully!");
             e.target.reset();
         } catch (error) {
@@ -263,16 +259,16 @@ const ProfileUser = () => {
             try {
                 const uploadResponse = await uploadFile(file);
                 const photoURL = uploadResponse.fileURL;
-          
+
                 await updateUserPhoto(userId, photoURL);
                 dispatch(userActions.updateUserPhoto(photoURL));
-          
+
                 toast.success("Avatar uploaded successfully!");
-              } catch (error) {
+            } catch (error) {
                 toast.error("Failed to upload avatar: " + error.message);
-              } finally {
+            } finally {
                 setIsAvatarUpLoading(false);
-              }
+            }
         }
     };
 
@@ -289,7 +285,7 @@ const ProfileUser = () => {
         if (!userInfo) {
             return <div>Loading personal information...</div>;
         }
-    
+
         return (
             <div className="personal-info">
                 <h3>Personal Information</h3>
@@ -328,7 +324,8 @@ const ProfileUser = () => {
                 <div className="info-item">
                     <Mail size={18} />
                     <span>
-                        <strong>Email:</strong> {userInfo.email || "Not Provided"}
+                        <strong>Email:</strong>{" "}
+                        {userInfo.email || "Not Provided"}
                     </span>
                 </div>
                 <div className="info-item">
@@ -385,6 +382,78 @@ const ProfileUser = () => {
         );
     };
 
+    // Hàm helper để parse chuỗi ngày giờ thành đối tượng Date
+    const parseDate = (dateString) => {
+        if (!dateString || typeof dateString !== "string") {
+            console.log("dateString is invalid or not a string:", dateString);
+            return null;
+        }
+
+        if (dateString === "No") {
+            console.log("dateString is 'No':", dateString);
+            return null;
+        }
+
+        const isoMatch = dateString.match(
+            /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+        );
+        if (isoMatch) {
+            console.log("Parsing ISO string:", dateString);
+            const parsedDate = new Date(dateString);
+            if (isNaN(parsedDate)) {
+                console.log("Failed to parse ISO string:", dateString);
+                return null;
+            }
+            // Điều chỉnh múi giờ sang UTC+7 (Việt Nam)
+            const offsetMinutes = 7 * 60; // UTC+7
+            parsedDate.setMinutes(
+                parsedDate.getMinutes() +
+                    parsedDate.getTimezoneOffset() +
+                    offsetMinutes
+            );
+            return parsedDate;
+        }
+        const dateOnlyMatch = dateString.match(/^\d{4}-\d{2}-\d{2}$/);
+        if (dateOnlyMatch) {
+            const dateTimeString = `${dateString}T00:00:00`;
+            console.log("Parsing date-only string:", dateTimeString);
+            const parsedDate = new Date(dateTimeString);
+            if (isNaN(parsedDate)) {
+                console.log(
+                    "Failed to parse date-only string:",
+                    dateTimeString
+                );
+                return null;
+            }
+            return parsedDate;
+        }
+
+        // Kiểm tra định dạng đầy đủ: "March 19, 2025 at 1:25:36PM UTC+7"
+        const [datePart, timePartWithTZ] = dateString.split(" at ");
+        if (!datePart || !timePartWithTZ) {
+            console.log("Failed to split dateString:", dateString);
+            return null;
+        }
+
+        const timeMatch = timePartWithTZ.match(/(\d{1,2}:\d{2}:\d{2})(AM|PM)/);
+        if (!timeMatch) {
+            console.log("Failed to match time in dateString:", dateString);
+            return null;
+        }
+
+        const time = timeMatch[1];
+        const period = timeMatch[2];
+        const dateTimeString = `${datePart} ${time} ${period}`;
+
+        const parsedDate = new Date(dateTimeString);
+        if (isNaN(parsedDate)) {
+            console.log("Failed to parse dateTimeString:", dateTimeString);
+            return null;
+        }
+
+        return parsedDate;
+    };
+
     // Render Order Information
     const renderOrderInformation = () => (
         <div className="order-info">
@@ -402,37 +471,131 @@ const ProfileUser = () => {
                 </thead>
                 <tbody>
                     {orderInfo.length > 0 ? (
-                        orderInfo.map((order) => (
-                            <tr key={order.orderId}>
-                                <td>{order.orderId}</td>
-                                <td>{order.date}</td>
-                                <td>${order.totalPrice}</td>
-                                <td>{order.paidAt}</td>
-                                <td>{order.deliveredAt}</td>
-                                <td>
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        className="action-button"
-                                        onClick={() =>
-                                            handleViewOrder(order.orderId)
-                                        }
-                                    >
-                                        View
-                                    </Button>
-                                    <Button
-                                        variant="danger"
-                                        size="sm"
-                                        className="action-button"
-                                        onClick={() =>
-                                            handleDeleteOrder(order.orderId)
-                                        }
-                                    >
-                                        Delete
-                                    </Button>
-                                </td>
-                            </tr>
-                        ))
+                        orderInfo.map((order) => {
+                            // Parse Paid At
+                            let paidAtDate;
+                            if (order.paidAt) {
+                                if (order.paidAt.toDate) {
+                                    paidAtDate = order.paidAt.toDate();
+                                } else {
+                                    paidAtDate = parseDate(order.paidAt);
+                                }
+                            }
+
+                            const paidAtFormatted = paidAtDate
+                                ? paidAtDate.toLocaleString("en-US", {
+                                      year: "numeric",
+                                      month: "2-digit",
+                                      day: "2-digit",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      hour12: false,
+                                  })
+                                : "Not Paid";
+                            const [paidAtDatePart, paidAtTimePart] =
+                                paidAtFormatted !== "Not Paid"
+                                    ? paidAtFormatted.split(", ")
+                                    : ["", ""];
+
+                            // Parse Delivered At
+                            let deliveredAtDate;
+                            if (order.deliveredAt) {
+                                if (order.deliveredAt.toDate) {
+                                    deliveredAtDate =
+                                        order.deliveredAt.toDate();
+                                } else {
+                                    deliveredAtDate = parseDate(
+                                        order.deliveredAt
+                                    );
+                                }
+                            }
+
+                            const deliveredAtFormatted = deliveredAtDate
+                                ? deliveredAtDate.toLocaleString("en-US", {
+                                      year: "numeric",
+                                      month: "2-digit",
+                                      day: "2-digit",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      hour12: false,
+                                  })
+                                : "Not Delivered";
+                            const [deliveredAtDatePart, deliveredAtTimePart] =
+                                deliveredAtFormatted !== "Not Delivered"
+                                    ? deliveredAtFormatted.split(", ")
+                                    : ["", ""];
+
+                            return (
+                                <tr key={order.orderId}>
+                                    <td>{order.orderId}</td>
+                                    <td>{order.date}</td>
+                                    <td>${order.totalPrice}</td>
+                                    <td>
+                                        {paidAtFormatted === "Not Paid" ? (
+                                            "Not Paid"
+                                        ) : (
+                                            <div style={{ lineHeight: "1.2" }}>
+                                                <div>{paidAtDatePart}</div>
+                                                <div>
+                                                    {paidAtTimePart ===
+                                                        "00:00" &&
+                                                    paidAtDate &&
+                                                    paidAtDate.getHours() ===
+                                                        0 &&
+                                                    paidAtDate.getMinutes() ===
+                                                        0
+                                                        ? "N/A"
+                                                        : paidAtTimePart}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td>
+                                        {deliveredAtFormatted ===
+                                        "Not Delivered" ? (
+                                            "Not Delivered"
+                                        ) : (
+                                            <div style={{ lineHeight: "1.2" }}>
+                                                <div>{deliveredAtDatePart}</div>
+                                                <div>
+                                                    {deliveredAtTimePart ===
+                                                        "00:00" &&
+                                                    deliveredAtDate &&
+                                                    deliveredAtDate.getHours() ===
+                                                        0 &&
+                                                    deliveredAtDate.getMinutes() ===
+                                                        0
+                                                        ? "N/A"
+                                                        : deliveredAtTimePart}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td>
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            className="action-button"
+                                            onClick={() =>
+                                                handleViewOrder(order.orderId)
+                                            }
+                                        >
+                                            View
+                                        </Button>
+                                        <Button
+                                            variant="danger"
+                                            size="sm"
+                                            className="action-button"
+                                            onClick={() =>
+                                                handleDeleteOrder(order.orderId)
+                                            }
+                                        >
+                                            Delete
+                                        </Button>
+                                    </td>
+                                </tr>
+                            );
+                        })
                     ) : (
                         <tr>
                             <td colSpan="6" className="text-center">

@@ -101,7 +101,7 @@ const Checkout = () => {
                 postalCode: billingInfo.postalCode,
                 country: billingInfo.country,
             },
-            items: orderData.cartItems.map(item => ({
+            items: orderData.cartItems.map((item) => ({
                 id: item.id,
                 productName: item.productName,
                 price: item.price,
@@ -118,7 +118,7 @@ const Checkout = () => {
             totalPrice: orderData.totalPrice,
             isPaid: false,
             isDelivered: false,
-            createdAt: new Date().toISOString(), 
+            createdAt: new Date().toISOString(),
             sellerIds: [
                 ...new Set(
                     orderData.cartItems.map(
@@ -131,7 +131,7 @@ const Checkout = () => {
 
         try {
             const response = await createOrder(totalOrdersData);
-            const orderId = response.id; 
+            const orderId = response.id;
 
             navigate(`/placeorder/${orderId}`, {
                 state: { billingInfo, orderId, paymentMethod },
@@ -241,10 +241,16 @@ const Checkout = () => {
                                                 name="paymentMethod"
                                                 value="paypal"
                                                 id="paypal"
-                                                checked={paymentMethod === "paypal"}
-                                                onChange={handlePaymentMethodChange}
+                                                checked={
+                                                    paymentMethod === "paypal"
+                                                }
+                                                onChange={
+                                                    handlePaymentMethodChange
+                                                }
                                             />
-                                            <label htmlFor="paypal">PayPal</label>
+                                            <label htmlFor="paypal">
+                                                PayPal
+                                            </label>
                                         </div>
                                         <div
                                             className={`payment__option ${
@@ -258,10 +264,37 @@ const Checkout = () => {
                                                 name="paymentMethod"
                                                 value="momo"
                                                 id="momo"
-                                                checked={paymentMethod === "momo"}
-                                                onChange={handlePaymentMethodChange}
+                                                checked={
+                                                    paymentMethod === "momo"
+                                                }
+                                                onChange={
+                                                    handlePaymentMethodChange
+                                                }
                                             />
                                             <label htmlFor="momo">MoMo</label>
+                                        </div>
+                                        <div
+                                            className={`payment__option ${
+                                                paymentMethod === "stripe"
+                                                    ? "payment__option--selected"
+                                                    : ""
+                                            }`}
+                                        >
+                                            <input
+                                                type="radio"
+                                                name="paymentMethod"
+                                                value="stripe"
+                                                id="stripe"
+                                                checked={
+                                                    paymentMethod === "stripe"
+                                                }
+                                                onChange={
+                                                    handlePaymentMethodChange
+                                                }
+                                            />
+                                            <label htmlFor="stripe">
+                                                Stripe
+                                            </label>
                                         </div>
                                     </div>
                                 </div>

@@ -87,6 +87,8 @@ const Login = () => {
         if (reduxUser) {
             if (reduxUser.role === "admin") {
                 navigate("/admin/dashboard");
+            } if (reduxUser.role === "seller") {
+                navigate("/seller/dashboard");
             } else {
                 navigate("/checkout");
             }

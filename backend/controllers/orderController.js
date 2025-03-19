@@ -1,5 +1,6 @@
 const admin = require("firebase-admin");
 const db = admin.firestore();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 exports.getOrders = async (req, res) => {
     try {
@@ -141,6 +142,8 @@ exports.getOrderById = async (req, res) => {
             items: [],
             sellerIds: [],
             ...totalOrderSnap.data(),
+            paidAt: totalOrderSnap.data().paidAt ? totalOrderSnap.data().paidAt.toDate().toISOString() : null,
+            deliveredAt: totalOrderSnap.data().deliveredAt ? totalOrderSnap.data().deliveredAt.toDate().toISOString() : null,
         };
 
         const subOrdersRef = db.collection("subOrders");
@@ -174,35 +177,62 @@ exports.updateOrder = async (req, res) => {
             return res.status(404).json({ message: "Order not found" });
         }
 
+        const totalOrderData = totalOrderSnap.data();
         const updateData = {};
         if (isPaid !== undefined) updateData.isPaid = isPaid;
-        if (paidAt) updateData.paidAt = new Date(paidAt);
+        if (paidAt) updateData.paidAt = admin.firestore.Timestamp.fromDate(new Date(paidAt));
         if (isDelivered !== undefined) updateData.isDelivered = isDelivered;
-        if (deliveredAt) updateData.deliveredAt = new Date(deliveredAt);
-        if (paymentResult) updateData.paymentResult = paymentResult;
+        if (deliveredAt) updateData.deliveredAt = admin.firestore.Timestamp.fromDate(new Date(deliveredAt));
+        if (paymentResult) {
+            updateData.paymentResult = {
+                ...paymentResult,
+                email: paymentResult.email || totalOrderData.billingInfo?.email || "N/A", 
+            };
+        }
 
         await totalOrderRef.update(updateData);
 
         if (isPaid !== undefined || isDelivered !== undefined) {
             const subOrdersRef = db.collection("subOrders");
-            const subOrdersSnap = await subOrdersRef
-                .where("totalOrderId", "==", orderId)
-                .get();
-
+            const subOrdersSnap = await subOrdersRef.where("totalOrderId", "==", orderId).get();
             const updatePromises = subOrdersSnap.docs.map((doc) => {
                 const subUpdateData = {};
                 if (isPaid !== undefined) subUpdateData.isPaid = isPaid;
-                if (paidAt) subUpdateData.paidAt = new Date(paidAt);
+                if (paidAt) subUpdateData.paidAt = admin.firestore.Timestamp.fromDate(new Date(paidAt));
                 if (isDelivered !== undefined) subUpdateData.isDelivered = isDelivered;
-                if (deliveredAt) subUpdateData.deliveredAt = new Date(deliveredAt);
+                if (deliveredAt) subUpdateData.deliveredAt = admin.firestore.Timestamp.fromDate(new Date(deliveredAt));
                 return doc.ref.update(subUpdateData);
             });
-
             await Promise.all(updatePromises);
         }
 
         res.status(200).json({ message: "Order updated successfully" });
     } catch (error) {
-        res.status(500).json({ message: "Error updating order", error });
+        res.status(500).json({ message: "Error updating order", error: error.message });
+    }
+};
+
+// Stripe function Payment method
+exports.createStripePaymentIntent = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { amount } = req.body;
+
+        const totalOrderRef = db.collection("totalOrders").doc(orderId);
+        const totalOrderSnap = await totalOrderRef.get();
+
+        if (!totalOrderSnap.exists) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount,
+            currency: "usd",
+            metadata: { orderId },
+        });
+
+        res.status(200).json({ clientSecret: paymentIntent.client_secret });
+    } catch (error) {
+        res.status(500).json({ message: "Error creating Stripe payment intent", error: error.message });
     }
 };

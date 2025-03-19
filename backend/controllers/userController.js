@@ -139,17 +139,17 @@ exports.getUserOrders = async (req, res) => {
             .collection("totalOrders")
             .where("userId", "==", id)
             .get();
-        const orders = snapshot.docs.map((doc) => ({
-            orderId: doc.id,
-            date: doc.data().createdAt.toDate().toISOString().split("T")[0],
-            totalPrice: doc.data().totalPrice,
-            paidAt: doc.data().isPaid
-                ? doc.data().paidAt.toDate().toISOString().split("T")[0]
-                : "No",
-            deliveredAt: doc.data().isDelivered
-                ? doc.data().deliveredAt.toDate().toISOString().split("T")[0]
-                : "No",
-        }));
+            const orders = snapshot.docs.map((doc) => ({
+                orderId: doc.id,
+                date: doc.data().createdAt.toDate().toISOString().split("T")[0], 
+                totalPrice: doc.data().totalPrice,
+                paidAt: doc.data().isPaid
+                    ? doc.data().paidAt.toDate().toISOString() 
+                    : "No",
+                deliveredAt: doc.data().isDelivered
+                    ? doc.data().deliveredAt.toDate().toISOString()
+                    : "No",
+            }));
         res.status(200).json(orders);
     } catch (error) {
         res.status(500).json({ error: error.message });

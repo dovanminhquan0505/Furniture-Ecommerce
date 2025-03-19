@@ -163,3 +163,18 @@ h6.fw-bold {
 .momo__button {
     margin-bottom: 20px;
 }
+
+/* Back Arrow Styles */
+.back__arrow {
+    margin-left: 5px;
+    font-size: 1.5rem; 
+    color: #333; 
+    cursor: pointer; 
+    margin-bottom: 15px;
+    display: inline-block; 
+    transition: color 0.3s ease; 
+}
+
+.back__arrow:hover {
+    color: #007bff; 
+}

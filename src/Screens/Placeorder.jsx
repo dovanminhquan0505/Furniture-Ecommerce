@@ -3,7 +3,7 @@ import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col, Spinner } from "reactstrap";
 import { motion } from "framer-motion";
 import CommonSection from "../components/UI/CommonSection";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import "../styles/checkout.css";
 import "../styles/placeorder.css";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
@@ -24,7 +24,8 @@ import { loadStripe } from "@stripe/stripe-js";
 // Get Paypal Client from your environment
 const clientId = process.env.REACT_APP_PAYPAL_CLIENT_ID;
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
-const paypalIcon = "https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_37x23.jpg";
+const paypalIcon =
+    "https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_37x23.jpg";
 const momoIcon = "https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png";
 const stripeIcon = "https://stripe.com/img/v3/home/social.png";
 
@@ -105,7 +106,6 @@ const CheckoutForm = ({ orderId, totalPrice, onSuccess, billingInfo }) => {
 
 const PlaceOrder = () => {
     const { orderId } = useParams();
-    const { state } = useLocation();
     const [loading, setLoading] = useState(false);
     const [isFetchingOrder, setIsFetchingOrder] = useState(true);
     const navigate = useNavigate();
@@ -385,6 +385,19 @@ const PlaceOrder = () => {
                     <Row>
                         {/* Billing information summary */}
                         <Col lg="8">
+                            {/* Back Arrow */}
+                            {!totalOrder.isPaid && (
+                                    <motion.i
+                                        className="fas fa-arrow-left back__arrow"
+                                        onClick={() =>
+                                            navigate("/checkout", {
+                                                state: { ...totalOrder },
+                                            })
+                                        }
+                                        whileHover={{ scale: 1.2 }}
+                                        whileTap={{ scale: 0.9 }}
+                                    />
+                                )}
                             <div className="border rounded p-3 mb-4">
                                 <h6 className="mb-3 fw-bold">Shipping</h6>
                                 <div className="billing__info">
@@ -513,12 +526,15 @@ const PlaceOrder = () => {
                                         <motion.button
                                             whileTap={{ scale: 1.1 }}
                                             className={`payment__option ${
-                                                selectedPaymentMethod === "paypal"
+                                                selectedPaymentMethod ===
+                                                "paypal"
                                                     ? "payment__option--selected"
                                                     : ""
                                             }`}
                                             onClick={() =>
-                                                handleSelectPaymentMethod("paypal")
+                                                handleSelectPaymentMethod(
+                                                    "paypal"
+                                                )
                                             }
                                         >
                                             <img
@@ -536,7 +552,9 @@ const PlaceOrder = () => {
                                                     : ""
                                             }`}
                                             onClick={() =>
-                                                handleSelectPaymentMethod("momo")
+                                                handleSelectPaymentMethod(
+                                                    "momo"
+                                                )
                                             }
                                         >
                                             <img
@@ -549,12 +567,15 @@ const PlaceOrder = () => {
                                         <motion.button
                                             whileTap={{ scale: 1.1 }}
                                             className={`payment__option ${
-                                                selectedPaymentMethod === "stripe"
+                                                selectedPaymentMethod ===
+                                                "stripe"
                                                     ? "payment__option--selected"
                                                     : ""
                                             }`}
                                             onClick={() =>
-                                                handleSelectPaymentMethod("stripe")
+                                                handleSelectPaymentMethod(
+                                                    "stripe"
+                                                )
                                             }
                                         >
                                             <img
@@ -573,21 +594,32 @@ const PlaceOrder = () => {
                                     {shouldShowPaypal && (
                                         <div className="paypal__buttons">
                                             <PayPalScriptProvider
-                                                options={{ "client-id": clientId }}
+                                                options={{
+                                                    "client-id": clientId,
+                                                }}
                                             >
                                                 <PayPalButtons
-                                                    createOrder={(data, actions) => {
-                                                        return actions.order.create({
-                                                            purchase_units: [
-                                                                {
-                                                                    amount: {
-                                                                        value: totalOrder.totalPrice.toString(),
-                                                                    },
-                                                                },
-                                                            ],
-                                                        });
+                                                    createOrder={(
+                                                        data,
+                                                        actions
+                                                    ) => {
+                                                        return actions.order.create(
+                                                            {
+                                                                purchase_units:
+                                                                    [
+                                                                        {
+                                                                            amount: {
+                                                                                value: totalOrder.totalPrice.toString(),
+                                                                            },
+                                                                        },
+                                                                    ],
+                                                            }
+                                                        );
                                                     }}
-                                                    onApprove={(data, actions) => {
+                                                    onApprove={(
+                                                        data,
+                                                        actions
+                                                    ) => {
                                                         return actions.order
                                                             .capture()
                                                             .then((details) => {
@@ -611,7 +643,9 @@ const PlaceOrder = () => {
                                                 onClick={() =>
                                                     handlePaymentSuccess(
                                                         {
-                                                            id: "momo_" + Date.now(),
+                                                            id:
+                                                                "momo_" +
+                                                                Date.now(),
                                                             status: "completed",
                                                         },
                                                         "momo"
@@ -629,20 +663,26 @@ const PlaceOrder = () => {
                                             <Elements stripe={stripePromise}>
                                                 <CheckoutForm
                                                     orderId={orderId}
-                                                    totalPrice={totalOrder.totalPrice}
-                                                    onSuccess={(paymentIntent) =>
+                                                    totalPrice={
+                                                        totalOrder.totalPrice
+                                                    }
+                                                    onSuccess={(
+                                                        paymentIntent
+                                                    ) =>
                                                         handlePaymentSuccess(
                                                             paymentIntent,
                                                             "stripe"
                                                         )
                                                     }
-                                                    billingInfo={totalOrder.billingInfo}
+                                                    billingInfo={
+                                                        totalOrder.billingInfo
+                                                    }
                                                 />
                                             </Elements>
                                         </div>
                                     )}
                                 </div>
-                                
+
                                 {shouldShowConfirmDeliverBtn && (
                                     <motion.button
                                         whileTap={{ scale: 1.1 }}

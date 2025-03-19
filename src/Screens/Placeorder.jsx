@@ -24,6 +24,9 @@ import { loadStripe } from "@stripe/stripe-js";
 // Get Paypal Client from your environment
 const clientId = process.env.REACT_APP_PAYPAL_CLIENT_ID;
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
+const paypalIcon = "https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_37x23.jpg";
+const momoIcon = "https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png";
+const stripeIcon = "https://stripe.com/img/v3/home/social.png";
 
 const CheckoutForm = ({ orderId, totalPrice, onSuccess, billingInfo }) => {
     const stripe = useStripe();
@@ -109,8 +112,8 @@ const PlaceOrder = () => {
     const { isSeller, isLoading: sellerLoading } = useSeller();
     const [orderDetails, setOrderDetails] = useState(null);
     const [showPayment, setShowPayment] = useState(false);
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
     const dispatch = useDispatch();
-    const paymentMethod = state?.paymentMethod || "paypal";
 
     useEffect(() => {
         if (!orderId) {
@@ -125,15 +128,57 @@ const PlaceOrder = () => {
 
                 let paidAt = response.totalOrder.paidAt;
                 if (typeof paidAt === "string") {
-                    paidAt = new Date(paidAt.replace(" at ", " ").replace(" UTC+7", "+0700"));
+                    const isoMatch = paidAt.match(
+                        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+                    );
+                    if (isoMatch) {
+                        paidAt = new Date(paidAt);
+                        const offsetMinutes = 7 * 60; // UTC+7
+                        paidAt.setMinutes(
+                            paidAt.getMinutes() +
+                                paidAt.getTimezoneOffset() +
+                                offsetMinutes
+                        );
+                    } else if (paidAt.includes(" at ")) {
+                        paidAt = new Date(
+                            paidAt
+                                .replace(" at ", " ")
+                                .replace(" UTC+7", "+0700")
+                        );
+                    }
                 } else if (paidAt && paidAt.toDate) {
                     paidAt = paidAt.toDate();
+                }
+
+                let deliveredAt = response.totalOrder.deliveredAt;
+                if (typeof deliveredAt === "string") {
+                    const isoMatch = deliveredAt.match(
+                        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+                    );
+                    if (isoMatch) {
+                        deliveredAt = new Date(deliveredAt);
+                        const offsetMinutes = 7 * 60; // UTC+7
+                        deliveredAt.setMinutes(
+                            deliveredAt.getMinutes() +
+                                deliveredAt.getTimezoneOffset() +
+                                offsetMinutes
+                        );
+                    } else if (deliveredAt.includes(" at ")) {
+                        deliveredAt = new Date(
+                            deliveredAt
+                                .replace(" at ", " ")
+                                .replace(" UTC+7", "+0700")
+                        );
+                    }
+                } else if (deliveredAt && deliveredAt.toDate) {
+                    deliveredAt = deliveredAt.toDate();
                 }
 
                 setOrderDetails({
                     totalOrder: {
                         ...response.totalOrder,
                         paidAt,
+                        deliveredAt,
                     },
                     subOrders: response.subOrders,
                 });
@@ -178,6 +223,10 @@ const PlaceOrder = () => {
 
     const handleConfirmOrder = () => {
         setShowPayment(true);
+    };
+
+    const handleSelectPaymentMethod = (method) => {
+        setSelectedPaymentMethod(method);
     };
 
     // Handle Payment
@@ -245,40 +294,6 @@ const PlaceOrder = () => {
         }
     };
 
-    // Handle MoMo Payment (Giả lập)
-    const handleMoMoPayment = async () => {
-        try {
-            setLoading(true);
-            const paidAt = new Date().toISOString();
-
-            // Giả lập thanh toán thành công (thay bằng API MoMo thực tế sau)
-            await updateOrder(orderId, {
-                isPaid: true,
-                paidAt,
-                paymentResult: {
-                    method: "momo",
-                    status: "completed",
-                },
-            });
-
-            setOrderDetails((prevDetails) => ({
-                ...prevDetails,
-                totalOrder: {
-                    ...prevDetails.totalOrder,
-                    isPaid: true,
-                    paidAt: new Date(paidAt),
-                },
-            }));
-
-            dispatch(cartActions.clearCart());
-            toast.success("MoMo payment successful!");
-        } catch (error) {
-            toast.error("Error processing MoMo payment: " + error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     // Handle Deliver Order, only seller
     const handleDeliveryConfirmation = async () => {
         if (!isSeller) {
@@ -314,39 +329,50 @@ const PlaceOrder = () => {
     // Handle display Date
     const formatDate = (date) => {
         if (!date) return "N/A";
-    
+
         let parsedDate;
         if (typeof date === "string") {
-            parsedDate = new Date(date.replace(" at ", " ").replace(" UTC+7", "+0700"));
+            const isoMatch = date.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+            if (isoMatch) {
+                parsedDate = new Date(date);
+                const offsetMinutes = 7 * 60; // UTC+7
+                parsedDate.setMinutes(
+                    parsedDate.getMinutes() +
+                        parsedDate.getTimezoneOffset() +
+                        offsetMinutes
+                );
+            } else if (date.includes(" at ")) {
+                parsedDate = new Date(
+                    date.replace(" at ", " ").replace(" UTC+7", "+0700")
+                );
+            }
         } else if (date instanceof Date) {
             parsedDate = date;
-        } else if (date.toDate) { 
+        } else if (date.toDate) {
             parsedDate = date.toDate();
         } else {
             return "N/A";
         }
-    
+
         if (isNaN(parsedDate.getTime())) return "N/A";
-        return parsedDate.toLocaleString();
+        return parsedDate.toLocaleString("en-US", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+        });
     };
 
-    const shouldShowConfirmOrderBtn =
+    const shouldShowProceedToPaymentBtn =
         !isSeller && totalOrder && !totalOrder.isPaid && !showPayment;
     const shouldShowPaypal =
-        totalOrder &&
-        !totalOrder.isPaid &&
-        showPayment &&
-        paymentMethod === "paypal";
+        totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "paypal";
     const shouldShowMomo =
-        totalOrder &&
-        !totalOrder.isPaid &&
-        showPayment &&
-        paymentMethod === "momo";
+        totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "momo";
     const shouldShowStripe =
-        totalOrder &&
-        !totalOrder.isPaid &&
-        showPayment &&
-        paymentMethod === "stripe";
+        totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "stripe";
     const shouldShowConfirmDeliverBtn =
         isSeller && totalOrder && totalOrder.isPaid && !totalOrder.isDelivered;
 
@@ -417,31 +443,6 @@ const PlaceOrder = () => {
                             </div>
 
                             <div className="border rounded p-3 mb-4">
-                                <h6 className="mb-3 fw-bold">Payment</h6>
-                                <p className="mb-0">
-                                    Payment Method:{" "}
-                                    {totalOrder.paymentMethod === "momo"
-                                        ? "MoMo"
-                                        : totalOrder.paymentMethod === "stripe"
-                                        ? "Stripe"
-                                        : "PayPal"}
-                                </p>
-                                <p
-                                    className={
-                                        totalOrder.isPaid
-                                            ? "text-success mt-2"
-                                            : "text-danger mt-2"
-                                    }
-                                >
-                                    {totalOrder.isPaid && totalOrder.paidAt
-                                        ? `Paid at ${formatDate(
-                                              totalOrder.paidAt
-                                          )}`
-                                        : "Not Paid"}
-                                </p>
-                            </div>
-
-                            <div className="border rounded p-3 mb-4">
                                 <div className="cart__items-heading d-flex align-items-center justify-content-between">
                                     <h6 className="mb-3 fw-bold">
                                         Shopping Cart
@@ -495,7 +496,7 @@ const PlaceOrder = () => {
                                     <span>${totalOrder.totalPrice}</span>
                                 </h4>
 
-                                {shouldShowConfirmOrderBtn && (
+                                {shouldShowProceedToPaymentBtn && (
                                     <motion.button
                                         type="button"
                                         whileTap={{ scale: 1.1 }}
@@ -506,72 +507,142 @@ const PlaceOrder = () => {
                                     </motion.button>
                                 )}
 
-                                {/* Display Paypal if user clicks on Confirm button */}
-                                {shouldShowPaypal && (
-                                    <PayPalScriptProvider
-                                        options={{ "client-id": clientId }}
-                                    >
-                                        <PayPalButtons
-                                            createOrder={(data, actions) => {
-                                                return actions.order.create({
-                                                    purchase_units: [
-                                                        {
-                                                            amount: {
-                                                                value: totalOrder.totalPrice.toString(),
-                                                            },
-                                                        },
-                                                    ],
-                                                });
-                                            }}
-                                            onApprove={(data, actions) => {
-                                                return actions.order
-                                                    .capture()
-                                                    .then((details) => {
-                                                        handlePaymentSuccess(
-                                                            details,
-                                                            "paypal"
-                                                        );
-                                                    });
-                                            }}
-                                        />
-                                    </PayPalScriptProvider>
-                                )}
-
-                                {/* Display MoMo payment button if payment method is MoMo */}
-                                {shouldShowMomo && (
-                                    <motion.button
-                                        whileTap={{ scale: 1.1 }}
-                                        className="buy__btn auth__btn w-100"
-                                        onClick={() =>
-                                            handlePaymentSuccess(
-                                                {
-                                                    id: "momo_" + Date.now(),
-                                                    status: "completed",
-                                                },
-                                                "momo"
-                                            )
-                                        }
-                                    >
-                                        Confirm MoMo Payment
-                                    </motion.button>
-                                )}
-
-                                {shouldShowStripe && (
-                                    <Elements stripe={stripePromise}>
-                                        <CheckoutForm
-                                            orderId={orderId}
-                                            totalPrice={totalOrder.totalPrice}
-                                            onSuccess={(paymentIntent) =>
-                                                handlePaymentSuccess(
-                                                    paymentIntent,
-                                                    "stripe"
-                                                )
+                                {/* Display Payment Options */}
+                                {showPayment && !totalOrder.isPaid && (
+                                    <div className="payment__options">
+                                        <motion.button
+                                            whileTap={{ scale: 1.1 }}
+                                            className={`payment__option ${
+                                                selectedPaymentMethod === "paypal"
+                                                    ? "payment__option--selected"
+                                                    : ""
+                                            }`}
+                                            onClick={() =>
+                                                handleSelectPaymentMethod("paypal")
                                             }
-                                            billingInfo={totalOrder.billingInfo}
-                                        />
-                                    </Elements>
+                                        >
+                                            <img
+                                                src={paypalIcon}
+                                                alt="PayPal"
+                                                className="payment__icon"
+                                            />
+                                            PayPal
+                                        </motion.button>
+                                        <motion.button
+                                            whileTap={{ scale: 1.1 }}
+                                            className={`payment__option ${
+                                                selectedPaymentMethod === "momo"
+                                                    ? "payment__option--selected"
+                                                    : ""
+                                            }`}
+                                            onClick={() =>
+                                                handleSelectPaymentMethod("momo")
+                                            }
+                                        >
+                                            <img
+                                                src={momoIcon}
+                                                alt="MoMo"
+                                                className="payment__icon"
+                                            />
+                                            MoMo
+                                        </motion.button>
+                                        <motion.button
+                                            whileTap={{ scale: 1.1 }}
+                                            className={`payment__option ${
+                                                selectedPaymentMethod === "stripe"
+                                                    ? "payment__option--selected"
+                                                    : ""
+                                            }`}
+                                            onClick={() =>
+                                                handleSelectPaymentMethod("stripe")
+                                            }
+                                        >
+                                            <img
+                                                src={stripeIcon}
+                                                alt="Stripe"
+                                                className="payment__icon"
+                                            />
+                                            Stripe
+                                        </motion.button>
+                                    </div>
                                 )}
 
+                                {/* Payment Container */}
+                                <div className="payment__container">
+                                    {/* Display PayPal if selected */}
+                                    {shouldShowPaypal && (
+                                        <div className="paypal__buttons">
+                                            <PayPalScriptProvider
+                                                options={{ "client-id": clientId }}
+                                            >
+                                                <PayPalButtons
+                                                    createOrder={(data, actions) => {
+                                                        return actions.order.create({
+                                                            purchase_units: [
+                                                                {
+                                                                    amount: {
+                                                                        value: totalOrder.totalPrice.toString(),
+                                                                    },
+                                                                },
+                                                            ],
+                                                        });
+                                                    }}
+                                                    onApprove={(data, actions) => {
+                                                        return actions.order
+                                                            .capture()
+                                                            .then((details) => {
+                                                                handlePaymentSuccess(
+                                                                    details,
+                                                                    "paypal"
+                                                                );
+                                                            });
+                                                    }}
+                                                />
+                                            </PayPalScriptProvider>
+                                        </div>
+                                    )}
+
+                                    {/* Display MoMo payment button if selected */}
+                                    {shouldShowMomo && (
+                                        <div className="momo__button">
+                                            <motion.button
+                                                whileTap={{ scale: 1.1 }}
+                                                className="buy__btn auth__btn w-100"
+                                                onClick={() =>
+                                                    handlePaymentSuccess(
+                                                        {
+                                                            id: "momo_" + Date.now(),
+                                                            status: "completed",
+                                                        },
+                                                        "momo"
+                                                    )
+                                                }
+                                            >
+                                                Confirm MoMo Payment
+                                            </motion.button>
+                                        </div>
+                                    )}
+
+                                    {/* Display Stripe payment form if selected */}
+                                    {shouldShowStripe && (
+                                        <div className="stripe__form">
+                                            <Elements stripe={stripePromise}>
+                                                <CheckoutForm
+                                                    orderId={orderId}
+                                                    totalPrice={totalOrder.totalPrice}
+                                                    onSuccess={(paymentIntent) =>
+                                                        handlePaymentSuccess(
+                                                            paymentIntent,
+                                                            "stripe"
+                                                        )
+                                                    }
+                                                    billingInfo={totalOrder.billingInfo}
+                                                />
+                                            </Elements>
+                                        </div>
+                                    )}
+                                </div>
+                                
                                 {shouldShowConfirmDeliverBtn && (
                                     <motion.button
                                         whileTap={{ scale: 1.1 }}

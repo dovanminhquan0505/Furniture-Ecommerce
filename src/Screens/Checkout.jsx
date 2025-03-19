@@ -15,7 +15,6 @@ const Checkout = () => {
     const cart = useSelector((state) => state.cart);
     const [orderData, setOrderData] = useState(null);
     const navigate = useNavigate();
-    const [paymentMethod, setPaymentMethod] = useState("paypal");
 
     useEffect(() => {
         if (cart) {
@@ -48,11 +47,6 @@ const Checkout = () => {
             ...prev,
             [name]: name === "phone" ? value : value,
         }));
-    };
-
-    // Handle payment method change
-    const handlePaymentMethodChange = (e) => {
-        setPaymentMethod(e.target.value);
     };
 
     // Update state when user enters information
@@ -126,7 +120,6 @@ const Checkout = () => {
                     )
                 ),
             ],
-            paymentMethod: paymentMethod,
         };
 
         try {
@@ -134,7 +127,7 @@ const Checkout = () => {
             const orderId = response.id;
 
             navigate(`/placeorder/${orderId}`, {
-                state: { billingInfo, orderId, paymentMethod },
+                state: { billingInfo, orderId },
             });
         } catch (error) {
             console.error(error);
@@ -224,80 +217,6 @@ const Checkout = () => {
                                         onChange={handleInputChange}
                                     />
                                 </FormGroup>
-
-                                {/* Payment Method Selection */}
-                                <div className="payment__method">
-                                    <label>Payment Method</label>
-                                    <div className="payment__options">
-                                        <div
-                                            className={`payment__option ${
-                                                paymentMethod === "paypal"
-                                                    ? "payment__option--selected"
-                                                    : ""
-                                            }`}
-                                        >
-                                            <input
-                                                type="radio"
-                                                name="paymentMethod"
-                                                value="paypal"
-                                                id="paypal"
-                                                checked={
-                                                    paymentMethod === "paypal"
-                                                }
-                                                onChange={
-                                                    handlePaymentMethodChange
-                                                }
-                                            />
-                                            <label htmlFor="paypal">
-                                                PayPal
-                                            </label>
-                                        </div>
-                                        <div
-                                            className={`payment__option ${
-                                                paymentMethod === "momo"
-                                                    ? "payment__option--selected"
-                                                    : ""
-                                            }`}
-                                        >
-                                            <input
-                                                type="radio"
-                                                name="paymentMethod"
-                                                value="momo"
-                                                id="momo"
-                                                checked={
-                                                    paymentMethod === "momo"
-                                                }
-                                                onChange={
-                                                    handlePaymentMethodChange
-                                                }
-                                            />
-                                            <label htmlFor="momo">MoMo</label>
-                                        </div>
-                                        <div
-                                            className={`payment__option ${
-                                                paymentMethod === "stripe"
-                                                    ? "payment__option--selected"
-                                                    : ""
-                                            }`}
-                                        >
-                                            <input
-                                                type="radio"
-                                                name="paymentMethod"
-                                                value="stripe"
-                                                id="stripe"
-                                                checked={
-                                                    paymentMethod === "stripe"
-                                                }
-                                                onChange={
-                                                    handlePaymentMethodChange
-                                                }
-                                            />
-                                            <label htmlFor="stripe">
-                                                Stripe
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
                             </Form>
                         </Col>
 
@@ -347,7 +266,7 @@ const Checkout = () => {
                                     className="buy__btn auth__btn w-100"
                                     onClick={handlePlaceOrder}
                                 >
-                                    Place order
+                                    Continue
                                 </motion.button>
                             </div>
                         </Col>

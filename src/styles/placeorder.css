@@ -95,3 +95,71 @@ h6.fw-bold {
     font-size: 1.1rem;
     color: #007bff;
 }
+
+/* Payment Options Styles */
+.payment__options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.payment__option {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px; 
+    background: #ffffff; 
+    cursor: pointer;
+    transition: all 0.3s ease; 
+    height: 50px; 
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); 
+}
+
+.payment__option:hover {
+    border-color: #007bff; 
+    background: rgba(0, 123, 255, 0.05); 
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+    color: #fff;
+}
+
+.payment__option--selected {
+    border-color: #007bff;
+    background: rgba(0, 123, 255, 0.1); 
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2); 
+    color: #fff;
+}
+
+.payment__icon {
+    width: 32px; 
+    height: 32px;
+    margin-right: 12px; 
+    object-fit: contain; 
+}
+
+.payment__option span {
+    font-size: 1rem; 
+    font-weight: 500; 
+    color: #333; 
+}
+
+/* Style for payment form */
+.payment__container {
+    margin-top: 20px;
+}
+
+/* Style cho Stripe Form */
+.stripe__form {
+    margin-bottom: 20px;
+}
+
+/* Style cho PayPal Buttons */
+.paypal__buttons {
+    margin-bottom: 20px;
+}
+
+/* Style cho MoMo Button */
+.momo__button {
+    margin-bottom: 20px;
+}

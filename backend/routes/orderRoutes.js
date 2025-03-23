@@ -7,6 +7,7 @@ const {
     createStripePaymentIntent,
     requestRefund,
     processRefund,
+    cancelOrder,
 } = require("../controllers/orderController");
 const router = express.Router();
 
@@ -17,5 +18,6 @@ router.put("/:orderId", updateOrder);
 router.post("/:orderId/stripe-payment-intent", createStripePaymentIntent);
 router.post("/:orderId/refund", requestRefund);
 router.put("/:orderId/refund", processRefund);
+router.post("/:orderId/cancel", cancelOrder);
 
 module.exports = router;

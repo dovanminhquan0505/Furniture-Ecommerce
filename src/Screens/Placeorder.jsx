@@ -12,6 +12,7 @@ import { cartActions } from "../redux/slices/cartSlice";
 import { useDispatch } from "react-redux";
 import useSeller from "../custom-hooks/useSeller";
 import {
+    cancelOrder,
     createStripePaymentIntent,
     fetchSellerInfo,
     getOrderById,
@@ -27,7 +28,9 @@ import {
     useStripe,
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import RefundForm from "../components/Refund/RefundForm.js";
+import CancelOrderForm from "../components/Refund/CancelOrderForm.jsx";
+import RefundRequestForm from "../components/Refund/RefundRequestForm.jsx";
+import Modal from "../components/Modal/Modal.jsx";
 
 // eslint-disable-next-line no-undef
 // Get Paypal Client from your environment
@@ -123,8 +126,10 @@ const PlaceOrder = () => {
     const [showPayment, setShowPayment] = useState(false);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
     const dispatch = useDispatch();
-    const [showRefundForm, setShowRefundForm] = useState(false);
     const [sellerNames, setSellerNames] = useState({});
+    const [showRefundModal, setShowRefundModal] = useState(false);
+    const [selectedSubOrderId, setSelectedSubOrderId] = useState(null);
+    const [timeLeft, setTimeLeft] = useState(null);
 
     useEffect(() => {
         if (!orderId) {
@@ -200,7 +205,8 @@ const PlaceOrder = () => {
                 const sellerNamesData = {};
                 for (const subOrder of response.subOrders) {
                     const sellerInfo = await fetchSellerInfo(subOrder.sellerId);
-                    sellerNamesData[subOrder.sellerId] = sellerInfo.storeName || "Unknown Store";
+                    sellerNamesData[subOrder.sellerId] =
+                        sellerInfo.storeName || "Unknown Store";
                 }
                 setSellerNames(sellerNamesData);
             } catch (error) {
@@ -213,6 +219,28 @@ const PlaceOrder = () => {
 
         fetchOrderDetails();
     }, [orderId, navigate]);
+
+    // Tính toán thời gian còn lại để hủy đơn hàng
+    useEffect(() => {
+        if (orderDetails?.totalOrder?.createdAt) {
+            const createdAt = new Date(orderDetails.totalOrder.createdAt);
+            const fiveMinutesLater = new Date(
+                createdAt.getTime() + 5 * 60 * 1000
+            );
+            const interval = setInterval(() => {
+                const now = new Date();
+                const timeDiff = fiveMinutesLater - now;
+                if (timeDiff <= 0) {
+                    setTimeLeft(0);
+                    clearInterval(interval);
+                } else {
+                    setTimeLeft(Math.floor(timeDiff / 1000));
+                }
+            }, 1000);
+
+            return () => clearInterval(interval);
+        }
+    }, [orderDetails]);
 
     if (sellerLoading || isFetchingOrder) {
         return (
@@ -314,22 +342,40 @@ const PlaceOrder = () => {
         }
     };
 
-    // Handle Request Refund
-    const handleRequestRefund = async ({ reason, files }) => {
+    const handleCancelOrder = async ({ reason }, subOrderId) => {
+        try {
+            setLoading(true);
+            await cancelOrder(orderId, { reason });
+            setOrderDetails((prev) => ({
+                ...prev,
+                totalOrder: { ...prev.totalOrder, status: "cancelled" },
+            }));
+            setShowRefundModal(false);
+            setSelectedSubOrderId(null);
+            toast.success("Order cancellation request submitted successfully!");
+        } catch (error) {
+            toast.error(error.message || "Error cancelling order");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRequestRefund = async ({ reason, files }, subOrderId) => {
         try {
             setLoading(true);
             let evidence = [];
             if (files.length > 0) {
-                const uploadPromises = files.map(file => uploadFile(file));
+                const uploadPromises = files.map((file) => uploadFile(file));
                 const uploadResults = await Promise.all(uploadPromises);
-                evidence = uploadResults.map(result => result.fileURL);
+                evidence = uploadResults.map((result) => result.fileURL);
             }
             await requestRefund(orderId, { reason, evidence });
             setOrderDetails((prev) => ({
                 ...prev,
                 totalOrder: { ...prev.totalOrder, refundStatus: "Requested" },
             }));
-            setShowRefundForm(false);
+            setShowRefundModal(false);
+            setSelectedSubOrderId(null);
             toast.success(
                 totalOrder.status === "success"
                     ? "Return & Refund request submitted successfully!"
@@ -352,7 +398,11 @@ const PlaceOrder = () => {
             await processRefund(orderId, action);
             setOrderDetails((prev) => ({
                 ...prev,
-                totalOrder: { ...prev.totalOrder, refundStatus: action === "approve" ? "Refunded" : "Rejected" },
+                totalOrder: {
+                    ...prev.totalOrder,
+                    refundStatus:
+                        action === "approve" ? "Refunded" : "Rejected",
+                },
             }));
             toast.success(`Refund ${action}ed successfully!`);
         } catch (error) {
@@ -364,27 +414,32 @@ const PlaceOrder = () => {
 
     // Handle Buy Again
     const handleBuyAgain = (item) => {
-        dispatch(cartActions.addItem({
-            id: item.id,
-            productName: item.productName,
-            price: item.price,
-            imgUrl: item.imgUrl,
-            quantity: 1,
-        }));
+        dispatch(
+            cartActions.addItem({
+                id: item.id,
+                productName: item.productName,
+                price: item.price,
+                imgUrl: item.imgUrl,
+                quantity: 1,
+            })
+        );
         toast.success(`${item.productName} đã được thêm vào giỏ hàng!`);
         navigate("/cart");
     };
 
     const renderSubOrderItems = () => {
-        return subOrders.map(subOrder => {
+        return subOrders.map((subOrder) => {
             const subOrderId = subOrder.id;
-            const shouldShowRefundBtn = !isSeller && totalOrder.isPaid && 
-                (totalOrder.status === "pending" || totalOrder.status === "processing" || totalOrder.status === "success") && 
+            const shouldShowRefundBtn =
+                !isSeller &&
+                totalOrder.isPaid &&
+                (totalOrder.status === "pending" ||
+                    totalOrder.status === "processing" ||
+                    totalOrder.status === "success") &&
                 totalOrder.refundStatus === "None";
 
             return (
                 <div key={subOrder.id} className="border rounded p-3 mb-3">
-                    {/* Hiển thị tên cửa hàng của seller với icon */}
                     <h6 className="seller__store">
                         <i className="fas fa-store me-1"></i>
                         <div className="fw-bold">
@@ -400,22 +455,35 @@ const PlaceOrder = () => {
                             />
                             <div className="cart__item-info">
                                 <h6>{item.productName}</h6>
-                                <p>Qty: {item.quantity} | Status: {subOrder.status || "Pending"}</p>
+                                <p>
+                                    Qty: {item.quantity} | Status:{" "}
+                                    {subOrder.status || "Pending"}
+                                </p>
                             </div>
                             <div className="cart__item-price">
-                                <span className="price__cartItem">${item.price}</span>
+                                <span className="price__cartItem">
+                                    ${item.price}
+                                </span>
                             </div>
                         </div>
                     ))}
-                    {/* Thêm nút Refund/Cancel và Buy Again dưới cùng bên phải */}
                     {shouldShowRefundBtn && (
                         <div className="suborder__actions">
                             <motion.button
                                 whileTap={{ scale: 1.1 }}
                                 className="refund__btn"
-                                onClick={() => setShowRefundForm(prev => ({ ...prev, [subOrderId]: true }))}
+                                onClick={() => {
+                                    setSelectedSubOrderId(subOrderId);
+                                    setShowRefundModal(true);
+                                }}
+                                disabled={
+                                    timeLeft === 0 &&
+                                    totalOrder.status !== "success"
+                                }
                             >
-                                {totalOrder.status === "success" ? "Return & Refund" : "Cancel Order"}
+                                {totalOrder.status === "success"
+                                    ? "Return & Refund"
+                                    : "Cancel Order"}
                             </motion.button>
                             <motion.button
                                 whileTap={{ scale: 1.1 }}
@@ -425,16 +493,6 @@ const PlaceOrder = () => {
                                 Buy Again
                             </motion.button>
                         </div>
-                    )}
-                    {/* Hiển thị RefundForm nếu được kích hoạt */}
-                    {showRefundForm[subOrderId] && (
-                        <RefundForm
-                            orderId={orderId}
-                            onRequestRefund={(data) => handleRequestRefund(data, subOrderId)}
-                            onCancel={() => setShowRefundForm(prev => ({ ...prev, [subOrderId]: false }))}
-                            loading={loading}
-                            isDelivered={totalOrder.status === "success"} 
-                        />
                     )}
                 </div>
             );
@@ -480,12 +538,17 @@ const PlaceOrder = () => {
         });
     };
 
-    const shouldShowProceedToPaymentBtn = !isSeller && totalOrder && !totalOrder.isPaid && !showPayment;
-    const shouldShowPaypal = totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "paypal";
-    const shouldShowMomo = totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "momo";
-    const shouldShowStripe = totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "stripe";
+    const shouldShowProceedToPaymentBtn =
+        !isSeller && totalOrder && !totalOrder.isPaid && !showPayment;
+    const shouldShowPaypal =
+        totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "paypal";
+    const shouldShowMomo =
+        totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "momo";
+    const shouldShowStripe =
+        totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "stripe";
     const shouldShowRefundStatus = totalOrder.refundStatus !== "None";
-    const shouldShowProcessRefundBtn = isSeller && totalOrder.refundStatus === "Requested"
+    const shouldShowProcessRefundBtn =
+        isSeller && totalOrder.refundStatus === "Requested";
 
     return (
         <Helmet title=" Place Order">
@@ -583,15 +646,80 @@ const PlaceOrder = () => {
                                 <h6 className="mb-3 fw-bold">Shopping Cart</h6>
                                 {renderSubOrderItems()}
                             </div>
-                            {showRefundForm && (
-                                <RefundForm
-                                    orderId={orderId}
-                                    onRequestRefund={handleRequestRefund}
-                                    onCancel={() => setShowRefundForm(false)}
-                                    loading={loading}
-                                    isDelivered={totalOrder.status === "success"} 
-                                />
-                            )}
+                            {/* Modal hiển thị RefundForm */}
+                            <Modal
+                                isOpen={showRefundModal}
+                                onClose={() => {
+                                    setShowRefundModal(false);
+                                    setSelectedSubOrderId(null);
+                                }}
+                            >
+                                {selectedSubOrderId && (
+                                    <>
+                                        {totalOrder.status === "success" ? (
+                                            <RefundRequestForm
+                                                orderId={orderId}
+                                                subOrder={{
+                                                    ...subOrders.find(
+                                                        (sub) =>
+                                                            sub.id ===
+                                                            selectedSubOrderId
+                                                    ),
+                                                    sellerName:
+                                                        sellerNames[
+                                                            subOrders.find(
+                                                                (sub) =>
+                                                                    sub.id ===
+                                                                    selectedSubOrderId
+                                                            )?.sellerId
+                                                        ],
+                                                }}
+                                                onRequestRefund={(data) =>
+                                                    handleRequestRefund(
+                                                        data,
+                                                        selectedSubOrderId
+                                                    )
+                                                }
+                                                onCancel={() => {
+                                                    setShowRefundModal(false);
+                                                    setSelectedSubOrderId(null);
+                                                }}
+                                                loading={loading}
+                                            />
+                                        ) : (
+                                            <CancelOrderForm
+                                                orderId={orderId}
+                                                subOrder={{
+                                                    ...subOrders.find(
+                                                        (sub) =>
+                                                            sub.id ===
+                                                            selectedSubOrderId
+                                                    ),
+                                                    sellerName:
+                                                        sellerNames[
+                                                            subOrders.find(
+                                                                (sub) =>
+                                                                    sub.id ===
+                                                                    selectedSubOrderId
+                                                            )?.sellerId
+                                                        ],
+                                                }}
+                                                onCancelOrder={(data) =>
+                                                    handleCancelOrder(
+                                                        data,
+                                                        selectedSubOrderId
+                                                    )
+                                                }
+                                                onCancel={() => {
+                                                    setShowRefundModal(false);
+                                                    setSelectedSubOrderId(null);
+                                                }}
+                                                loading={loading}
+                                            />
+                                        )}
+                                    </>
+                                )}
+                            </Modal>
                         </Col>
 
                         {/* Order details summary */}
@@ -798,14 +926,18 @@ const PlaceOrder = () => {
                                         <motion.button
                                             whileTap={{ scale: 1.1 }}
                                             className="buy__btn auth__btn w-100"
-                                            onClick={() => handleProcessRefund("approve")}
+                                            onClick={() =>
+                                                handleProcessRefund("approve")
+                                            }
                                         >
                                             Approve Refund
                                         </motion.button>
                                         <motion.button
                                             whileTap={{ scale: 1.1 }}
                                             className="buy__btn auth__btn w-100 mt-2"
-                                            onClick={() => handleProcessRefund("reject")}
+                                            onClick={() =>
+                                                handleProcessRefund("reject")
+                                            }
                                         >
                                             Reject Refund
                                         </motion.button>

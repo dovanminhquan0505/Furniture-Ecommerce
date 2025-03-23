@@ -103,7 +103,9 @@ export const getUserProfileById = async (id) => {
         });
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to fetch user profile");
+            throw new Error(
+                errorData.message || "Failed to fetch user profile"
+            );
         }
         return await response.json();
     } catch (error) {
@@ -150,14 +152,11 @@ export const updateUserPhoto = async (id, photoURL) => {
     }
 };
 
-export const updateUserPassword = async (
-    id,
-    newPassword
-) => {
+export const updateUserPassword = async (id, newPassword) => {
     try {
         const response = await fetch(`${BASE_URL}/users/${id}/password`, {
             method: "PUT",
-            headers: {"Content-Type": "application/json"},
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ newPassword }),
             credentials: "include",
         });
@@ -289,7 +288,7 @@ export const updateProduct = async (productId, updateData) => {
     try {
         const response = await fetch(`${BASE_URL}/products/${productId}`, {
             method: "PUT",
-            headers: {"Content-Type": "application/json"},
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(updateData),
             credentials: "include",
         });
@@ -310,7 +309,7 @@ export const createProduct = async (sellerId, productData) => {
             `${BASE_URL}/sellers/${sellerId}/products`,
             {
                 method: "POST",
-                headers: {"Content-Type": "application/json"},
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(productData),
                 credentials: "include",
             }
@@ -361,7 +360,7 @@ export const registerSeller = async (sellerData) => {
         const response = await fetch(`${BASE_URL}/auth/seller/register`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
             },
             body: JSON.stringify(sellerData),
             credentials: "include",
@@ -421,13 +420,15 @@ export const updateSellerInfo = async (sellerId, updateData) => {
     try {
         const response = await fetch(`${BASE_URL}/sellers/${sellerId}/store`, {
             method: "PUT",
-            headers: {"Content-Type": "application/json"},
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(updateData),
             credentials: "include",
         });
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to update seller info");
+            throw new Error(
+                errorData.message || "Failed to update seller info"
+            );
         }
         return await response.json();
     } catch (error) {
@@ -487,7 +488,9 @@ export const fetchSellerOrders = async (sellerId) => {
         });
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to fetch seller orders");
+            throw new Error(
+                errorData.message || "Failed to fetch seller orders"
+            );
         }
         return await response.json();
     } catch (error) {
@@ -517,6 +520,26 @@ export const deleteOrder = async (sellerId, orderId) => {
     }
 };
 
+export const cancelOrder = async (orderId, data) => {
+    try {
+        const response = await fetch(`${BASE_URL}/orders/${orderId}/cancel`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+            credentials: "include",
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to cancel order");
+        }
+        return response.json();
+    } catch (error) {
+        throw new Error(error.message);
+    }
+};
+
 export const getDashboardStats = async (sellerId) => {
     try {
         const response = await fetch(
@@ -529,7 +552,9 @@ export const getDashboardStats = async (sellerId) => {
         );
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to fetch dashboard stats");
+            throw new Error(
+                errorData.message || "Failed to fetch dashboard stats"
+            );
         }
         return await response.json();
     } catch (error) {
@@ -564,7 +589,7 @@ export const addReview = async (productId, reviewData) => {
             {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify(reviewData),
                 credentials: "include",
@@ -581,14 +606,17 @@ export const addReview = async (productId, reviewData) => {
     }
 };
 
-export const deleteReview = async (productId, { review, userId, userSellerId }) => {
+export const deleteReview = async (
+    productId,
+    { review, userId, userSellerId }
+) => {
     try {
         const response = await fetch(
             `${BASE_URL}/products/${productId}/reviews`,
             {
                 method: "DELETE",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify({ review, userId, userSellerId }),
                 credentials: "include",
@@ -612,7 +640,7 @@ export const toggleLikeReview = async (productId, reviewIndex, userId) => {
             {
                 method: "PUT",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify({ reviewIndex, userId }),
                 credentials: "include",
@@ -636,7 +664,7 @@ export const addReplyToReview = async (productId, reviewIndex, replyData) => {
             {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
                     reviewIndex,
@@ -668,7 +696,7 @@ export const toggleLikeReply = async (
             {
                 method: "PUT",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify({ reviewIndex, replyIndex, userId }),
                 credentials: "include",
@@ -676,7 +704,9 @@ export const toggleLikeReply = async (
         );
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to toggle like for reply");
+            throw new Error(
+                errorData.message || "Failed to toggle like for reply"
+            );
         }
         return await response.json();
     } catch (error) {
@@ -690,7 +720,7 @@ export const createOrder = async (orderData) => {
     try {
         const response = await fetch(`${BASE_URL}/orders`, {
             method: "POST",
-            headers: {"Content-Type": "application/json"},
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(orderData),
             credentials: "include",
         });
@@ -714,7 +744,9 @@ export const getOrderById = async (orderId) => {
         });
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to fetch order details");
+            throw new Error(
+                errorData.message || "Failed to fetch order details"
+            );
         }
         return await response.json();
     } catch (error) {
@@ -727,7 +759,7 @@ export const updateOrder = async (orderId, updateData) => {
     try {
         const response = await fetch(`${BASE_URL}/orders/${orderId}`, {
             method: "PUT",
-            headers: {"Content-Type": "application/json"},
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(updateData),
             credentials: "include",
         });
@@ -752,26 +784,30 @@ export const getAdminProfileById = async (id) => {
         });
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to fetch admin profile");
+            throw new Error(
+                errorData.message || "Failed to fetch admin profile"
+            );
         }
         return await response.json();
     } catch (error) {
         console.error("Error fetching admin profile:", error);
         throw error;
     }
-}
+};
 
 export const updateAdminProfile = async (id, profileData) => {
     try {
         const response = await fetch(`${BASE_URL}/admin/${id}/profile`, {
             method: "PUT",
-            headers: {"Content-Type": "application/json"},
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(profileData),
             credentials: "include",
         });
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to update admin profile.");
+            throw new Error(
+                errorData.message || "Failed to update admin profile."
+            );
         }
         return await response.json();
     } catch (error) {
@@ -784,7 +820,7 @@ export const updateAdminPhoto = async (id, photoURL) => {
     try {
         const response = await fetch(`${BASE_URL}/admin/${id}/photo`, {
             method: "PUT",
-            headers: {"Content-Type": "application/json"},
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ photoURL }),
             credentials: "include",
         });
@@ -799,14 +835,11 @@ export const updateAdminPhoto = async (id, photoURL) => {
     }
 };
 
-export const updateAdminPassword = async (
-    id,
-    newPassword
-) => {
+export const updateAdminPassword = async (id, newPassword) => {
     try {
         const response = await fetch(`${BASE_URL}/admin/${id}/password`, {
             method: "PUT",
-            headers: {"Content-Type": "application/json"},
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ newPassword }),
             credentials: "include",
         });
@@ -830,7 +863,9 @@ export const getPendingOrders = async () => {
         });
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to fetch pending orders");
+            throw new Error(
+                errorData.message || "Failed to fetch pending orders"
+            );
         }
         return await response.json();
     } catch (error) {
@@ -841,14 +876,19 @@ export const getPendingOrders = async () => {
 
 export const approvePendingOrder = async (id) => {
     try {
-        const response = await fetch(`${BASE_URL}/admin/pending-orders/${id}/approve`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        });
+        const response = await fetch(
+            `${BASE_URL}/admin/pending-orders/${id}/approve`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            }
+        );
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to approve pending order.");
+            throw new Error(
+                errorData.message || "Failed to approve pending order."
+            );
         }
         return await response.json();
     } catch (error) {
@@ -859,14 +899,19 @@ export const approvePendingOrder = async (id) => {
 
 export const rejectPendingOrder = async (id) => {
     try {
-        const response = await fetch(`${BASE_URL}/admin/pending-orders/${id}/reject`, {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        });
+        const response = await fetch(
+            `${BASE_URL}/admin/pending-orders/${id}/reject`,
+            {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            }
+        );
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to reject pending order.");
+            throw new Error(
+                errorData.message || "Failed to reject pending order."
+            );
         }
         return await response.json();
     } catch (error) {
@@ -974,7 +1019,9 @@ export const getDashboardDataAdmin = async () => {
         });
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to fetch dashboard data.");
+            throw new Error(
+                errorData.message || "Failed to fetch dashboard data."
+            );
         }
         return await response.json();
     } catch (error) {
@@ -986,15 +1033,20 @@ export const getDashboardDataAdmin = async () => {
 //Stripe payment method
 export const createStripePaymentIntent = async (orderId, amount) => {
     try {
-        const response = await fetch(`${BASE_URL}/orders/${orderId}/stripe-payment-intent`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ amount }),
-            credentials: "include",
-        });
+        const response = await fetch(
+            `${BASE_URL}/orders/${orderId}/stripe-payment-intent`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ amount }),
+                credentials: "include",
+            }
+        );
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to create Stripe payment intent");
+            throw new Error(
+                errorData.message || "Failed to create Stripe payment intent"
+            );
         }
         return await response.json();
     } catch (error) {

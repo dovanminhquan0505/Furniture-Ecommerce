@@ -1,128 +1,60 @@
-/* Refund Form Container */
-.refund-form-container {
-    padding: 20px;
-    background-color: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: box-shadow 0.3s ease;
-}
-
-.refund-form-container:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-/* Refund Form Title */
-.refund-form-title {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 1rem;
-    border-bottom: 2px solid #007bff;
-    padding-bottom: 0.5rem;
-    display: inline-block;
-}
-
-/* Refund Form */
+/* refundForm.css */
 .refund-form {
-    width: 100%;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
 }
 
-/* Refund Form Group */
-.refund-form-group {
-    margin-bottom: 1rem;
-}
-
-/* Refund Form Label */
-.refund-form-label {
-    font-size: 0.95rem;
-    color: #333;
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-    display: block;
-}
-
-/* Refund Form Textarea */
-.refund-form-textarea {
-    width: 100%;
+.order-details {
     padding: 10px;
-    font-size: 0.9rem;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
+    border-radius: 5px;
     background-color: #fff;
-    transition: border-color 0.3s ease;
-    resize: vertical;
-    min-height: 100px;
 }
 
-.refund-form-textarea:focus {
-    border-color: #007bff;
-    outline: none;
+.order-details h6 {
+    font-size: 1.2rem;
+    margin-bottom: 5px;
+    color: #333;
 }
 
-/* Refund Form File Input */
-.refund-form-file {
-    width: 100%;
-    padding: 10px 0; /* Điều chỉnh padding để phù hợp với giao diện file input */
-    font-size: 0.9rem;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    background-color: #fff;
-    transition: border-color 0.3s ease;
-}
-
-.refund-form-file:focus {
-    border-color: #007bff;
-    outline: none;
-}
-
-/* Refund Form Text (Helper Text) */
-.refund-form-text {
-    font-size: 0.85rem;
+.order-details p {
     color: #666;
-    margin-top: 0.25rem;
 }
 
-/* Refund Form Buttons Container */
-.refund-form-buttons {
+.suborder-items {
+    margin-top: 10px;
+}
+
+.suborder-item {
     display: flex;
-    gap: 10px;
+    align-items: center;
+    padding: 10px 0;
 }
 
-/* Refund Form Buttons */
-.refund-form-btn {
-    display: inline-block;
-    padding: 10px 20px;
-    font-size: 1rem;
-    font-weight: 500;
-    text-align: center;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    width: 50%;
+.suborder-item-img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    margin-right: 15px;
+    border-radius: 5px;
 }
 
-.refund-form-btn-primary {
-    background-color: #007bff;
-    color: #fff;
+.suborder-item-info {
+    flex: 1;
 }
 
-.refund-form-btn-primary:hover {
-    background-color: #0056b3;
+.suborder-item-info p {
+    margin: 5px 0;
+    font-size: 0.9rem;
+    color: #555;
 }
 
-.refund-form-btn-secondary {
-    background-color: #6c757d;
-    color: #fff;
+.suborder-item-info p strong {
+    color: #333;
 }
 
-.refund-form-btn-secondary:hover {
-    background-color: #5a6268;
-}
-
-.refund-form-btn:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-    opacity: 0.7;
+.form-btn {
+    padding: 8px 20px;
+    font-size: 0.9rem;
 }

@@ -467,12 +467,10 @@ exports.cancelOrder = async (req, res) => {
         const { orderId } = req.params;
         const { reason } = req.body;
 
-        // Kiểm tra dữ liệu đầu vào
         if (!reason) {
             return res.status(400).json({ message: "Reason for cancellation is required" });
         }
 
-        // Tìm đơn hàng trong totalOrders
         const totalOrderRef = db.collection("totalOrders").doc(orderId);
         const totalOrderSnap = await totalOrderRef.get();
 
@@ -482,12 +480,6 @@ exports.cancelOrder = async (req, res) => {
 
         const totalOrderData = totalOrderSnap.data();
 
-        // Kiểm tra xem người dùng có quyền hủy đơn không
-        if (totalOrderData.userId !== req.user.uid) {
-            return res.status(403).json({ message: "You are not authorized to cancel this order" });
-        }
-
-        // Kiểm tra trạng thái đơn hàng (chỉ cho phép hủy nếu đơn hàng chưa giao)
         if (totalOrderData.status === "success" || totalOrderData.isDelivered) {
             return res.status(400).json({ message: "Cannot cancel order after it has been delivered" });
         }
@@ -496,58 +488,156 @@ exports.cancelOrder = async (req, res) => {
             return res.status(400).json({ message: "Order has already been cancelled" });
         }
 
-        // Kiểm tra thời gian giới hạn 5 phút
         const createdAt = totalOrderData.createdAt.toDate();
         const now = new Date();
-        const minutesSinceCreated = (now - createdAt) / (1000 * 60); 
-        if (minutesSinceCreated > 5) {
-            return res.status(400).json({ message: "Cannot cancel order after 5 minutes from creation time" });
-        }
+        const minutesSinceCreated = (now - createdAt) / (1000 * 60);
 
-        // Nếu đơn hàng đã thanh toán, thực hiện hoàn tiền
-        let updateData = {
-            status: "cancelled",
-            cancelReason: reason,
-            cancelledAt: admin.firestore.Timestamp.now(),
-        };
+        let updateData;
 
-        if (totalOrderData.isPaid) {
-            const paymentResult = totalOrderData.paymentResult;
-            if (paymentResult && totalOrderData.paymentMethod === "stripe") {
-                const refund = await stripe.refunds.create({
-                    payment_intent: paymentResult.id,
-                    amount: Math.round(totalOrderData.totalPrice * 100),
-                });
-                updateData.refundResult = { id: refund.id, status: refund.status };
-                updateData.refundedAt = admin.firestore.Timestamp.now();
-            } else if (paymentResult && totalOrderData.paymentMethod === "paypal") {
-                const request = new paypal.payments.CapturesRefundRequest(paymentResult.id);
-                request.requestBody({
-                    amount: { value: totalOrderData.totalPrice.toString(), currency_code: "USD" },
-                });
-                const refund = await paypalClient.execute(request);
-                updateData.refundResult = { id: refund.result.id, status: refund.result.status };
-                updateData.refundedAt = admin.firestore.Timestamp.now();
+        // Trường hợp 1: Status là pending và chưa quá 5 phút -> Hủy ngay
+        if (totalOrderData.status === "pending" && minutesSinceCreated <= 5) {
+            updateData = {
+                status: "cancelled",
+                cancelReason: reason,
+                cancelledAt: admin.firestore.Timestamp.now(),
+            };
+
+            if (totalOrderData.isPaid) {
+                const paymentResult = totalOrderData.paymentResult;
+                if (paymentResult && totalOrderData.paymentMethod === "stripe") {
+                    const refund = await stripe.refunds.create({
+                        payment_intent: paymentResult.id,
+                        amount: Math.round(totalOrderData.totalPrice * 100),
+                    });
+                    updateData.refundResult = { id: refund.id, status: refund.status };
+                    updateData.refundedAt = admin.firestore.Timestamp.now();
+                } else if (paymentResult && totalOrderData.paymentMethod === "paypal") {
+                    const request = new paypal.payments.CapturesRefundRequest(paymentResult.id);
+                    request.requestBody({
+                        amount: { value: totalOrderData.totalPrice.toString(), currency_code: "USD" },
+                    });
+                    const refund = await paypalClient.execute(request);
+                    updateData.refundResult = { id: refund.result.id, status: refund.result.status };
+                    updateData.refundedAt = admin.firestore.Timestamp.now();
+                }
+                updateData.refundStatus = "Refunded";
             }
-            updateData.refundStatus = "Refunded";
+
+            await totalOrderRef.update(updateData);
+
+            const subOrdersRef = db.collection("subOrders");
+            const subOrdersSnap = await subOrdersRef.where("totalOrderId", "==", orderId).get();
+            const updatePromises = subOrdersSnap.docs.map(doc => doc.ref.update({ 
+                status: "cancelled",
+                ...(totalOrderData.isPaid && { refundStatus: "Refunded" })
+            }));
+            await Promise.all(updatePromises);
+
+            res.status(200).json({ message: "Order cancelled successfully" });
+        } 
+        // Status không phải pending hoặc quá 5 phút -> Yêu cầu phê duyệt
+        else {
+            updateData = {
+                cancelStatus: "Requested", 
+                cancelReason: reason,
+                cancelRequestedAt: admin.firestore.Timestamp.now(),
+            };
+
+            await totalOrderRef.update(updateData);
+
+            const subOrdersRef = db.collection("subOrders");
+            const subOrdersSnap = await subOrdersRef.where("totalOrderId", "==", orderId).get();
+            const updatePromises = subOrdersSnap.docs.map(doc => doc.ref.update({ 
+                cancelStatus: "Requested"
+            }));
+            await Promise.all(updatePromises);
+
+            res.status(200).json({ message: "Cancellation request submitted, awaiting seller approval" });
         }
-
-        // Cập nhật trạng thái đơn hàng
-        await totalOrderRef.update(updateData);
-
-        // Cập nhật trạng thái của tất cả subOrders liên quan
-        const subOrdersRef = db.collection("subOrders");
-        const subOrdersSnap = await subOrdersRef.where("totalOrderId", "==", orderId).get();
-        const updatePromises = subOrdersSnap.docs.map(doc => doc.ref.update({ 
-            status: "cancelled",
-            ...(totalOrderData.isPaid && { refundStatus: "Refunded" })
-        }));
-        await Promise.all(updatePromises);
-
-        res.status(200).json({
-            message: "Order cancelled successfully",
-        });
     } catch (error) {
         res.status(500).json({ message: "Error cancelling order", error: error.message });
+    }
+};
+
+exports.processCancelRequest = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { action } = req.body; 
+
+        const totalOrderRef = db.collection("totalOrders").doc(orderId);
+        const totalOrderSnap = await totalOrderRef.get();
+
+        if (!totalOrderSnap.exists) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        const totalOrderData = totalOrderSnap.data();
+
+        if (totalOrderData.cancelStatus !== "Requested") {
+            return res.status(400).json({ message: "No cancellation request pending" });
+        }
+
+        let updateData = {};
+        if (action === "approve") {
+            updateData = {
+                status: "cancelled",
+                cancelStatus: "Approved",
+                cancelledAt: admin.firestore.Timestamp.now(),
+            };
+
+            if (totalOrderData.isPaid) {
+                const paymentResult = totalOrderData.paymentResult;
+                if (paymentResult && totalOrderData.paymentMethod === "stripe") {
+                    const refund = await stripe.refunds.create({
+                        payment_intent: paymentResult.id,
+                        amount: Math.round(totalOrderData.totalPrice * 100),
+                    });
+                    updateData.refundResult = { id: refund.id, status: refund.status };
+                    updateData.refundedAt = admin.firestore.Timestamp.now();
+                } else if (paymentResult && totalOrderData.paymentMethod === "paypal") {
+                    const request = new paypal.payments.CapturesRefundRequest(paymentResult.id);
+                    request.requestBody({
+                        amount: { value: totalOrderData.totalPrice.toString(), currency_code: "USD" },
+                    });
+                    const refund = await paypalClient.execute(request);
+                    updateData.refundResult = { id: refund.result.id, status: refund.result.status };
+                    updateData.refundedAt = admin.firestore.Timestamp.now();
+                }
+                updateData.refundStatus = "Refunded";
+            }
+
+            await totalOrderRef.update(updateData);
+
+            const subOrdersRef = db.collection("subOrders");
+            const subOrdersSnap = await subOrdersRef.where("totalOrderId", "==", orderId).get();
+            const updatePromises = subOrdersSnap.docs.map(doc => doc.ref.update({ 
+                status: "cancelled",
+                cancelStatus: "Approved",
+                ...(totalOrderData.isPaid && { refundStatus: "Refunded" })
+            }));
+            await Promise.all(updatePromises);
+
+            res.status(200).json({ message: "Cancellation request approved" });
+        } else if (action === "reject") {
+            updateData = {
+                cancelStatus: "Rejected",
+                cancelRejectedAt: admin.firestore.Timestamp.now(),
+            };
+
+            await totalOrderRef.update(updateData);
+
+            const subOrdersRef = db.collection("subOrders");
+            const subOrdersSnap = await subOrdersRef.where("totalOrderId", "==", orderId).get();
+            const updatePromises = subOrdersSnap.docs.map(doc => doc.ref.update({ 
+                cancelStatus: "Rejected"
+            }));
+            await Promise.all(updatePromises);
+
+            res.status(200).json({ message: "Cancellation request rejected" });
+        } else {
+            return res.status(400).json({ message: "Invalid action" });
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Error processing cancellation request", error: error.message });
     }
 };

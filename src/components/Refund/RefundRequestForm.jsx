@@ -29,8 +29,8 @@ const RefundRequestForm = ({ orderId, subOrder, onRequestRefund, onCancel, loadi
     return (
         <>
             <div className="order-details mb-4">
-                <h6>Sub-Order Details</h6>
-                <p><strong>Sub-Order ID:</strong> {subOrder.id}</p>
+                <h6 className="fw-bold">Order Details</h6>
+                <p><strong>Order ID:</strong> {subOrder.id}</p>
                 <p><strong>Seller:</strong> {subOrder.sellerName || "Unknown Store"}</p>
                 <div className="suborder-items">
                     {subOrder.items.map((item, index) => (
@@ -47,7 +47,7 @@ const RefundRequestForm = ({ orderId, subOrder, onRequestRefund, onCancel, loadi
             </div>
 
             <Form onSubmit={handleSubmit} className="refund-form">
-                <h6>Request Return & Refund for Sub-Order</h6>
+                <h6 className="fw-bold">Request Return & Refund</h6>
                 <FormGroup>
                     <Label for="reason">Reason for Return/Refund:</Label>
                     <Input
@@ -114,7 +114,7 @@ const RefundRequestForm = ({ orderId, subOrder, onRequestRefund, onCancel, loadi
                 isOpen={showConfirmModal}
                 onClose={() => setShowConfirmModal(false)}
                 onConfirm={handleConfirm}
-                message="Are you sure you want to request a return and refund for this sub-order?"
+                message="Are you sure you want to request a return and refund for this order?"
             />
         </>
     );

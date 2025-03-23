@@ -540,6 +540,27 @@ export const cancelOrder = async (orderId, data) => {
     }
 };
 
+export const processCancelRequest = async (orderId, action) => {
+    try {
+        const response = await fetch(`${BASE_URL}/orders/${orderId}/cancel/process`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ action }),
+            credentials: "include",
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to process cancel request");
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error processing cancel request:", error);
+        throw error;
+    }
+};
+
 export const getDashboardStats = async (sellerId) => {
     try {
         const response = await fetch(

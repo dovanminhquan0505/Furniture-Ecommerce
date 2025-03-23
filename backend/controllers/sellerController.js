@@ -132,8 +132,10 @@ exports.getSellerOrders = async (req, res) => {
                     ...orderData,
                     userName,
                     createdAt,
-                    isPaid: totalOrderData.isPaid || orderData.isPaid || false, 
-                    status: orderData.status || "pending"
+                    isPaid: totalOrderData.isPaid || orderData.isPaid || false,
+                    status: orderData.status || "pending",
+                    cancelStatus: totalOrderData.cancelStatus || "None",
+                    refundStatus: totalOrderData.refundStatus || "None",
                 };
             })
         );

@@ -8,7 +8,9 @@ const {
     requestRefund,
     processRefund,
     cancelOrder,
+    processCancelRequest,
 } = require("../controllers/orderController");
+const { authenticateUser } = require("../controllers/authController");
 const router = express.Router();
 
 router.get("/", getOrders);
@@ -19,5 +21,6 @@ router.post("/:orderId/stripe-payment-intent", createStripePaymentIntent);
 router.post("/:orderId/refund", requestRefund);
 router.put("/:orderId/refund", processRefund);
 router.post("/:orderId/cancel", cancelOrder);
+router.put("/:orderId/cancel/process", processCancelRequest)
 
 module.exports = router;

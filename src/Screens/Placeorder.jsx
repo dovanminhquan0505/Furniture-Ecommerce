@@ -345,14 +345,27 @@ const PlaceOrder = () => {
     const handleCancelOrder = async ({ reason }, subOrderId) => {
         try {
             setLoading(true);
-            await cancelOrder(orderId, { reason });
-            setOrderDetails((prev) => ({
-                ...prev,
-                totalOrder: { ...prev.totalOrder, status: "cancelled" },
-            }));
+            const response = await cancelOrder(orderId, { reason });
+            if (response.message.includes("awaiting seller approval")) {
+                setOrderDetails((prev) => ({
+                    ...prev,
+                    totalOrder: {
+                        ...prev.totalOrder,
+                        cancelStatus: "Requested",
+                    },
+                }));
+                toast.success(
+                    "Cancellation request submitted, awaiting seller approval!"
+                );
+            } else {
+                setOrderDetails((prev) => ({
+                    ...prev,
+                    totalOrder: { ...prev.totalOrder, status: "cancelled" },
+                }));
+                toast.success("Order cancelled successfully!");
+            }
             setShowRefundModal(false);
             setSelectedSubOrderId(null);
-            toast.success("Order cancellation request submitted successfully!");
         } catch (error) {
             toast.error(error.message || "Error cancelling order");
         } finally {
@@ -430,13 +443,24 @@ const PlaceOrder = () => {
     const renderSubOrderItems = () => {
         return subOrders.map((subOrder) => {
             const subOrderId = subOrder.id;
+
+            // Điều kiện hiển thị nút "Cancel Order"
+            const shouldShowCancelBtn =
+                !isSeller &&
+                totalOrder.isPaid &&
+                (subOrder.status === "pending" ||
+                    subOrder.status === "processing") &&
+                totalOrder.refundStatus === "None" &&
+                totalOrder.cancelStatus !== "Requested";
+
+            // Điều kiện hiển thị nút "Return & Refund"
             const shouldShowRefundBtn =
                 !isSeller &&
                 totalOrder.isPaid &&
-                (totalOrder.status === "pending" ||
-                    totalOrder.status === "processing" ||
-                    totalOrder.status === "success") &&
-                totalOrder.refundStatus === "None";
+                subOrder.status === "success" &&
+                totalOrder.refundStatus === "None" &&
+                totalOrder.cancelStatus !== "Requested" &&
+                !totalOrder.isDelivered;
 
             return (
                 <div key={subOrder.id} className="border rounded p-3 mb-3">
@@ -467,7 +491,12 @@ const PlaceOrder = () => {
                             </div>
                         </div>
                     ))}
-                    {shouldShowRefundBtn && (
+                    {totalOrder.cancelStatus === "Requested" && (
+                        <p className="text-warning">
+                            Cancellation request pending approval
+                        </p>
+                    )}
+                    {(shouldShowCancelBtn || shouldShowRefundBtn) && (
                         <div className="suborder__actions">
                             <motion.button
                                 whileTap={{ scale: 1.1 }}
@@ -476,13 +505,9 @@ const PlaceOrder = () => {
                                     setSelectedSubOrderId(subOrderId);
                                     setShowRefundModal(true);
                                 }}
-                                disabled={
-                                    timeLeft === 0 &&
-                                    totalOrder.status !== "success"
-                                }
                             >
-                                {totalOrder.status === "success"
-                                    ? "Return & Refund"
+                                {shouldShowRefundBtn
+                                    ? "Return/Refund"
                                     : "Cancel Order"}
                             </motion.button>
                             <motion.button
@@ -654,71 +679,78 @@ const PlaceOrder = () => {
                                     setSelectedSubOrderId(null);
                                 }}
                             >
-                                {selectedSubOrderId && (
-                                    <>
-                                        {totalOrder.status === "success" ? (
-                                            <RefundRequestForm
-                                                orderId={orderId}
-                                                subOrder={{
-                                                    ...subOrders.find(
-                                                        (sub) =>
-                                                            sub.id ===
-                                                            selectedSubOrderId
-                                                    ),
-                                                    sellerName:
-                                                        sellerNames[
-                                                            subOrders.find(
-                                                                (sub) =>
-                                                                    sub.id ===
-                                                                    selectedSubOrderId
-                                                            )?.sellerId
-                                                        ],
-                                                }}
-                                                onRequestRefund={(data) =>
-                                                    handleRequestRefund(
-                                                        data,
-                                                        selectedSubOrderId
-                                                    )
-                                                }
-                                                onCancel={() => {
-                                                    setShowRefundModal(false);
-                                                    setSelectedSubOrderId(null);
-                                                }}
-                                                loading={loading}
-                                            />
-                                        ) : (
-                                            <CancelOrderForm
-                                                orderId={orderId}
-                                                subOrder={{
-                                                    ...subOrders.find(
-                                                        (sub) =>
-                                                            sub.id ===
-                                                            selectedSubOrderId
-                                                    ),
-                                                    sellerName:
-                                                        sellerNames[
-                                                            subOrders.find(
-                                                                (sub) =>
-                                                                    sub.id ===
-                                                                    selectedSubOrderId
-                                                            )?.sellerId
-                                                        ],
-                                                }}
-                                                onCancelOrder={(data) =>
-                                                    handleCancelOrder(
-                                                        data,
-                                                        selectedSubOrderId
-                                                    )
-                                                }
-                                                onCancel={() => {
-                                                    setShowRefundModal(false);
-                                                    setSelectedSubOrderId(null);
-                                                }}
-                                                loading={loading}
-                                            />
-                                        )}
-                                    </>
-                                )}
+                                {selectedSubOrderId &&
+                                    (() => {
+                                        const selectedSubOrder = subOrders.find(
+                                            (sub) =>
+                                                sub.id === selectedSubOrderId
+                                        );
+                                        const isSuccess =
+                                            selectedSubOrder?.status ===
+                                            "success";
+
+                                        return (
+                                            <>
+                                                {isSuccess ? (
+                                                    <RefundRequestForm
+                                                        orderId={orderId}
+                                                        subOrder={{
+                                                            ...selectedSubOrder,
+                                                            sellerName:
+                                                                sellerNames[
+                                                                    selectedSubOrder
+                                                                        .sellerId
+                                                                ],
+                                                        }}
+                                                        onRequestRefund={(
+                                                            data
+                                                        ) =>
+                                                            handleRequestRefund(
+                                                                data,
+                                                                selectedSubOrderId
+                                                            )
+                                                        }
+                                                        onCancel={() => {
+                                                            setShowRefundModal(
+                                                                false
+                                                            );
+                                                            setSelectedSubOrderId(
+                                                                null
+                                                            );
+                                                        }}
+                                                        loading={loading}
+                                                    />
+                                                ) : (
+                                                    <CancelOrderForm
+                                                        orderId={orderId}
+                                                        subOrder={{
+                                                            ...selectedSubOrder,
+                                                            sellerName:
+                                                                sellerNames[
+                                                                    selectedSubOrder
+                                                                        .sellerId
+                                                                ],
+                                                        }}
+                                                        onCancelOrder={(data) =>
+                                                            handleCancelOrder(
+                                                                data,
+                                                                selectedSubOrderId
+                                                            )
+                                                        }
+                                                        onCancel={() => {
+                                                            setShowRefundModal(
+                                                                false
+                                                            );
+                                                            setSelectedSubOrderId(
+                                                                null
+                                                            );
+                                                        }}
+                                                        loading={loading}
+                                                    />
+                                                )}
+                                            </>
+                                        );
+                                    })()}
                             </Modal>
                         </Col>
 

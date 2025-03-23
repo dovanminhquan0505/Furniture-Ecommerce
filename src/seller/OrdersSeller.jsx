@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import "../seller/styles/orders-seller.css";
 import { useTheme } from "../components/UI/ThemeContext";
 import Helmet from "../components/Helmet/Helmet";
-import { deleteOrder, fetchSellerOrders, getUserById, updateOrder } from "../api";
+import { deleteOrder, fetchSellerOrders, getUserById, processCancelRequest, processRefund, updateOrder } from "../api";
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -78,6 +78,44 @@ const Orders = () => {
           }
     };
 
+    const handleProcessCancel = async (totalOrderId, action) => {
+        try {
+            setLoading(true);
+            await processCancelRequest(totalOrderId, action);
+            setOrders(prevOrders =>
+                prevOrders.map(order =>
+                    order.totalOrderId === totalOrderId
+                        ? { ...order, cancelStatus: action === "approve" ? "Approved" : "Rejected" }
+                        : order
+                )
+            );
+            toast.success(`Cancellation request ${action}d successfully!`);
+        } catch (error) {
+            toast.error(`Failed to ${action} cancellation request: ` + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleProcessRefund = async (totalOrderId, action) => {
+        try {
+            setLoading(true);
+            await processRefund(totalOrderId, action);
+            setOrders(prevOrders =>
+                prevOrders.map(order =>
+                    order.totalOrderId === totalOrderId
+                        ? { ...order, refundStatus: action === "approve" ? "Refunded" : "Rejected" }
+                        : order
+                )
+            );
+            toast.success(`Refund request ${action}d successfully!`);
+        } catch (error) {
+            toast.error(`Failed to ${action} refund request: ` + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const parseDate = (createdAt) => {
         if (!createdAt) return new Date();
         const date = new Date(createdAt);
@@ -104,7 +142,7 @@ const Orders = () => {
             >
                 <Container fluid>
                     <Row className="justify-content-center">
-                        <Col lg="10">
+                        <Col lg="11">
                             <div className="orders__container">
                                 <h2 className="orders__title">Seller Orders</h2>
                                 {loading ? (
@@ -122,16 +160,14 @@ const Orders = () => {
                                                     <th>Total Amount</th>
                                                     <th>Status</th>
                                                     <th>Confirm</th>
+                                                    <th>Cancel/Refund Actions</th>
                                                     <th>Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {orders.length === 0 ? (
+                                            {orders.length === 0 ? (
                                                     <tr>
-                                                        <td
-                                                            colSpan="8"
-                                                            className="text-center fw-bold"
-                                                        >
+                                                        <td colSpan="8" className="text-center fw-bold">
                                                             No orders found
                                                         </td>
                                                     </tr>
@@ -162,6 +198,56 @@ const Orders = () => {
                                                                     >
                                                                         Confirm Order
                                                                     </motion.button>
+                                                                )}
+                                                            </td>
+                                                            <td>
+                                                                {order.cancelStatus === "Requested" && (
+                                                                    <div>
+                                                                        <motion.button
+                                                                            whileTap={{ scale: 0.9 }}
+                                                                            className="btn__seller btn__seller-success"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleProcessCancel(order.totalOrderId, "approve");
+                                                                            }}
+                                                                        >
+                                                                            Approve Cancel
+                                                                        </motion.button>
+                                                                        <motion.button
+                                                                            whileTap={{ scale: 0.9 }}
+                                                                            className="btn__seller btn__seller-danger"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleProcessCancel(order.totalOrderId, "reject");
+                                                                            }}
+                                                                        >
+                                                                            Reject Cancel
+                                                                        </motion.button>
+                                                                    </div>
+                                                                )}
+                                                                {order.refundStatus === "Requested" && (
+                                                                    <div>
+                                                                        <motion.button
+                                                                            whileTap={{ scale: 0.9 }}
+                                                                            className="btn__seller btn__seller-success"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleProcessRefund(order.totalOrderId, "approve");
+                                                                            }}
+                                                                        >
+                                                                            Approve Refund
+                                                                        </motion.button>
+                                                                        <motion.button
+                                                                            whileTap={{ scale: 0.9 }}
+                                                                            className="btn__seller btn__seller-danger"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleProcessRefund(order.totalOrderId, "reject");
+                                                                            }}
+                                                                        >
+                                                                            Reject Refund
+                                                                        </motion.button>
+                                                                    </div>
                                                                 )}
                                                             </td>
                                                             <td>

@@ -44,9 +44,9 @@
 .orders__table th,
 .orders__table td {
     padding: 15px;
-    text-align: left;
-    border-bottom: 1px solid #dee2e6;
     text-align: center;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: middle;
 }
 
 .dark-mode .orders__table th,
@@ -62,7 +62,6 @@
     letter-spacing: 0.5px;
     font-size: 0.9rem;
     color: #495057;
-    text-align: center;
 }
 
 .dark-mode .orders__table th {
@@ -92,22 +91,22 @@
 }
 
 .orders__status__processing {
-    background-color: #FFA500 !important; 
+    background-color: #ffa500 !important;
     color: white !important;
 }
 
 .orders__status__shipping {
-    background-color: #007BFF !important; 
+    background-color: #007bff !important;
     color: white !important;
 }
 
 .orders__status__delivered {
-    background-color: #28A745 !important; 
+    background-color: #28a745 !important;
     color: white !important;
 }
 
 .orders__status__pending {
-    background-color: #6C757D !important; 
+    background-color: #6c757d !important;
     color: white !important;
 }
 
@@ -123,41 +122,58 @@
     border-color: #533f03;
 }
 
-.dark-mode .orders__status__paid {
-    background-color: #0f401b;
-    color: #d4edda;
-    border-color: #0f401b;
+.dark-mode .orders__status__processing {
+    background-color: #e0a800;
+    color: #212529;
+    border-color: #e0a800;
+}
+
+.dark-mode .orders__status__shipping {
+    background-color: #0056b3;
+    color: #cce5ff;
+    border-color: #0056b3;
 }
 
 .dark-mode .orders__status__delivered {
-    background-color: #002752;
-    color: #cce5ff;
-    border-color: #002752;
+    background-color: #1c7430;
+    color: #d4edda;
+    border-color: #1c7430;
 }
 
 .btn__seller {
-    height: 54px;
+    height: 40px;
     font-size: 0.8rem;
-    padding: 8px 16px;
-    border-radius: 50px;
+    padding: 6px 12px;
+    border-radius: 20px;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     transition: all 0.2s ease;
+    margin: 2px;
 }
 
 .btn__seller-success {
-    background-color: #333333;
+    background-color: #28a745; 
     color: white;
     border: none;
 }
 
 .btn__seller-success:hover {
-    background-color: #706c6c;
+    background-color: #218838;
+}
+
+.btn__seller-danger {
+    background-color: #dc3545; 
+    color: white;
+    border: none;
+}
+
+.btn__seller-danger:hover {
+    background-color: #c82333;
 }
 
 .btn__seller-delete {
-    background-color: #ef5350;
+    background-color: #ef5350; 
     color: white;
     border: none;
 }
@@ -165,6 +181,13 @@
 .btn__seller-delete:hover {
     background-color: #c82333;
     border-color: #bd2130;
+}
+
+.orders__table td:nth-child(7) {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px; 
 }
 
 .spinner-border {
@@ -184,5 +207,33 @@
     .orders__table th,
     .orders__table td {
         padding: 10px;
+        font-size: 0.85rem;
+    }
+
+    .btn__seller {
+        height: 35px;
+        font-size: 0.75rem;
+        padding: 5px 10px;
+    }
+
+    .orders__table td:nth-child(7) {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+@media (max-width: 576px) {
+    .orders__table {
+        font-size: 0.8rem;
+    }
+
+    .orders__table th,
+    .orders__table td {
+        padding: 8px;
+    }
+
+    .badge__seller {
+        font-size: 10px;
+        padding: 4px 8px;
     }
 }

@@ -91,19 +91,24 @@
     text-transform: uppercase;
 }
 
-.orders__status__pending {
-    background-color: #fff0c2;
-    color: #a68b00;
+.orders__status__processing {
+    background-color: #FFA500 !important; 
+    color: white !important;
 }
 
-.orders__status__paid {
-    background-color: #c8e6c9;
-    color: #388e3c;
+.orders__status__shipping {
+    background-color: #007BFF !important; 
+    color: white !important;
 }
 
 .orders__status__delivered {
-    background-color: #bbdefb;
-    color: #1976d2;
+    background-color: #28A745 !important; 
+    color: white !important;
+}
+
+.orders__status__pending {
+    background-color: #6C757D !important; 
+    color: white !important;
 }
 
 /* Hover effect for better visibility */

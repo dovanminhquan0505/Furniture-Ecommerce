@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Helmet from "../components/Helmet/Helmet";
-import { Container, Row, Col, Spinner } from "reactstrap";
+import { Container, Row, Col, Spinner, Form } from "reactstrap";
 import { motion } from "framer-motion";
 import CommonSection from "../components/UI/CommonSection";
 import { useNavigate, useParams } from "react-router-dom";
@@ -11,7 +11,15 @@ import { toast } from "react-toastify";
 import { cartActions } from "../redux/slices/cartSlice";
 import { useDispatch } from "react-redux";
 import useSeller from "../custom-hooks/useSeller";
-import { createStripePaymentIntent, getOrderById, updateOrder } from "../api";
+import {
+    createStripePaymentIntent,
+    fetchSellerInfo,
+    getOrderById,
+    processRefund,
+    requestRefund,
+    updateOrder,
+    uploadFile,
+} from "../api";
 import {
     CardElement,
     Elements,
@@ -19,6 +27,7 @@ import {
     useStripe,
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
+import RefundForm from "../components/Refund/RefundForm.js";
 
 // eslint-disable-next-line no-undef
 // Get Paypal Client from your environment
@@ -114,6 +123,8 @@ const PlaceOrder = () => {
     const [showPayment, setShowPayment] = useState(false);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
     const dispatch = useDispatch();
+    const [showRefundForm, setShowRefundForm] = useState(false);
+    const [sellerNames, setSellerNames] = useState({});
 
     useEffect(() => {
         if (!orderId) {
@@ -179,9 +190,19 @@ const PlaceOrder = () => {
                         ...response.totalOrder,
                         paidAt,
                         deliveredAt,
+                        refundStatus:
+                            response.totalOrder.refundStatus || "None",
                     },
                     subOrders: response.subOrders,
                 });
+
+                // Fetch seller names for each subOrder
+                const sellerNamesData = {};
+                for (const subOrder of response.subOrders) {
+                    const sellerInfo = await fetchSellerInfo(subOrder.sellerId);
+                    sellerNamesData[subOrder.sellerId] = sellerInfo.storeName || "Unknown Store";
+                }
+                setSellerNames(sellerNamesData);
             } catch (error) {
                 toast.error("Error fetching order details: " + error.message);
                 navigate("/checkout");
@@ -219,7 +240,6 @@ const PlaceOrder = () => {
 
     // Get order details
     const { totalOrder, subOrders } = orderDetails;
-    const cartItems = totalOrder.items || [];
 
     const handleConfirmOrder = () => {
         setShowPayment(true);
@@ -294,36 +314,131 @@ const PlaceOrder = () => {
         }
     };
 
-    // Handle Deliver Order, only seller
-    const handleDeliveryConfirmation = async () => {
-        if (!isSeller) {
-            toast.error("Only sellers can confirm delivery");
-            return;
-        }
-
+    // Handle Request Refund
+    const handleRequestRefund = async ({ reason, files }) => {
         try {
             setLoading(true);
-            const deliveredAt = new Date().toISOString();
-
-            await updateOrder(orderId, {
-                isDelivered: true,
-                deliveredAt,
-            });
-
+            let evidence = [];
+            if (files.length > 0) {
+                const uploadPromises = files.map(file => uploadFile(file));
+                const uploadResults = await Promise.all(uploadPromises);
+                evidence = uploadResults.map(result => result.fileURL);
+            }
+            await requestRefund(orderId, { reason, evidence });
             setOrderDetails((prev) => ({
                 ...prev,
-                totalOrder: {
-                    ...prev.totalOrder,
-                    isDelivered: true,
-                    deliveredAt: new Date(deliveredAt),
-                },
+                totalOrder: { ...prev.totalOrder, refundStatus: "Requested" },
             }));
-            toast.success("Order marked as delivered");
+            setShowRefundForm(false);
+            toast.success(
+                totalOrder.status === "success"
+                    ? "Return & Refund request submitted successfully!"
+                    : "Order cancellation request submitted successfully!"
+            );
         } catch (error) {
-            toast.error("Error updating order: " + error.message);
+            toast.error("Error requesting refund: " + error.message);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleProcessRefund = async (action) => {
+        if (!isSeller) {
+            toast.error("Only sellers can process refunds");
+            return;
+        }
+        try {
+            setLoading(true);
+            await processRefund(orderId, action);
+            setOrderDetails((prev) => ({
+                ...prev,
+                totalOrder: { ...prev.totalOrder, refundStatus: action === "approve" ? "Refunded" : "Rejected" },
+            }));
+            toast.success(`Refund ${action}ed successfully!`);
+        } catch (error) {
+            toast.error("Error processing refund: " + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Handle Buy Again
+    const handleBuyAgain = (item) => {
+        dispatch(cartActions.addItem({
+            id: item.id,
+            productName: item.productName,
+            price: item.price,
+            imgUrl: item.imgUrl,
+            quantity: 1,
+        }));
+        toast.success(`${item.productName} đã được thêm vào giỏ hàng!`);
+        navigate("/cart");
+    };
+
+    const renderSubOrderItems = () => {
+        return subOrders.map(subOrder => {
+            const subOrderId = subOrder.id;
+            const shouldShowRefundBtn = !isSeller && totalOrder.isPaid && 
+                (totalOrder.status === "pending" || totalOrder.status === "processing" || totalOrder.status === "success") && 
+                totalOrder.refundStatus === "None";
+
+            return (
+                <div key={subOrder.id} className="border rounded p-3 mb-3">
+                    {/* Hiển thị tên cửa hàng của seller với icon */}
+                    <h6 className="seller__store">
+                        <i className="fas fa-store me-1"></i>
+                        <div className="fw-bold">
+                            {sellerNames[subOrder.sellerId] || "Đang tải..."}
+                        </div>
+                    </h6>
+                    {subOrder.items.map((item, index) => (
+                        <div key={index} className="cart__item">
+                            <img
+                                src={item.imgUrl}
+                                alt={item.productName}
+                                className="cart__item-img"
+                            />
+                            <div className="cart__item-info">
+                                <h6>{item.productName}</h6>
+                                <p>Qty: {item.quantity} | Status: {subOrder.status || "Pending"}</p>
+                            </div>
+                            <div className="cart__item-price">
+                                <span className="price__cartItem">${item.price}</span>
+                            </div>
+                        </div>
+                    ))}
+                    {/* Thêm nút Refund/Cancel và Buy Again dưới cùng bên phải */}
+                    {shouldShowRefundBtn && (
+                        <div className="suborder__actions">
+                            <motion.button
+                                whileTap={{ scale: 1.1 }}
+                                className="refund__btn"
+                                onClick={() => setShowRefundForm(prev => ({ ...prev, [subOrderId]: true }))}
+                            >
+                                {totalOrder.status === "success" ? "Return & Refund" : "Cancel Order"}
+                            </motion.button>
+                            <motion.button
+                                whileTap={{ scale: 1.1 }}
+                                className="buy-again__btn"
+                                onClick={() => handleBuyAgain(subOrder)}
+                            >
+                                Buy Again
+                            </motion.button>
+                        </div>
+                    )}
+                    {/* Hiển thị RefundForm nếu được kích hoạt */}
+                    {showRefundForm[subOrderId] && (
+                        <RefundForm
+                            orderId={orderId}
+                            onRequestRefund={(data) => handleRequestRefund(data, subOrderId)}
+                            onCancel={() => setShowRefundForm(prev => ({ ...prev, [subOrderId]: false }))}
+                            loading={loading}
+                            isDelivered={totalOrder.status === "success"} 
+                        />
+                    )}
+                </div>
+            );
+        });
     };
 
     // Handle display Date
@@ -365,16 +480,12 @@ const PlaceOrder = () => {
         });
     };
 
-    const shouldShowProceedToPaymentBtn =
-        !isSeller && totalOrder && !totalOrder.isPaid && !showPayment;
-    const shouldShowPaypal =
-        totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "paypal";
-    const shouldShowMomo =
-        totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "momo";
-    const shouldShowStripe =
-        totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "stripe";
-    const shouldShowConfirmDeliverBtn =
-        isSeller && totalOrder && totalOrder.isPaid && !totalOrder.isDelivered;
+    const shouldShowProceedToPaymentBtn = !isSeller && totalOrder && !totalOrder.isPaid && !showPayment;
+    const shouldShowPaypal = totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "paypal";
+    const shouldShowMomo = totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "momo";
+    const shouldShowStripe = totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "stripe";
+    const shouldShowRefundStatus = totalOrder.refundStatus !== "None";
+    const shouldShowProcessRefundBtn = isSeller && totalOrder.refundStatus === "Requested"
 
     return (
         <Helmet title=" Place Order">
@@ -387,17 +498,17 @@ const PlaceOrder = () => {
                         <Col lg="8">
                             {/* Back Arrow */}
                             {!totalOrder.isPaid && (
-                                    <motion.i
-                                        className="fas fa-arrow-left back__arrow"
-                                        onClick={() =>
-                                            navigate("/checkout", {
-                                                state: { ...totalOrder },
-                                            })
-                                        }
-                                        whileHover={{ scale: 1.2 }}
-                                        whileTap={{ scale: 0.9 }}
-                                    />
-                                )}
+                                <motion.i
+                                    className="fas fa-arrow-left back__arrow"
+                                    onClick={() =>
+                                        navigate("/checkout", {
+                                            state: { ...totalOrder },
+                                        })
+                                    }
+                                    whileHover={{ scale: 1.2 }}
+                                    whileTap={{ scale: 0.9 }}
+                                />
+                            )}
                             <div className="border rounded p-3 mb-4">
                                 <h6 className="mb-3 fw-bold">Shipping</h6>
                                 <div className="billing__info">
@@ -452,36 +563,35 @@ const PlaceOrder = () => {
                                               )}`
                                             : "Not Delivered"}
                                     </p>
+                                    {shouldShowRefundStatus && (
+                                        <p
+                                            className={
+                                                totalOrder.refundStatus ===
+                                                "Refunded"
+                                                    ? "text-success"
+                                                    : "text-warning"
+                                            }
+                                        >
+                                            Refund Status:{" "}
+                                            {totalOrder.refundStatus}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 
                             <div className="border rounded p-3 mb-4">
-                                <div className="cart__items-heading d-flex align-items-center justify-content-between">
-                                    <h6 className="mb-3 fw-bold">
-                                        Shopping Cart
-                                    </h6>
-                                    <div className="price__cartItem">Price</div>
-                                </div>
-
-                                <div className="cart__items-list">
-                                    {cartItems.map((item, index) => (
-                                        <div key={index} className="cart__item">
-                                            <img
-                                                src={item.imgUrl}
-                                                alt={item.productName}
-                                                className="cart__item-img"
-                                            />
-                                            <div className="cart__item-info">
-                                                <h6>{item.productName}</h6>
-                                                <p>Qty: {item.quantity}</p>
-                                            </div>
-                                            <div className="cart__item-price">
-                                                <p>${item.price}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                <h6 className="mb-3 fw-bold">Shopping Cart</h6>
+                                {renderSubOrderItems()}
                             </div>
+                            {showRefundForm && (
+                                <RefundForm
+                                    orderId={orderId}
+                                    onRequestRefund={handleRequestRefund}
+                                    onCancel={() => setShowRefundForm(false)}
+                                    loading={loading}
+                                    isDelivered={totalOrder.status === "success"} 
+                                />
+                            )}
                         </Col>
 
                         {/* Order details summary */}
@@ -683,14 +793,23 @@ const PlaceOrder = () => {
                                     )}
                                 </div>
 
-                                {shouldShowConfirmDeliverBtn && (
-                                    <motion.button
-                                        whileTap={{ scale: 1.1 }}
-                                        className="buy__btn auth__btn w-100"
-                                        onClick={handleDeliveryConfirmation}
-                                    >
-                                        Confirm Delivery
-                                    </motion.button>
+                                {shouldShowProcessRefundBtn && (
+                                    <div className="mt-3">
+                                        <motion.button
+                                            whileTap={{ scale: 1.1 }}
+                                            className="buy__btn auth__btn w-100"
+                                            onClick={() => handleProcessRefund("approve")}
+                                        >
+                                            Approve Refund
+                                        </motion.button>
+                                        <motion.button
+                                            whileTap={{ scale: 1.1 }}
+                                            className="buy__btn auth__btn w-100 mt-2"
+                                            onClick={() => handleProcessRefund("reject")}
+                                        >
+                                            Reject Refund
+                                        </motion.button>
+                                    </div>
                                 )}
 
                                 {loading && (

@@ -10,7 +10,6 @@ const {
     createSellerProduct,
     deleteSellerProduct,
     getSellerOrders,
-    confirmDelivery,
     deleteSellerOrder,
     getSellerIdByUserId,
 } = require("../controllers/sellerController");
@@ -31,7 +30,6 @@ router.put('/:productId/products', updateSellerProduct);
 router.delete('/:productId', deleteSellerProduct);
 router.get("/:sellerId/dashboard", getDashboardStats);
 router.get('/:sellerId/orders', getSellerOrders);
-router.put('/:orderId/deliver', confirmDelivery);
 router.delete('/:sellerId/orders/:orderId', deleteSellerOrder);
 router.get("/by-user/:userId", getSellerIdByUserId)
 

@@ -454,6 +454,15 @@ const ProfileUser = () => {
         return parsedDate;
     };
 
+    const getStatusColor = (status) => {
+        switch (status) {
+            case "processing": return "#FFA500"; 
+            case "shipping": return "#007BFF"; 
+            case "success": return "#28A745"; 
+            default: return "#6C757D"; 
+        }
+    };
+
     // Render Order Information
     const renderOrderInformation = () => (
         <div className="order-info">
@@ -470,60 +479,19 @@ const ProfileUser = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {orderInfo.length > 0 ? (
+                {orderInfo.length > 0 ? (
                         orderInfo.map((order) => {
-                            // Parse Paid At
-                            let paidAtDate;
-                            if (order.paidAt) {
-                                if (order.paidAt.toDate) {
-                                    paidAtDate = order.paidAt.toDate();
-                                } else {
-                                    paidAtDate = parseDate(order.paidAt);
-                                }
-                            }
-
+                            let paidAtDate = order.paidAt?.toDate ? order.paidAt.toDate() : parseDate(order.paidAt);
                             const paidAtFormatted = paidAtDate
-                                ? paidAtDate.toLocaleString("en-US", {
-                                      year: "numeric",
-                                      month: "2-digit",
-                                      day: "2-digit",
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                      hour12: false,
-                                  })
+                                ? paidAtDate.toLocaleString("en-US", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })
                                 : "Not Paid";
-                            const [paidAtDatePart, paidAtTimePart] =
-                                paidAtFormatted !== "Not Paid"
-                                    ? paidAtFormatted.split(", ")
-                                    : ["", ""];
+                            const [paidAtDatePart, paidAtTimePart] = paidAtFormatted !== "Not Paid" ? paidAtFormatted.split(", ") : ["", ""];
 
-                            // Parse Delivered At
-                            let deliveredAtDate;
-                            if (order.deliveredAt) {
-                                if (order.deliveredAt.toDate) {
-                                    deliveredAtDate =
-                                        order.deliveredAt.toDate();
-                                } else {
-                                    deliveredAtDate = parseDate(
-                                        order.deliveredAt
-                                    );
-                                }
-                            }
-
+                            let deliveredAtDate = order.deliveredAt?.toDate ? order.deliveredAt.toDate() : parseDate(order.deliveredAt);
                             const deliveredAtFormatted = deliveredAtDate
-                                ? deliveredAtDate.toLocaleString("en-US", {
-                                      year: "numeric",
-                                      month: "2-digit",
-                                      day: "2-digit",
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                      hour12: false,
-                                  })
+                                ? deliveredAtDate.toLocaleString("en-US", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })
                                 : "Not Delivered";
-                            const [deliveredAtDatePart, deliveredAtTimePart] =
-                                deliveredAtFormatted !== "Not Delivered"
-                                    ? deliveredAtFormatted.split(", ")
-                                    : ["", ""];
+                            const [deliveredAtDatePart, deliveredAtTimePart] = deliveredAtFormatted !== "Not Delivered" ? deliveredAtFormatted.split(", ") : ["", ""];
 
                             return (
                                 <tr key={order.orderId}>
@@ -531,65 +499,26 @@ const ProfileUser = () => {
                                     <td>{order.date}</td>
                                     <td>${order.totalPrice}</td>
                                     <td>
-                                        {paidAtFormatted === "Not Paid" ? (
-                                            "Not Paid"
-                                        ) : (
+                                        {paidAtFormatted === "Not Paid" ? "Not Paid" : (
                                             <div style={{ lineHeight: "1.2" }}>
                                                 <div>{paidAtDatePart}</div>
-                                                <div>
-                                                    {paidAtTimePart ===
-                                                        "00:00" &&
-                                                    paidAtDate &&
-                                                    paidAtDate.getHours() ===
-                                                        0 &&
-                                                    paidAtDate.getMinutes() ===
-                                                        0
-                                                        ? "N/A"
-                                                        : paidAtTimePart}
-                                                </div>
+                                                <div>{paidAtTimePart === "00:00" && paidAtDate && paidAtDate.getHours() === 0 && paidAtDate.getMinutes() === 0 ? "N/A" : paidAtTimePart}</div>
                                             </div>
                                         )}
                                     </td>
                                     <td>
-                                        {deliveredAtFormatted ===
-                                        "Not Delivered" ? (
-                                            "Not Delivered"
-                                        ) : (
+                                        {deliveredAtFormatted === "Not Delivered" ? "Not Delivered" : (
                                             <div style={{ lineHeight: "1.2" }}>
                                                 <div>{deliveredAtDatePart}</div>
-                                                <div>
-                                                    {deliveredAtTimePart ===
-                                                        "00:00" &&
-                                                    deliveredAtDate &&
-                                                    deliveredAtDate.getHours() ===
-                                                        0 &&
-                                                    deliveredAtDate.getMinutes() ===
-                                                        0
-                                                        ? "N/A"
-                                                        : deliveredAtTimePart}
-                                                </div>
+                                                <div>{deliveredAtTimePart === "00:00" && deliveredAtDate && deliveredAtDate.getHours() === 0 && deliveredAtDate.getMinutes() === 0 ? "N/A" : deliveredAtTimePart}</div>
                                             </div>
                                         )}
                                     </td>
                                     <td>
-                                        <Button
-                                            variant="secondary"
-                                            size="sm"
-                                            className="action-button"
-                                            onClick={() =>
-                                                handleViewOrder(order.orderId)
-                                            }
-                                        >
+                                        <Button variant="secondary" size="sm" className="action-button" onClick={() => handleViewOrder(order.orderId)}>
                                             View
                                         </Button>
-                                        <Button
-                                            variant="danger"
-                                            size="sm"
-                                            className="action-button"
-                                            onClick={() =>
-                                                handleDeleteOrder(order.orderId)
-                                            }
-                                        >
+                                        <Button variant="danger" size="sm" className="action-button" onClick={() => handleDeleteOrder(order.orderId)}>
                                             Delete
                                         </Button>
                                     </td>
@@ -597,11 +526,7 @@ const ProfileUser = () => {
                             );
                         })
                     ) : (
-                        <tr>
-                            <td colSpan="6" className="text-center">
-                                No orders found.
-                            </td>
-                        </tr>
+                        <tr><td colSpan="7" className="text-center">No orders found.</td></tr>
                     )}
                 </tbody>
             </Table>

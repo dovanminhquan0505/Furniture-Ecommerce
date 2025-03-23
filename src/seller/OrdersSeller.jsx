@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import "../seller/styles/orders-seller.css";
 import { useTheme } from "../components/UI/ThemeContext";
 import Helmet from "../components/Helmet/Helmet";
-import { confirmDelivery, deleteOrder, fetchSellerOrders, getUserById } from "../api";
+import { deleteOrder, fetchSellerOrders, getUserById, updateOrder } from "../api";
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -50,21 +50,23 @@ const Orders = () => {
         fetchOrders();
     }, [sellerId]);
 
-    // Handle Deliver orders for each seller
-    const handleConfirmDelivery = async (orderId) => {
+    // Xử lý Confirm Order
+    const handleConfirmOrder = async (subOrderId, totalOrderId) => {
         try {
-            await confirmDelivery(orderId); 
-            setOrders((prevOrders) =>
-              prevOrders.map((order) =>
-                order.id === orderId ? { ...order, isDelivered: true, deliveredAt: new Date() } : order
-              )
+            await updateOrder(totalOrderId, { subOrderId, status: "processing" });
+            setOrders(prevOrders =>
+                prevOrders.map(order =>
+                    order.id === subOrderId
+                        ? { ...order, status: "processing", statusUpdatedAt: new Date() }
+                        : order
+                )
             );
-            toast.success("Order delivered successfully!");
-          } catch (error) {
-            toast.error("Failed to confirm delivery: " + error.message);
-          }
+            toast.success("Order confirmed successfully! Processing started.");
+        } catch (error) {
+            toast.error("Failed to confirm order: " + error.message);
+        }
     };
-
+    
     // Handle delete orders
     const deleteOrderHandler = async (orderId) => {
         try {
@@ -84,10 +86,12 @@ const Orders = () => {
 
     const getStatusClass = (status) => {
         switch (status) {
-            case "Delivered":
+            case "processing":
+                return "orders__status__processing";
+            case "shipping":
+                return "orders__status__shipping";
+            case "success":
                 return "orders__status__delivered";
-            case "Paid":
-                return "orders__status__paid";
             default:
                 return "orders__status__pending";
         }
@@ -135,85 +139,38 @@ const Orders = () => {
                                                     orders.map((order) => (
                                                         <tr
                                                             key={order.id}
-                                                            onClick={() =>
-                                                                navigate(
-                                                                    `/placeorder/${order.totalOrderId}`
-                                                                )
-                                                            }
+                                                            onClick={() => navigate(`/placeorder/${order.totalOrderId}`)}
                                                         >
                                                             <td>{order.id}</td>
+                                                            <td>{order.userName}</td>
+                                                            <td>{parseDate(order.createdAt).toLocaleDateString()}</td>
+                                                            <td>${order.totalAmount.toFixed(2)}</td>
                                                             <td>
-                                                                {order.userName}
-                                                            </td>
-                                                            <td>
-                                                                {parseDate(order.createdAt).toLocaleDateString()}
-                                                            </td>
-                                                            <td>
-                                                                $
-                                                                {order.totalAmount.toFixed(
-                                                                    2
-                                                                )}
-                                                            </td>
-                                                            <td>
-                                                                <span
-                                                                    className={`badge__seller ${getStatusClass(
-                                                                        order.isPaid
-                                                                            ? "Paid"
-                                                                            : "Pending"
-                                                                    )}`}
-                                                                >
-                                                                    {order.isPaid
-                                                                        ? "Paid"
-                                                                        : "Pending"}
+                                                                <span className={`badge__seller ${getStatusClass(order.status)}`}>
+                                                                    {order.status || "Pending"}
                                                                 </span>
-                                                                {order.isDelivered && (
-                                                                    <span
-                                                                        className={`badge__seller ${getStatusClass(
-                                                                            "Delivered"
-                                                                        )}`}
-                                                                        style={{
-                                                                            marginLeft:
-                                                                                "5px",
-                                                                        }}
-                                                                    >
-                                                                        Delivered
-                                                                    </span>
-                                                                )}
                                                             </td>
                                                             <td>
-                                                                {!order.isDelivered && order.isPaid && (
+                                                                {order.status === "pending" && order.isPaid && (
                                                                     <motion.button
-                                                                        whileTap={{
-                                                                            scale: 0.9,
-                                                                        }}
+                                                                        whileTap={{ scale: 0.9 }}
                                                                         className="btn__seller btn__seller-success"
-                                                                        onClick={(
-                                                                            e
-                                                                        ) => {
+                                                                        onClick={(e) => {
                                                                             e.stopPropagation();
-                                                                            handleConfirmDelivery(
-                                                                                order.id
-                                                                            );
+                                                                            handleConfirmOrder(order.id, order.totalOrderId);
                                                                         }}
                                                                     >
-                                                                        Confirm
-                                                                        Delivered
+                                                                        Confirm Order
                                                                     </motion.button>
                                                                 )}
                                                             </td>
                                                             <td>
                                                                 <motion.button
-                                                                    whileTap={{
-                                                                        scale: 0.9,
-                                                                    }}
+                                                                    whileTap={{ scale: 0.9 }}
                                                                     className="btn__seller btn__seller-delete"
-                                                                    onClick={(
-                                                                        e
-                                                                    ) => {
+                                                                    onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        deleteOrderHandler(
-                                                                            order.id
-                                                                        );
+                                                                        deleteOrderHandler(order.id);
                                                                     }}
                                                                 >
                                                                     Delete

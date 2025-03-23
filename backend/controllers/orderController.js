@@ -1,6 +1,60 @@
 const admin = require("firebase-admin");
 const db = admin.firestore();
+
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const paypal = require("@paypal/checkout-server-sdk");
+
+// Cấu hình PayPal Sandbox
+const paypalEnv = new paypal.core.SandboxEnvironment(
+    process.env.PAYPAL_CLIENT_ID,
+    process.env.PAYPAL_CLIENT_SECRET
+);
+const paypalClient = new paypal.core.PayPalHttpClient(paypalEnv);
+
+// Hàm để lên lịch chuyển trạng thái
+const scheduleStatusUpdate = async (orderId, subOrderId, currentStatus, delay) => {
+    setTimeout(async () => {
+        const subOrderRef = db.collection("subOrders").doc(subOrderId);
+        const subOrderSnap = await subOrderRef.get();
+        if (!subOrderSnap.exists) return;
+
+        const subOrderData = subOrderSnap.data();
+        if (subOrderData.status !== currentStatus) return;
+
+        let newStatus;
+        if (currentStatus === "processing") newStatus = "shipping";
+        else if (currentStatus === "shipping") newStatus = "success";
+
+        if (newStatus) {
+            const updateData = {
+                status: newStatus,
+                statusUpdatedAt: admin.firestore.Timestamp.now(),
+            };
+            if (newStatus === "success") {
+                updateData.isDelivered = true;
+                updateData.deliveredAt = admin.firestore.Timestamp.now();
+            }
+
+            await subOrderRef.update(updateData);
+
+            if (newStatus === "shipping") {
+                scheduleStatusUpdate(orderId, subOrderId, "shipping", 300000);
+            }
+
+            const subOrdersSnap = await db.collection("subOrders")
+                .where("totalOrderId", "==", orderId)
+                .get();
+            const allSubOrdersSuccess = subOrdersSnap.docs.every(doc => doc.data().status === "success");
+            if (allSubOrdersSuccess) {
+                await db.collection("totalOrders").doc(orderId).update({
+                    status: "success",
+                    isDelivered: true,
+                    deliveredAt: admin.firestore.Timestamp.now(),
+                });
+            }
+        }
+    }, delay);
+};
 
 exports.getOrders = async (req, res) => {
     try {
@@ -34,10 +88,14 @@ exports.createOrder = async (req, res) => {
         } = req.body;
 
         if (!userId || !items.length) {
-            return res.status(400).json({ message: "userId and items are required" });
+            return res
+                .status(400)
+                .json({ message: "userId and items are required" });
         }
         if (totalPrice <= 0) {
-            return res.status(400).json({ message: "totalPrice must be greater than 0" });
+            return res
+                .status(400)
+                .json({ message: "totalPrice must be greater than 0" });
         }
 
         // 1. Create the total order in totalOrders collection
@@ -52,6 +110,8 @@ exports.createOrder = async (req, res) => {
             totalPrice,
             isPaid,
             isDelivered,
+            status: "pending",
+            statusUpdatedAt: null,
             createdAt: createdAt
                 ? new Date(createdAt)
                 : admin.firestore.Timestamp.now(),
@@ -77,6 +137,8 @@ exports.createOrder = async (req, res) => {
                     totalAmount: 0,
                     isPaid: false,
                     isDelivered: false,
+                    status: "pending",
+                    statusUpdatedAt: null,
                     createdAt: createdAt
                         ? new Date(createdAt)
                         : admin.firestore.Timestamp.now(),
@@ -141,9 +203,15 @@ exports.getOrderById = async (req, res) => {
             billingInfo: {},
             items: [],
             sellerIds: [],
+            status: "pending", 
             ...totalOrderSnap.data(),
-            paidAt: totalOrderSnap.data().paidAt ? totalOrderSnap.data().paidAt.toDate().toISOString() : null,
-            deliveredAt: totalOrderSnap.data().deliveredAt ? totalOrderSnap.data().deliveredAt.toDate().toISOString() : null,
+            paidAt: totalOrderSnap.data().paidAt
+                ? totalOrderSnap.data().paidAt.toDate().toISOString()
+                : null,
+            deliveredAt: totalOrderSnap.data().deliveredAt
+                ? totalOrderSnap.data().deliveredAt.toDate().toISOString()
+                : null,
+            statusUpdatedAt: totalOrderSnap.data().statusUpdatedAt ? totalOrderSnap.data().statusUpdatedAt.toDate().toISOString() : null
         };
 
         const subOrdersRef = db.collection("subOrders");
@@ -154,6 +222,7 @@ exports.getOrderById = async (req, res) => {
         const subOrdersData = subOrdersSnap.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
+            statusUpdatedAt: doc.data().statusUpdatedAt ? doc.data().statusUpdatedAt.toDate().toISOString() : null
         }));
 
         res.status(200).json({
@@ -161,14 +230,18 @@ exports.getOrderById = async (req, res) => {
             subOrders: subOrdersData,
         });
     } catch (error) {
-        res.status(500).json({ message: "Error fetching order details", error });
+        res.status(500).json({
+            message: "Error fetching order details",
+            error,
+        });
     }
 };
 
+// orderController.js
 exports.updateOrder = async (req, res) => {
     try {
         const { orderId } = req.params;
-        const { isPaid, paidAt, isDelivered, deliveredAt, paymentResult } = req.body;
+        const { subOrderId, isPaid, paidAt, paymentResult, status } = req.body;
 
         const totalOrderRef = db.collection("totalOrders").doc(orderId);
         const totalOrderSnap = await totalOrderRef.get();
@@ -177,33 +250,56 @@ exports.updateOrder = async (req, res) => {
             return res.status(404).json({ message: "Order not found" });
         }
 
-        const totalOrderData = totalOrderSnap.data();
         const updateData = {};
         if (isPaid !== undefined) updateData.isPaid = isPaid;
         if (paidAt) updateData.paidAt = admin.firestore.Timestamp.fromDate(new Date(paidAt));
-        if (isDelivered !== undefined) updateData.isDelivered = isDelivered;
-        if (deliveredAt) updateData.deliveredAt = admin.firestore.Timestamp.fromDate(new Date(deliveredAt));
         if (paymentResult) {
             updateData.paymentResult = {
                 ...paymentResult,
-                email: paymentResult.email || totalOrderData.billingInfo?.email || "N/A", 
+                email: paymentResult.email || totalOrderSnap.data().billingInfo?.email || "N/A"
             };
         }
 
-        await totalOrderRef.update(updateData);
+        if (Object.keys(updateData).length > 0) {
+            await totalOrderRef.update(updateData);
+        }
 
-        if (isPaid !== undefined || isDelivered !== undefined) {
-            const subOrdersRef = db.collection("subOrders");
-            const subOrdersSnap = await subOrdersRef.where("totalOrderId", "==", orderId).get();
-            const updatePromises = subOrdersSnap.docs.map((doc) => {
-                const subUpdateData = {};
-                if (isPaid !== undefined) subUpdateData.isPaid = isPaid;
-                if (paidAt) subUpdateData.paidAt = admin.firestore.Timestamp.fromDate(new Date(paidAt));
-                if (isDelivered !== undefined) subUpdateData.isDelivered = isDelivered;
-                if (deliveredAt) subUpdateData.deliveredAt = admin.firestore.Timestamp.fromDate(new Date(deliveredAt));
-                return doc.ref.update(subUpdateData);
-            });
-            await Promise.all(updatePromises);
+        if (subOrderId && status) {
+            const subOrderRef = db.collection("subOrders").doc(subOrderId);
+            const subOrderSnap = await subOrderRef.get();
+
+            if (!subOrderSnap.exists) {
+                return res.status(404).json({ message: "Sub-order not found" });
+            }
+
+            const subUpdateData = {
+                status,
+                statusUpdatedAt: admin.firestore.Timestamp.now(),
+            };
+
+            await subOrderRef.update(subUpdateData);
+
+            if (status === "processing") {
+                scheduleStatusUpdate(orderId, subOrderId, "processing", 300000);
+            } else if (status === "shipping") {
+                scheduleStatusUpdate(orderId, subOrderId, "shipping", 300000);
+            }
+
+            const subOrdersSnap = await db.collection("subOrders")
+                .where("totalOrderId", "==", orderId)
+                .get();
+            const allSubOrdersSuccess = subOrdersSnap.docs.every(doc => 
+                doc.data().status === "success" || (status === "success" && doc.id === subOrderId)
+            );
+            if (allSubOrdersSuccess) {
+                await totalOrderRef.update({
+                    status: "success",
+                    isDelivered: true,
+                    deliveredAt: admin.firestore.Timestamp.now(),
+                });
+            }
+
+            return res.status(200).json({ message: "Sub-order updated successfully" });
         }
 
         res.status(200).json({ message: "Order updated successfully" });
@@ -233,6 +329,135 @@ exports.createStripePaymentIntent = async (req, res) => {
 
         res.status(200).json({ clientSecret: paymentIntent.client_secret });
     } catch (error) {
-        res.status(500).json({ message: "Error creating Stripe payment intent", error: error.message });
+        res.status(500).json({
+            message: "Error creating Stripe payment intent",
+            error: error.message,
+        });
+    }
+};
+
+// Refund
+exports.requestRefund = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { reason, evidence } = req.body;
+
+        const totalOrderRef = db.collection("totalOrders").doc(orderId);
+        const totalOrderSnap = await totalOrderRef.get();
+
+        if (!totalOrderSnap.exists) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        const totalOrderData = totalOrderSnap.data();
+
+        if (!totalOrderData.isPaid) {
+            return res.status(400).json({ message: "Order has not been paid yet" });
+        }
+        if (totalOrderData.refundStatus === "Refunded") {
+            return res.status(400).json({ message: "Order has already been refunded" });
+        }
+
+        const paidAt = totalOrderData.paidAt.toDate();
+        const now = new Date();
+        const daysSincePaid = (now - paidAt) / (1000 * 60 * 60 * 24);
+        if (daysSincePaid > 15) {
+            return res.status(400).json({ message: "Refund request period has expired" });
+        }
+
+        // Điều kiện hoàn tiền
+        if (totalOrderData.status === "success" && !totalOrderData.isDelivered) {
+            return res.status(400).json({ message: "Order status conflict" });
+        }
+        if (totalOrderData.status !== "processing" && totalOrderData.status !== "pending" && totalOrderData.status !== "success") {
+            return res.status(400).json({ message: "Cannot request refund at this status" });
+        }
+
+        const refundData = {
+            refundStatus: "Requested",
+            refundRequest: {
+                reason,
+                evidence: evidence || [],
+                requestedAt: admin.firestore.Timestamp.now(),
+                isReturnRequired: totalOrderData.status === "success" // Yêu cầu trả hàng nếu đã giao
+            }
+        };
+
+        await totalOrderRef.update(refundData);
+
+        const subOrdersRef = db.collection("subOrders");
+        const subOrdersSnap = await subOrdersRef.where("totalOrderId", "==", orderId).get();
+        const updatePromises = subOrdersSnap.docs.map(doc => doc.ref.update({ refundStatus: "Requested" }));
+        await Promise.all(updatePromises);
+
+        res.status(200).json({
+            message: totalOrderData.status === "success"
+                ? "Return & Refund request submitted successfully"
+                : "Order cancellation request submitted successfully"
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Error requesting refund", error: error.message });
+    }
+};
+
+exports.processRefund = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { action } = req.body;
+
+        const totalOrderRef = db.collection("totalOrders").doc(orderId);
+        const totalOrderSnap = await totalOrderRef.get();
+
+        if (!totalOrderSnap.exists) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        const totalOrderData = totalOrderSnap.data();
+
+        if (totalOrderData.refundStatus !== "Requested") {
+            return res.status(400).json({ message: "No refund request pending" });
+        }
+
+        let updateData = {};
+        if (action === "approve") {
+            updateData = {
+                refundStatus: "Refunded",
+                refundedAt: admin.firestore.Timestamp.now()
+            };
+
+            const paymentResult = totalOrderData.paymentResult;
+            if (paymentResult && totalOrderData.paymentMethod === "stripe") {
+                const refund = await stripe.refunds.create({
+                    payment_intent: paymentResult.id,
+                    amount: Math.round(totalOrderData.totalPrice * 100)
+                });
+                updateData.refundResult = { id: refund.id, status: refund.status };
+            } else if (paymentResult && totalOrderData.paymentMethod === "paypal") {
+                const request = new paypal.payments.CapturesRefundRequest(paymentResult.id);
+                request.requestBody({
+                    amount: { value: totalOrderData.totalPrice.toString(), currency_code: "USD" }
+                });
+                const refund = await paypalClient.execute(request);
+                updateData.refundResult = { id: refund.result.id, status: refund.result.status };
+            }
+        } else if (action === "reject") {
+            updateData = {
+                refundStatus: "Rejected",
+                rejectedAt: admin.firestore.Timestamp.now()
+            };
+        } else {
+            return res.status(400).json({ message: "Invalid action" });
+        }
+
+        await totalOrderRef.update(updateData);
+
+        const subOrdersRef = db.collection("subOrders");
+        const subOrdersSnap = await subOrdersRef.where("totalOrderId", "==", orderId).get();
+        const updatePromises = subOrdersSnap.docs.map(doc => doc.ref.update({ refundStatus: updateData.refundStatus }));
+        await Promise.all(updatePromises);
+
+        res.status(200).json({ message: `Refund ${action}ed successfully` });
+    } catch (error) {
+        res.status(500).json({ message: "Error processing refund", error: error.message });
     }
 };

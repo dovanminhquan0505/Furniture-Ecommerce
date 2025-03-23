@@ -496,24 +496,6 @@ export const fetchSellerOrders = async (sellerId) => {
     }
 };
 
-export const confirmDelivery = async (orderId) => {
-    try {
-        const response = await fetch(`${BASE_URL}/sellers/${orderId}/deliver`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        });
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to confirm delivery");
-        }
-        return await response.json();
-    } catch (error) {
-        console.error("Error confirming delivery:", error);
-        throw error;
-    }
-};
-
 export const deleteOrder = async (sellerId, orderId) => {
     try {
         const response = await fetch(
@@ -1017,6 +999,45 @@ export const createStripePaymentIntent = async (orderId, amount) => {
         return await response.json();
     } catch (error) {
         console.error("Error creating Stripe payment intent:", error);
+        throw error;
+    }
+};
+
+//Refund
+export const requestRefund = async (orderId, refundData) => {
+    try {
+        const response = await fetch(`${BASE_URL}/orders/${orderId}/refund`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(refundData),
+            credentials: "include",
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to request refund");
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error requesting refund:", error);
+        throw error;
+    }
+};
+
+export const processRefund = async (orderId, action) => {
+    try {
+        const response = await fetch(`${BASE_URL}/orders/${orderId}/refund`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action }),
+            credentials: "include",
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to process refund");
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error processing refund:", error);
         throw error;
     }
 };

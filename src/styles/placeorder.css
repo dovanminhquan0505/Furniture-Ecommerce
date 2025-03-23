@@ -51,20 +51,10 @@ h6.fw-bold {
     margin-bottom: 1rem;
 }
 
-.price__cartItem {
-    font-weight: bold;
-    color: #007bff;
-}
-
 .cart__item {
     display: flex;
     align-items: center;
     padding: 1rem 0;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.cart__item:last-child {
-    border-bottom: none;
 }
 
 .cart__item-img {
@@ -94,6 +84,61 @@ h6.fw-bold {
     font-weight: bold;
     font-size: 1.1rem;
     color: #007bff;
+}
+
+.price__cartItem {
+    font-weight: bold;
+    color: #007bff;
+}
+
+/* SubOrder Actions (Refund and Buy Again buttons) */
+.seller__store {
+    display: flex;
+    align-items: center; 
+}
+
+.suborder__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.refund__btn {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #000000; 
+    background-color: #ffffff; 
+    border: 1px solid #888; 
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.refund__btn:hover {
+    color: #333333; 
+    border-color: #333333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.buy-again__btn {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #ff5722;
+    background-color: #ffffff; 
+    border: 1px solid #ff5722; 
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.buy-again__btn:hover {
+    color: #e64a19; 
+    border-color: #e64a19;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* Payment Options Styles */

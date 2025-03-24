@@ -398,7 +398,6 @@ const ProfileUser = () => {
             /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
         );
         if (isoMatch) {
-            console.log("Parsing ISO string:", dateString);
             const parsedDate = new Date(dateString);
             if (isNaN(parsedDate)) {
                 console.log("Failed to parse ISO string:", dateString);

@@ -198,7 +198,11 @@ const PlaceOrder = () => {
                         refundStatus:
                             response.totalOrder.refundStatus || "None",
                     },
-                    subOrders: response.subOrders,
+                    subOrders: response.subOrders.map((sub) => ({
+                        ...sub,
+                        refundStatus: sub.refundStatus || "None", 
+                        cancelStatus: sub.cancelStatus || "None", 
+                    })),
                 });
 
                 // Fetch seller names for each subOrder
@@ -287,8 +291,13 @@ const PlaceOrder = () => {
             // Xử lý paymentResult dựa trên phương thức thanh toán
             switch (paymentMethod) {
                 case "paypal":
+                    const captureId = details.purchase_units?.[0]?.payments?.captures?.[0]?.id;
+                    if (!captureId) {
+                        throw new Error("Capture ID not found in PayPal response");
+                    }
                     paymentResult = {
-                        id: details.id,
+                        id: captureId,
+                        orderId: details.id,
                         status: details.status,
                         update_time: details.update_time || paidAt,
                         email_address: details.payer?.email_address || "N/A",
@@ -346,7 +355,24 @@ const PlaceOrder = () => {
         try {
             setLoading(true);
             const response = await cancelOrder(orderId, subOrderId, { reason });
-            if (response.message.includes("awaiting seller approval")) {
+    
+            if (response.message === "Sub-order cancelled successfully") {
+                setOrderDetails((prev) => {
+                    const updatedSubOrders = prev.subOrders.filter(
+                        (sub) => sub.id !== subOrderId
+                    );
+                    const updatedTotalOrder = {
+                        ...prev.totalOrder,
+                        ...response.updatedTotalOrder,
+                    };
+                    return {
+                        ...prev,
+                        totalOrder: updatedTotalOrder,
+                        subOrders: updatedSubOrders,
+                    };
+                });
+                toast.success("Sub-order cancelled successfully!");
+            } else if (response.message === "Cancellation request submitted, awaiting seller approval") {
                 setOrderDetails((prev) => ({
                     ...prev,
                     subOrders: prev.subOrders.map((sub) =>
@@ -354,14 +380,6 @@ const PlaceOrder = () => {
                     ),
                 }));
                 toast.success("Cancellation request submitted, awaiting seller approval!");
-            } else {
-                setOrderDetails((prev) => ({
-                    ...prev,
-                    subOrders: prev.subOrders.map((sub) =>
-                        sub.id === subOrderId ? { ...sub, status: "cancelled", cancelStatus: "Approved" } : sub
-                    ),
-                }));
-                toast.success("Sub-order cancelled successfully!");
             }
             setShowRefundModal(false);
             setSelectedSubOrderId(null);
@@ -390,11 +408,7 @@ const PlaceOrder = () => {
             }));
             setShowRefundModal(false);
             setSelectedSubOrderId(null);
-            toast.success(
-                subOrders.find((sub) => sub.id === subOrderId).status === "success"
-                    ? "Return & Refund request submitted successfully!"
-                    : "Order cancellation request submitted successfully!"
-            );
+            toast.success("Return & Refund request submitted successfully!");
         } catch (error) {
             toast.error("Error requesting refund: " + error.message);
         } finally {
@@ -444,6 +458,7 @@ const PlaceOrder = () => {
     const renderSubOrderItems = () => {
         return subOrders.map((subOrder) => {
             const subOrderId = subOrder.id;
+    
             const shouldShowCancelBtn =
                 !isSeller &&
                 totalOrder.isPaid &&
@@ -458,8 +473,7 @@ const PlaceOrder = () => {
                 subOrder.status === "success" &&
                 subOrder.refundStatus !== "Requested" &&
                 subOrder.refundStatus !== "Rejected" &&
-                subOrder.refundStatus !== "Refunded" &&
-                !subOrder.isDelivered;
+                subOrder.refundStatus !== "Refunded";
     
             return (
                 <div key={subOrder.id} className="border rounded p-3 mb-3">
@@ -522,7 +536,6 @@ const PlaceOrder = () => {
             );
         });
     };
-
     // Handle display Date
     const formatDate = (date) => {
         if (!date) return "N/A";

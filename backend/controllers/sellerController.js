@@ -134,8 +134,8 @@ exports.getSellerOrders = async (req, res) => {
                     createdAt,
                     isPaid: totalOrderData.isPaid || orderData.isPaid || false,
                     status: orderData.status || "pending",
-                    cancelStatus: totalOrderData.cancelStatus || "None",
-                    refundStatus: totalOrderData.refundStatus || "None",
+                    cancelStatus: orderData.cancelStatus || "None", 
+                    refundStatus: orderData.refundStatus || "None", 
                 };
             })
         );

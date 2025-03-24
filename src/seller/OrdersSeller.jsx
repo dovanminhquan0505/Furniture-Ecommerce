@@ -78,13 +78,13 @@ const Orders = () => {
           }
     };
 
-    const handleProcessCancel = async (totalOrderId, action) => {
+    const handleProcessCancel = async (totalOrderId, subOrderId, action) => {
         try {
             setLoading(true);
-            await processCancelRequest(totalOrderId, action);
-            setOrders(prevOrders =>
-                prevOrders.map(order =>
-                    order.totalOrderId === totalOrderId
+            await processCancelRequest(totalOrderId, subOrderId, action);
+            setOrders((prevOrders) =>
+                prevOrders.map((order) =>
+                    order.id === subOrderId
                         ? { ...order, cancelStatus: action === "approve" ? "Approved" : "Rejected" }
                         : order
                 )
@@ -97,13 +97,13 @@ const Orders = () => {
         }
     };
 
-    const handleProcessRefund = async (totalOrderId, action) => {
+    const handleProcessRefund = async (totalOrderId, subOrderId, action) => {
         try {
             setLoading(true);
-            await processRefund(totalOrderId, action);
-            setOrders(prevOrders =>
-                prevOrders.map(order =>
-                    order.totalOrderId === totalOrderId
+            await processRefund(totalOrderId, subOrderId, action);
+            setOrders((prevOrders) =>
+                prevOrders.map((order) =>
+                    order.id === subOrderId
                         ? { ...order, refundStatus: action === "approve" ? "Refunded" : "Rejected" }
                         : order
                 )
@@ -208,7 +208,7 @@ const Orders = () => {
                                                                             className="btn__seller btn__seller-success"
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
-                                                                                handleProcessCancel(order.totalOrderId, "approve");
+                                                                                handleProcessCancel(order.totalOrderId, order.id, "approve");
                                                                             }}
                                                                         >
                                                                             Approve Cancel
@@ -218,7 +218,7 @@ const Orders = () => {
                                                                             className="btn__seller btn__seller-danger"
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
-                                                                                handleProcessCancel(order.totalOrderId, "reject");
+                                                                                handleProcessCancel(order.totalOrderId, order.id, "reject");
                                                                             }}
                                                                         >
                                                                             Reject Cancel
@@ -232,7 +232,7 @@ const Orders = () => {
                                                                             className="btn__seller btn__seller-success"
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
-                                                                                handleProcessRefund(order.totalOrderId, "approve");
+                                                                                handleProcessRefund(order.totalOrderId, order.id, "approve");
                                                                             }}
                                                                         >
                                                                             Approve Refund
@@ -242,7 +242,7 @@ const Orders = () => {
                                                                             className="btn__seller btn__seller-danger"
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
-                                                                                handleProcessRefund(order.totalOrderId, "reject");
+                                                                                handleProcessRefund(order.totalOrderId, order.id, "reject");
                                                                             }}
                                                                         >
                                                                             Reject Refund

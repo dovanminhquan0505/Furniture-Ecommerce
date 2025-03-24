@@ -339,7 +339,7 @@ exports.createStripePaymentIntent = async (req, res) => {
 // Refund
 exports.requestRefund = async (req, res) => {
     try {
-        const { orderId } = req.params;
+        const { orderId, subOrderId } = req.params; 
         const { reason, evidence } = req.body;
 
         const totalOrderRef = db.collection("totalOrders").doc(orderId);
@@ -351,11 +351,20 @@ exports.requestRefund = async (req, res) => {
 
         const totalOrderData = totalOrderSnap.data();
 
+        const subOrderRef = db.collection("subOrders").doc(subOrderId);
+        const subOrderSnap = await subOrderRef.get();
+
+        if (!subOrderSnap.exists) {
+            return res.status(404).json({ message: "Sub-order not found" });
+        }
+
+        const subOrderData = subOrderSnap.data();
+
         if (!totalOrderData.isPaid) {
             return res.status(400).json({ message: "Order has not been paid yet" });
         }
-        if (totalOrderData.refundStatus === "Refunded") {
-            return res.status(400).json({ message: "Order has already been refunded" });
+        if (subOrderData.refundStatus === "Refunded") {
+            return res.status(400).json({ message: "Sub-order has already been refunded" });
         }
 
         const paidAt = totalOrderData.paidAt.toDate();
@@ -365,35 +374,22 @@ exports.requestRefund = async (req, res) => {
             return res.status(400).json({ message: "Refund request period has expired" });
         }
 
-        // Điều kiện hoàn tiền
-        if (totalOrderData.status === "success" && !totalOrderData.isDelivered) {
-            return res.status(400).json({ message: "Order status conflict" });
-        }
-        if (totalOrderData.status !== "processing" && totalOrderData.status !== "pending" && totalOrderData.status !== "success") {
-            return res.status(400).json({ message: "Cannot request refund at this status" });
-        }
-
         const refundData = {
             refundStatus: "Requested",
             refundRequest: {
                 reason,
                 evidence: evidence || [],
                 requestedAt: admin.firestore.Timestamp.now(),
-                isReturnRequired: totalOrderData.status === "success" 
-            }
+                isReturnRequired: subOrderData.status === "success",
+            },
         };
 
-        await totalOrderRef.update(refundData);
-
-        const subOrdersRef = db.collection("subOrders");
-        const subOrdersSnap = await subOrdersRef.where("totalOrderId", "==", orderId).get();
-        const updatePromises = subOrdersSnap.docs.map(doc => doc.ref.update({ refundStatus: "Requested" }));
-        await Promise.all(updatePromises);
+        await subOrderRef.update(refundData);
 
         res.status(200).json({
-            message: totalOrderData.status === "success"
+            message: subOrderData.status === "success"
                 ? "Return & Refund request submitted successfully"
-                : "Order cancellation request submitted successfully"
+                : "Order cancellation request submitted successfully",
         });
     } catch (error) {
         res.status(500).json({ message: "Error requesting refund", error: error.message });
@@ -402,7 +398,7 @@ exports.requestRefund = async (req, res) => {
 
 exports.processRefund = async (req, res) => {
     try {
-        const { orderId } = req.params;
+        const { orderId, subOrderId } = req.params; 
         const { action } = req.body;
 
         const totalOrderRef = db.collection("totalOrders").doc(orderId);
@@ -414,7 +410,16 @@ exports.processRefund = async (req, res) => {
 
         const totalOrderData = totalOrderSnap.data();
 
-        if (totalOrderData.refundStatus !== "Requested") {
+        const subOrderRef = db.collection("subOrders").doc(subOrderId);
+        const subOrderSnap = await subOrderRef.get();
+
+        if (!subOrderSnap.exists) {
+            return res.status(404).json({ message: "Sub-order not found" });
+        }
+
+        const subOrderData = subOrderSnap.data();
+
+        if (subOrderData.refundStatus !== "Requested") {
             return res.status(400).json({ message: "No refund request pending" });
         }
 
@@ -422,20 +427,21 @@ exports.processRefund = async (req, res) => {
         if (action === "approve") {
             updateData = {
                 refundStatus: "Refunded",
-                refundedAt: admin.firestore.Timestamp.now()
+                refundedAt: admin.firestore.Timestamp.now(),
             };
 
             const paymentResult = totalOrderData.paymentResult;
+            const refundAmount = subOrderData.totalAmount;
             if (paymentResult && totalOrderData.paymentMethod === "stripe") {
                 const refund = await stripe.refunds.create({
                     payment_intent: paymentResult.id,
-                    amount: Math.round(totalOrderData.totalPrice * 100)
+                    amount: Math.round(refundAmount * 100),
                 });
                 updateData.refundResult = { id: refund.id, status: refund.status };
             } else if (paymentResult && totalOrderData.paymentMethod === "paypal") {
                 const request = new paypal.payments.CapturesRefundRequest(paymentResult.id);
                 request.requestBody({
-                    amount: { value: totalOrderData.totalPrice.toString(), currency_code: "USD" }
+                    amount: { value: refundAmount.toString(), currency_code: "USD" },
                 });
                 const refund = await paypalClient.execute(request);
                 updateData.refundResult = { id: refund.result.id, status: refund.result.status };
@@ -443,18 +449,13 @@ exports.processRefund = async (req, res) => {
         } else if (action === "reject") {
             updateData = {
                 refundStatus: "Rejected",
-                rejectedAt: admin.firestore.Timestamp.now()
+                rejectedAt: admin.firestore.Timestamp.now(),
             };
         } else {
             return res.status(400).json({ message: "Invalid action" });
         }
 
-        await totalOrderRef.update(updateData);
-
-        const subOrdersRef = db.collection("subOrders");
-        const subOrdersSnap = await subOrdersRef.where("totalOrderId", "==", orderId).get();
-        const updatePromises = subOrdersSnap.docs.map(doc => doc.ref.update({ refundStatus: updateData.refundStatus }));
-        await Promise.all(updatePromises);
+        await subOrderRef.update(updateData);
 
         res.status(200).json({ message: `Refund ${action}ed successfully` });
     } catch (error) {
@@ -464,7 +465,7 @@ exports.processRefund = async (req, res) => {
 
 exports.cancelOrder = async (req, res) => {
     try {
-        const { orderId } = req.params;
+        const { orderId, subOrderId } = req.params;
         const { reason } = req.body;
 
         if (!reason) {
@@ -480,11 +481,20 @@ exports.cancelOrder = async (req, res) => {
 
         const totalOrderData = totalOrderSnap.data();
 
-        if (totalOrderData.status === "success" || totalOrderData.isDelivered) {
+        const subOrderRef = db.collection("subOrders").doc(subOrderId);
+        const subOrderSnap = await subOrderRef.get();
+
+        if (!subOrderSnap.exists) {
+            return res.status(404).json({ message: "Sub-order not found" });
+        }
+
+        const subOrderData = subOrderSnap.data();
+
+        if (subOrderData.status === "success" || subOrderData.isDelivered) {
             return res.status(400).json({ message: "Cannot cancel order after it has been delivered" });
         }
 
-        if (totalOrderData.status === "cancelled") {
+        if (subOrderData.cancelStatus === "Approved" || subOrderData.status === "cancelled") {
             return res.status(400).json({ message: "Order has already been cancelled" });
         }
 
@@ -494,27 +504,29 @@ exports.cancelOrder = async (req, res) => {
 
         let updateData;
 
-        // Trường hợp 1: Status là pending và chưa quá 5 phút -> Hủy ngay
-        if (totalOrderData.status === "pending" && minutesSinceCreated <= 5) {
+        // Hủy ngay nếu pending và trong 5 phút
+        if (subOrderData.status === "pending" && minutesSinceCreated <= 5) {
             updateData = {
                 status: "cancelled",
                 cancelReason: reason,
+                cancelStatus: "Approved",
                 cancelledAt: admin.firestore.Timestamp.now(),
             };
 
             if (totalOrderData.isPaid) {
+                const refundAmount = subOrderData.totalAmount; 
                 const paymentResult = totalOrderData.paymentResult;
                 if (paymentResult && totalOrderData.paymentMethod === "stripe") {
                     const refund = await stripe.refunds.create({
                         payment_intent: paymentResult.id,
-                        amount: Math.round(totalOrderData.totalPrice * 100),
+                        amount: Math.round(refundAmount * 100),
                     });
                     updateData.refundResult = { id: refund.id, status: refund.status };
                     updateData.refundedAt = admin.firestore.Timestamp.now();
                 } else if (paymentResult && totalOrderData.paymentMethod === "paypal") {
                     const request = new paypal.payments.CapturesRefundRequest(paymentResult.id);
                     request.requestBody({
-                        amount: { value: totalOrderData.totalPrice.toString(), currency_code: "USD" },
+                        amount: { value: refundAmount.toString(), currency_code: "USD" },
                     });
                     const refund = await paypalClient.execute(request);
                     updateData.refundResult = { id: refund.result.id, status: refund.result.status };
@@ -523,34 +535,18 @@ exports.cancelOrder = async (req, res) => {
                 updateData.refundStatus = "Refunded";
             }
 
-            await totalOrderRef.update(updateData);
+            await subOrderRef.update(updateData);
 
-            const subOrdersRef = db.collection("subOrders");
-            const subOrdersSnap = await subOrdersRef.where("totalOrderId", "==", orderId).get();
-            const updatePromises = subOrdersSnap.docs.map(doc => doc.ref.update({ 
-                status: "cancelled",
-                ...(totalOrderData.isPaid && { refundStatus: "Refunded" })
-            }));
-            await Promise.all(updatePromises);
-
-            res.status(200).json({ message: "Order cancelled successfully" });
-        } 
-        // Status không phải pending hoặc quá 5 phút -> Yêu cầu phê duyệt
-        else {
+            res.status(200).json({ message: "Sub-order cancelled successfully" });
+        } else {
+            // Yêu cầu phê duyệt từ seller
             updateData = {
-                cancelStatus: "Requested", 
+                cancelStatus: "Requested",
                 cancelReason: reason,
                 cancelRequestedAt: admin.firestore.Timestamp.now(),
             };
 
-            await totalOrderRef.update(updateData);
-
-            const subOrdersRef = db.collection("subOrders");
-            const subOrdersSnap = await subOrdersRef.where("totalOrderId", "==", orderId).get();
-            const updatePromises = subOrdersSnap.docs.map(doc => doc.ref.update({ 
-                cancelStatus: "Requested"
-            }));
-            await Promise.all(updatePromises);
+            await subOrderRef.update(updateData);
 
             res.status(200).json({ message: "Cancellation request submitted, awaiting seller approval" });
         }
@@ -561,8 +557,8 @@ exports.cancelOrder = async (req, res) => {
 
 exports.processCancelRequest = async (req, res) => {
     try {
-        const { orderId } = req.params;
-        const { action } = req.body; 
+        const { orderId, subOrderId } = req.params; 
+        const { action } = req.body;
 
         const totalOrderRef = db.collection("totalOrders").doc(orderId);
         const totalOrderSnap = await totalOrderRef.get();
@@ -573,7 +569,16 @@ exports.processCancelRequest = async (req, res) => {
 
         const totalOrderData = totalOrderSnap.data();
 
-        if (totalOrderData.cancelStatus !== "Requested") {
+        const subOrderRef = db.collection("subOrders").doc(subOrderId);
+        const subOrderSnap = await subOrderRef.get();
+
+        if (!subOrderSnap.exists) {
+            return res.status(404).json({ message: "Sub-order not found" });
+        }
+
+        const subOrderData = subOrderSnap.data();
+
+        if (subOrderData.cancelStatus !== "Requested") {
             return res.status(400).json({ message: "No cancellation request pending" });
         }
 
@@ -586,18 +591,19 @@ exports.processCancelRequest = async (req, res) => {
             };
 
             if (totalOrderData.isPaid) {
+                const refundAmount = subOrderData.totalAmount;
                 const paymentResult = totalOrderData.paymentResult;
                 if (paymentResult && totalOrderData.paymentMethod === "stripe") {
                     const refund = await stripe.refunds.create({
                         payment_intent: paymentResult.id,
-                        amount: Math.round(totalOrderData.totalPrice * 100),
+                        amount: Math.round(refundAmount * 100),
                     });
                     updateData.refundResult = { id: refund.id, status: refund.status };
                     updateData.refundedAt = admin.firestore.Timestamp.now();
                 } else if (paymentResult && totalOrderData.paymentMethod === "paypal") {
                     const request = new paypal.payments.CapturesRefundRequest(paymentResult.id);
                     request.requestBody({
-                        amount: { value: totalOrderData.totalPrice.toString(), currency_code: "USD" },
+                        amount: { value: refundAmount.toString(), currency_code: "USD" },
                     });
                     const refund = await paypalClient.execute(request);
                     updateData.refundResult = { id: refund.result.id, status: refund.result.status };
@@ -606,16 +612,7 @@ exports.processCancelRequest = async (req, res) => {
                 updateData.refundStatus = "Refunded";
             }
 
-            await totalOrderRef.update(updateData);
-
-            const subOrdersRef = db.collection("subOrders");
-            const subOrdersSnap = await subOrdersRef.where("totalOrderId", "==", orderId).get();
-            const updatePromises = subOrdersSnap.docs.map(doc => doc.ref.update({ 
-                status: "cancelled",
-                cancelStatus: "Approved",
-                ...(totalOrderData.isPaid && { refundStatus: "Refunded" })
-            }));
-            await Promise.all(updatePromises);
+            await subOrderRef.update(updateData);
 
             res.status(200).json({ message: "Cancellation request approved" });
         } else if (action === "reject") {
@@ -624,18 +621,25 @@ exports.processCancelRequest = async (req, res) => {
                 cancelRejectedAt: admin.firestore.Timestamp.now(),
             };
 
-            await totalOrderRef.update(updateData);
-
-            const subOrdersRef = db.collection("subOrders");
-            const subOrdersSnap = await subOrdersRef.where("totalOrderId", "==", orderId).get();
-            const updatePromises = subOrdersSnap.docs.map(doc => doc.ref.update({ 
-                cancelStatus: "Rejected"
-            }));
-            await Promise.all(updatePromises);
+            await subOrderRef.update(updateData);
 
             res.status(200).json({ message: "Cancellation request rejected" });
         } else {
             return res.status(400).json({ message: "Invalid action" });
+        }
+
+        // Kiểm tra nếu tất cả subOrders đều cancelled thì cập nhật totalOrder
+        const subOrdersSnap = await db.collection("subOrders")
+            .where("totalOrderId", "==", orderId)
+            .get();
+        const allSubOrdersCancelled = subOrdersSnap.docs.every(doc => 
+            doc.data().status === "cancelled" || doc.data().cancelStatus === "Approved"
+        );
+        if (allSubOrdersCancelled) {
+            await totalOrderRef.update({
+                status: "cancelled",
+                cancelledAt: admin.firestore.Timestamp.now(),
+            });
         }
     } catch (error) {
         res.status(500).json({ message: "Error processing cancellation request", error: error.message });

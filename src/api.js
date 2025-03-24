@@ -520,13 +520,11 @@ export const deleteOrder = async (sellerId, orderId) => {
     }
 };
 
-export const cancelOrder = async (orderId, data) => {
+export const cancelOrder = async (orderId, subOrderId, data) => {
     try {
-        const response = await fetch(`${BASE_URL}/orders/${orderId}/cancel`, {
+        const response = await fetch(`${BASE_URL}/orders/${orderId}/cancel/${subOrderId}`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
             credentials: "include",
         });
@@ -540,13 +538,11 @@ export const cancelOrder = async (orderId, data) => {
     }
 };
 
-export const processCancelRequest = async (orderId, action) => {
+export const processCancelRequest = async (orderId, subOrderId, action) => {
     try {
-        const response = await fetch(`${BASE_URL}/orders/${orderId}/cancel/process`, {
+        const response = await fetch(`${BASE_URL}/orders/${orderId}/cancel/process/${subOrderId}`, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action }),
             credentials: "include",
         });
@@ -1077,9 +1073,9 @@ export const createStripePaymentIntent = async (orderId, amount) => {
 };
 
 //Refund
-export const requestRefund = async (orderId, refundData) => {
+export const requestRefund = async (orderId, subOrderId, refundData) => {
     try {
-        const response = await fetch(`${BASE_URL}/orders/${orderId}/refund`, {
+        const response = await fetch(`${BASE_URL}/orders/${orderId}/refund/${subOrderId}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(refundData),
@@ -1096,9 +1092,9 @@ export const requestRefund = async (orderId, refundData) => {
     }
 };
 
-export const processRefund = async (orderId, action) => {
+export const processRefund = async (orderId, subOrderId, action) => {
     try {
-        const response = await fetch(`${BASE_URL}/orders/${orderId}/refund`, {
+        const response = await fetch(`${BASE_URL}/orders/${orderId}/refund/${subOrderId}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action }),

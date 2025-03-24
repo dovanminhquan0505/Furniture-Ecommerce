@@ -345,24 +345,23 @@ const PlaceOrder = () => {
     const handleCancelOrder = async ({ reason }, subOrderId) => {
         try {
             setLoading(true);
-            const response = await cancelOrder(orderId, { reason });
+            const response = await cancelOrder(orderId, subOrderId, { reason });
             if (response.message.includes("awaiting seller approval")) {
                 setOrderDetails((prev) => ({
                     ...prev,
-                    totalOrder: {
-                        ...prev.totalOrder,
-                        cancelStatus: "Requested",
-                    },
+                    subOrders: prev.subOrders.map((sub) =>
+                        sub.id === subOrderId ? { ...sub, cancelStatus: "Requested" } : sub
+                    ),
                 }));
-                toast.success(
-                    "Cancellation request submitted, awaiting seller approval!"
-                );
+                toast.success("Cancellation request submitted, awaiting seller approval!");
             } else {
                 setOrderDetails((prev) => ({
                     ...prev,
-                    totalOrder: { ...prev.totalOrder, status: "cancelled" },
+                    subOrders: prev.subOrders.map((sub) =>
+                        sub.id === subOrderId ? { ...sub, status: "cancelled", cancelStatus: "Approved" } : sub
+                    ),
                 }));
-                toast.success("Order cancelled successfully!");
+                toast.success("Sub-order cancelled successfully!");
             }
             setShowRefundModal(false);
             setSelectedSubOrderId(null);
@@ -382,15 +381,17 @@ const PlaceOrder = () => {
                 const uploadResults = await Promise.all(uploadPromises);
                 evidence = uploadResults.map((result) => result.fileURL);
             }
-            await requestRefund(orderId, { reason, evidence });
+            await requestRefund(orderId, subOrderId, { reason, evidence });
             setOrderDetails((prev) => ({
                 ...prev,
-                totalOrder: { ...prev.totalOrder, refundStatus: "Requested" },
+                subOrders: prev.subOrders.map((sub) =>
+                    sub.id === subOrderId ? { ...sub, refundStatus: "Requested" } : sub
+                ),
             }));
             setShowRefundModal(false);
             setSelectedSubOrderId(null);
             toast.success(
-                totalOrder.status === "success"
+                subOrders.find((sub) => sub.id === subOrderId).status === "success"
                     ? "Return & Refund request submitted successfully!"
                     : "Order cancellation request submitted successfully!"
             );
@@ -443,25 +444,23 @@ const PlaceOrder = () => {
     const renderSubOrderItems = () => {
         return subOrders.map((subOrder) => {
             const subOrderId = subOrder.id;
-
-            // Điều kiện hiển thị nút "Cancel Order"
             const shouldShowCancelBtn =
                 !isSeller &&
                 totalOrder.isPaid &&
-                (subOrder.status === "pending" ||
-                    subOrder.status === "processing") &&
-                totalOrder.refundStatus === "None" &&
-                totalOrder.cancelStatus !== "Requested";
-
-            // Điều kiện hiển thị nút "Return & Refund"
+                (subOrder.status === "pending" || subOrder.status === "processing") &&
+                subOrder.cancelStatus !== "Requested" &&
+                subOrder.cancelStatus !== "Rejected" &&
+                subOrder.cancelStatus !== "Approved";
+    
             const shouldShowRefundBtn =
                 !isSeller &&
                 totalOrder.isPaid &&
                 subOrder.status === "success" &&
-                totalOrder.refundStatus === "None" &&
-                totalOrder.cancelStatus !== "Requested" &&
-                !totalOrder.isDelivered;
-
+                subOrder.refundStatus !== "Requested" &&
+                subOrder.refundStatus !== "Rejected" &&
+                subOrder.refundStatus !== "Refunded" &&
+                !subOrder.isDelivered;
+    
             return (
                 <div key={subOrder.id} className="border rounded p-3 mb-3">
                     <h6 className="seller__store">
@@ -480,20 +479,22 @@ const PlaceOrder = () => {
                             <div className="cart__item-info">
                                 <h6>{item.productName}</h6>
                                 <p>
-                                    Qty: {item.quantity} | Status:{" "}
-                                    {subOrder.status || "Pending"}
+                                    Qty: {item.quantity} | Status: {subOrder.status || "Pending"}
                                 </p>
                             </div>
                             <div className="cart__item-price">
-                                <span className="price__cartItem">
-                                    ${item.price}
-                                </span>
+                                <span className="price__cartItem">${item.price}</span>
                             </div>
                         </div>
                     ))}
-                    {totalOrder.cancelStatus === "Requested" && (
+                    {subOrder.cancelStatus === "Requested" && (
                         <p className="text-warning">
                             Cancellation request pending approval
+                        </p>
+                    )}
+                    {subOrder.refundStatus === "Requested" && (
+                        <p className="text-warning">
+                            Refund request pending approval
                         </p>
                     )}
                     {(shouldShowCancelBtn || shouldShowRefundBtn) && (
@@ -506,14 +507,12 @@ const PlaceOrder = () => {
                                     setShowRefundModal(true);
                                 }}
                             >
-                                {shouldShowRefundBtn
-                                    ? "Return/Refund"
-                                    : "Cancel Order"}
+                                {shouldShowRefundBtn ? "Return/Refund" : "Cancel Order"}
                             </motion.button>
                             <motion.button
                                 whileTap={{ scale: 1.1 }}
                                 className="buy-again__btn"
-                                onClick={() => handleBuyAgain(subOrder)}
+                                onClick={() => handleBuyAgain(subOrder.items[0])}
                             >
                                 Buy Again
                             </motion.button>

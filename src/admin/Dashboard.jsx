@@ -59,7 +59,7 @@ const Dashboard = () => {
         };
 
         fetchDashboardData();
-    }, []);
+    }, [navigate, reduxUser]);
 
     // Format date function to handle different date formats
     const formatDate = (date) => {

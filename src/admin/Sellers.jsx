@@ -43,7 +43,7 @@ const Sellers = () => {
         };
 
         fetchSellers();
-    }, []);
+    }, [navigate, reduxUser]);
 
     const handleDeleteSeller = async (id) => {
         const user = auth.currentUser;

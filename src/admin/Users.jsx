@@ -42,7 +42,7 @@ const Users = () => {
         };
 
         fetchUsers();
-    }, []);
+    }, [navigate, reduxUser]);
 
     const handleDeleteUser = async (id) => {
         const user = auth.currentUser;

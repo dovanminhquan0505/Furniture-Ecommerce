@@ -42,7 +42,7 @@ const Orders = () => {
         };
 
         fetchOrders();
-    }, []);
+    }, [navigate, reduxUser]);
 
     const viewOrders = (orderId) => {
         navigate(`/placeorder/${orderId}`);

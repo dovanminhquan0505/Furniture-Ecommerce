@@ -131,7 +131,7 @@ const PlaceOrder = () => {
     const [showRefundModal, setShowRefundModal] = useState(false);
     const [selectedSubOrderId, setSelectedSubOrderId] = useState(null);
     const [timeLeft, setTimeLeft] = useState(null);
-    const [showAppealModal, setShowAppealModal] = useState(false); 
+    const [showAppealModal, setShowAppealModal] = useState(false);
     const [appealReason, setAppealReason] = useState("");
 
     useEffect(() => {
@@ -203,8 +203,8 @@ const PlaceOrder = () => {
                     },
                     subOrders: response.subOrders.map((sub) => ({
                         ...sub,
-                        refundStatus: sub.refundStatus || "None", 
-                        cancelStatus: sub.cancelStatus || "None", 
+                        refundStatus: sub.refundStatus || "None",
+                        cancelStatus: sub.cancelStatus || "None",
                     })),
                 });
 
@@ -294,9 +294,13 @@ const PlaceOrder = () => {
             // Xử lý paymentResult dựa trên phương thức thanh toán
             switch (paymentMethod) {
                 case "paypal":
-                    const captureId = details.purchase_units?.[0]?.payments?.captures?.[0]?.id;
+                    const captureId =
+                        details.purchase_units?.[0]?.payments?.captures?.[0]
+                            ?.id;
                     if (!captureId) {
-                        throw new Error("Capture ID not found in PayPal response");
+                        throw new Error(
+                            "Capture ID not found in PayPal response"
+                        );
                     }
                     paymentResult = {
                         id: captureId,
@@ -358,7 +362,7 @@ const PlaceOrder = () => {
         try {
             setLoading(true);
             const response = await cancelOrder(orderId, subOrderId, { reason });
-    
+
             if (response.message === "Sub-order cancelled successfully") {
                 setOrderDetails((prev) => {
                     const updatedSubOrders = prev.subOrders.filter(
@@ -375,14 +379,21 @@ const PlaceOrder = () => {
                     };
                 });
                 toast.success("Sub-order cancelled successfully!");
-            } else if (response.message === "Cancellation request submitted, awaiting seller approval") {
+            } else if (
+                response.message ===
+                "Cancellation request submitted, awaiting seller approval"
+            ) {
                 setOrderDetails((prev) => ({
                     ...prev,
                     subOrders: prev.subOrders.map((sub) =>
-                        sub.id === subOrderId ? { ...sub, cancelStatus: "Requested" } : sub
+                        sub.id === subOrderId
+                            ? { ...sub, cancelStatus: "Requested" }
+                            : sub
                     ),
                 }));
-                toast.success("Cancellation request submitted, awaiting seller approval!");
+                toast.success(
+                    "Cancellation request submitted, awaiting seller approval!"
+                );
             }
             setShowRefundModal(false);
             setSelectedSubOrderId(null);
@@ -406,7 +417,9 @@ const PlaceOrder = () => {
             setOrderDetails((prev) => ({
                 ...prev,
                 subOrders: prev.subOrders.map((sub) =>
-                    sub.id === subOrderId ? { ...sub, refundStatus: "Requested" } : sub
+                    sub.id === subOrderId
+                        ? { ...sub, refundStatus: "Requested" }
+                        : sub
                 ),
             }));
             setShowRefundModal(false);
@@ -460,7 +473,7 @@ const PlaceOrder = () => {
 
     const handleAppealRefund = (subOrderId) => {
         setSelectedSubOrderId(subOrderId);
-        setShowAppealModal(true); 
+        setShowAppealModal(true);
     };
 
     const submitAppeal = async () => {
@@ -479,7 +492,9 @@ const PlaceOrder = () => {
                         : sub
                 ),
             }));
-            toast.success("Appeal submitted successfully, awaiting admin review");
+            toast.success(
+                "Appeal submitted successfully, awaiting admin review"
+            );
             setShowAppealModal(false);
             setAppealReason("");
             setSelectedSubOrderId(null);
@@ -497,7 +512,8 @@ const PlaceOrder = () => {
             const shouldShowCancelBtn =
                 !isSeller &&
                 totalOrder.isPaid &&
-                (subOrder.status === "pending" || subOrder.status === "processing") &&
+                (subOrder.status === "pending" ||
+                    subOrder.status === "processing") &&
                 subOrder.cancelStatus !== "Requested" &&
                 subOrder.cancelStatus !== "Rejected" &&
                 subOrder.cancelStatus !== "Approved";
@@ -533,11 +549,14 @@ const PlaceOrder = () => {
                             <div className="cart__item-info">
                                 <h6>{item.productName}</h6>
                                 <p>
-                                    Qty: {item.quantity} | Status: {subOrder.status || "Pending"}
+                                    Qty: {item.quantity} | Status:{" "}
+                                    {subOrder.status || "Pending"}
                                 </p>
                             </div>
                             <div className="cart__item-price">
-                                <span className="price__cartItem">${item.price * item.quantity}</span>
+                                <span className="price__cartItem">
+                                    ${item.price * item.quantity}
+                                </span>
                             </div>
                         </div>
                     ))}
@@ -556,7 +575,9 @@ const PlaceOrder = () => {
                             Appeal submitted, awaiting admin review
                         </p>
                     )}
-                    {(shouldShowCancelBtn || shouldShowRefundBtn || shouldShowAppealBtn) && (
+                    {(shouldShowCancelBtn ||
+                        shouldShowRefundBtn ||
+                        shouldShowAppealBtn) && (
                         <div className="suborder__actions">
                             {(shouldShowCancelBtn || shouldShowRefundBtn) && (
                                 <motion.button
@@ -567,14 +588,18 @@ const PlaceOrder = () => {
                                         setShowRefundModal(true);
                                     }}
                                 >
-                                    {shouldShowRefundBtn ? "Return/Refund" : "Cancel Order"}
+                                    {shouldShowRefundBtn
+                                        ? "Return/Refund"
+                                        : "Cancel Order"}
                                 </motion.button>
                             )}
                             {shouldShowAppealBtn && (
                                 <motion.button
                                     whileTap={{ scale: 1.1 }}
                                     className="appeal__btn"
-                                    onClick={() => handleAppealRefund(subOrderId)}
+                                    onClick={() =>
+                                        handleAppealRefund(subOrderId)
+                                    }
                                 >
                                     Appeal to Admin
                                 </motion.button>
@@ -582,7 +607,9 @@ const PlaceOrder = () => {
                             <motion.button
                                 whileTap={{ scale: 1.1 }}
                                 className="buy-again__btn"
-                                onClick={() => handleBuyAgain(subOrder.items[0])}
+                                onClick={() =>
+                                    handleBuyAgain(subOrder.items[0])
+                                }
                             >
                                 Buy Again
                             </motion.button>
@@ -833,20 +860,27 @@ const PlaceOrder = () => {
                                 <div className="p-3">
                                     <h5>Submit Appeal</h5>
                                     <Form>
-                                        <input
-                                            type="textarea"
+                                        <textarea
                                             placeholder="Enter your reason for appeal..."
                                             value={appealReason}
-                                            onChange={(e) => setAppealReason(e.target.value)}
+                                            onChange={(e) =>
+                                                setAppealReason(e.target.value)
+                                            }
                                             rows="4"
                                             className="mb-3"
                                         />
                                         <motion.button
                                             color="primary"
+                                            whileTap={{ scale: 0.95 }}
                                             onClick={submitAppeal}
-                                            disabled={loading || !appealReason.trim()}
+                                            disabled={
+                                                loading || !appealReason.trim()
+                                            }
+                                            className="form-btn"
                                         >
-                                            {loading ? "Submitting..." : "Submit Appeal"}
+                                            {loading
+                                                ? "Submitting..."
+                                                : "Submit Appeal"}
                                         </motion.button>
                                     </Form>
                                 </div>

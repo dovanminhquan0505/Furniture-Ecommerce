@@ -4,7 +4,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.6);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -12,22 +12,85 @@
 }
 
 .modal-content {
-    background-color: #ffffff;
-    padding: 20px;
-    border-radius: 8px;
-    width: 500px;
-    max-width: 90%;
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
     position: relative;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
 }
 
 .modal-close-btn {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 12px;
+    right: 12px;
     background: none;
-    border: none;
-    font-size: 1.5rem;
+    border: none !important;
+    font-size: 24px;
+    color: #666;
     cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.modal-close-btn:hover {
+    color: #ff4444;
+}
+
+/* Custom styles cho nội dung Modal */
+.modal-content h5 {
+    font-size: 1.5rem;
     color: #333;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.modal-content textarea,
+.modal-content input[type="textarea"] {
+    width: 100%;
+    min-height: 100px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    color: #333;
+    resize: vertical;
+    transition: border-color 0.3s ease;
+}
+
+.modal-content textarea:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 4px rgba(0, 123, 255, 0.3);
+}
+
+/* .modal-content button {
+    padding: 0px 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 8px;
+    border: none;
+    background: #007bff;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.2s ease;
+} */
+
+.modal-content button:disabled {
+    border-radius: 8px;
+    padding: 5px 10px;
+    background: #ccc;
+    cursor: not-allowed;
+    border: none;
+    color: #888;
+}
+
+.modal-content button:not(:disabled) {
+    border-radius: 8px;
+    padding: 5px 10px;
+    background: #fff;
+    cursor: pointer;
+    color: #000;
+    border: 1px solid #969494;
 }

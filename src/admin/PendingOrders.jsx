@@ -43,7 +43,7 @@ const PendingOrders = () => {
         };
 
         fetchPendingOrders();
-    }, []);
+    }, [navigate, reduxUser]);
 
     const handleApprove = async (order) => {
         const user = auth.currentUser;

@@ -1,6 +1,45 @@
 const admin = require("firebase-admin");
 const db = admin.firestore();
 
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const paypal = require("@paypal/checkout-server-sdk");
+
+// Cấu hình PayPal Sandbox
+const paypalEnv = new paypal.core.SandboxEnvironment(
+    process.env.PAYPAL_CLIENT_ID,
+    process.env.PAYPAL_CLIENT_SECRET
+);
+const paypalClient = new paypal.core.PayPalHttpClient(paypalEnv);
+
+// Hàm kiểm tra xem đơn hàng có cần Admin can thiệp không
+const shouldAdminIntervene = async (subOrderData) => {
+    const now = new Date();
+    const requestedAt = subOrderData.refundRequest?.requestedAt?.toDate();
+    const returnRequestedAt = subOrderData.returnRequestedAt?.toDate();
+
+    // Trường hợp 1: Seller từ chối và khách hàng khiếu nại 
+    if (subOrderData.refundStatus === "Rejected" && subOrderData.appealRequested) {
+        return true;
+    }
+
+    // Trường hợp 2: Seller không phản hồi trong 1 ngày
+    if (subOrderData.refundStatus === "Requested" && requestedAt) {
+        const daysSinceRequested = (now - requestedAt) / (1000 * 60 * 60 * 24);
+        if (daysSinceRequested > 1) {
+            return true;
+        }
+    }
+
+    // Trường hợp 3: Seller không xác nhận trả hàng trong 1 ngày
+    if (subOrderData.refundStatus === "Return Requested" && returnRequestedAt) {
+        const daysSinceReturnRequested = (now - returnRequestedAt) / (1000 * 60 * 60 * 24);
+        if (daysSinceReturnRequested > 1) {
+            return true;
+        }
+    }
+    return false;
+};
+
 /* Profile Admin */
 exports.getAdminProfileById = async (req, res) => {
     try {
@@ -286,5 +325,130 @@ exports.getDashboardData = async (req, res) => {
         res.status(200).json({ products, users, orders, sellers });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+};
+
+exports.getRefundDisputes = async (req, res) => {
+    try {
+        const subOrdersSnap = await db.collection("subOrders")
+            .where("refundStatus", "in", ["Requested", "Rejected", "Return Requested"])
+            .get();
+
+        const disputes = await Promise.all(subOrdersSnap.docs.map(async (doc) => {
+            const subOrderData = doc.data();
+            const totalOrderSnap = await db.collection("totalOrders").doc(subOrderData.totalOrderId).get();
+            const totalOrderData = totalOrderSnap.data();
+
+            const sellerSnap = await db.collection("sellers").doc(subOrderData.sellerId).get();
+            const sellerName = sellerSnap.exists ? sellerSnap.data().storeName : "Unknown";
+
+            const needsAdmin = await shouldAdminIntervene(subOrderData);
+
+            if (!needsAdmin) return null; 
+
+            return {
+                orderId: subOrderData.totalOrderId,
+                subOrderId: doc.id,
+                sellerName,
+                customerName: totalOrderData.billingInfo?.name || "Unknown",
+                reason: subOrderData.refundRequest?.reason || "N/A",
+                evidence: subOrderData.refundRequest?.evidence || [],
+                refundStatus: subOrderData.refundStatus,
+                appealRequested: subOrderData.appealRequested || false,
+            };
+        }));
+
+        const filteredDisputes = disputes.filter((dispute) => dispute !== null);
+        res.status(200).json(filteredDisputes);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching refund disputes", error: error.message });
+    }
+};
+
+exports.resolveRefundDispute = async (req, res) => {
+    try {
+        const { orderId, subOrderId } = req.params;
+        const { action } = req.body;
+
+        const totalOrderRef = db.collection("totalOrders").doc(orderId);
+        const totalOrderSnap = await totalOrderRef.get();
+        if (!totalOrderSnap.exists) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+        const totalOrderData = totalOrderSnap.data();
+
+        const subOrderRef = db.collection("subOrders").doc(subOrderId);
+        const subOrderSnap = await subOrderRef.get();
+        if (!subOrderSnap.exists) {
+            return res.status(404).json({ message: "Sub-order not found" });
+        }
+        const subOrderData = subOrderSnap.data();
+
+        if (subOrderData.refundStatus !== "Requested") {
+            return res.status(400).json({ message: "No refund request pending" });
+        }
+
+        let updateData = {};
+        if (action === "approve") {
+            updateData = {
+                refundStatus: "Refunded",
+                refundedAt: admin.firestore.Timestamp.now(),
+            };
+
+            const paymentResult = totalOrderData.paymentResult;
+            const refundAmount = subOrderData.totalAmount;
+            if (paymentResult && totalOrderData.paymentMethod === "stripe") {
+                const refund = await stripe.refunds.create({
+                    payment_intent: paymentResult.id,
+                    amount: Math.round(refundAmount * 100),
+                });
+                updateData.refundResult = { id: refund.id, status: refund.status };
+            } else if (paymentResult && totalOrderData.paymentMethod === "paypal") {
+                const request = new paypal.payments.CapturesRefundRequest(paymentResult.id);
+                request.requestBody({
+                    amount: { value: refundAmount.toString(), currency_code: "USD" },
+                });
+                const refund = await paypalClient.execute(request);
+                updateData.refundResult = { id: refund.result.id, status: refund.result.status };
+            }
+
+            // Loại bỏ sản phẩm khỏi totalOrder.items
+            const updatedItems = totalOrderData.items.filter(
+                (item) => !subOrderData.items.some((subItem) => subItem.id === item.id)
+            );
+            const subOrderAmount = subOrderData.totalAmount;
+            const subOrderQuantity = subOrderData.totalQuantity;
+
+            const newTotalAmount = totalOrderData.totalAmount - subOrderAmount;
+            const newTotalQuantity = totalOrderData.totalQuantity - subOrderQuantity;
+            const newTotalShipping = newTotalAmount > 100 ? 0 : 10;
+            const newTotalTax = Math.round((0.15 * newTotalAmount * 100) / 100);
+            const newTotalPrice = newTotalAmount + newTotalShipping + newTotalTax;
+
+            const totalOrderUpdateData = {
+                items: updatedItems,
+                totalAmount: newTotalAmount,
+                totalQuantity: newTotalQuantity,
+                totalShipping: newTotalShipping,
+                totalTax: newTotalTax,
+                totalPrice: newTotalPrice,
+            };
+
+            await totalOrderRef.update(totalOrderUpdateData);
+            await subOrderRef.update(updateData);
+
+            res.status(200).json({ message: "Refund dispute approved by admin", updatedTotalOrder: totalOrderUpdateData });
+        } else if (action === "reject") {
+            updateData = {
+                refundStatus: "Rejected",
+                rejectedAt: admin.firestore.Timestamp.now(),
+            };
+            await subOrderRef.update(updateData);
+            res.status(200).json({ message: "Refund dispute rejected by admin" });
+        } else {
+            return res.status(400).json({ message: "Invalid action" });
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Error resolving refund dispute", error: error.message });
     }
 };

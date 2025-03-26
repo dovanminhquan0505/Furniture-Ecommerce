@@ -9,6 +9,7 @@ const {
     processRefund,
     cancelOrder,
     processCancelRequest,
+    requestAppeal,
 } = require("../controllers/orderController");
 const { authenticateUser } = require("../controllers/authController");
 const router = express.Router();
@@ -21,6 +22,7 @@ router.post("/:orderId/stripe-payment-intent", createStripePaymentIntent);
 router.post("/:orderId/refund/:subOrderId", requestRefund);
 router.put("/:orderId/refund/:subOrderId", processRefund);
 router.post("/:orderId/cancel/:subOrderId", cancelOrder);
-router.put("/:orderId/cancel/process/:subOrderId", processCancelRequest)
+router.put("/:orderId/cancel/process/:subOrderId", processCancelRequest);
+router.post("/:orderId/sub-orders/:subOrderId/appeal", requestAppeal);
 
 module.exports = router;

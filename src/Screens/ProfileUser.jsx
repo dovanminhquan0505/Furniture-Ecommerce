@@ -453,15 +453,6 @@ const ProfileUser = () => {
         return parsedDate;
     };
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case "processing": return "#FFA500"; 
-            case "shipping": return "#007BFF"; 
-            case "success": return "#28A745"; 
-            default: return "#6C757D"; 
-        }
-    };
-
     // Render Order Information
     const renderOrderInformation = () => (
         <div className="order-info">

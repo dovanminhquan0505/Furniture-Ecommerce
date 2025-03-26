@@ -557,6 +557,64 @@ export const processCancelRequest = async (orderId, subOrderId, action) => {
     }
 };
 
+export const getRefundDisputes = async () => {
+    try {
+        const response = await fetch(`${BASE_URL}/admin/refund-disputes`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch refund disputes");
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching refund disputes:", error);
+        throw error;
+    }
+};
+
+export const resolveRefundDispute = async (orderId, subOrderId, action) => {
+    try {
+        const response = await fetch(`${BASE_URL}/admin/refund-disputes/${orderId}/${subOrderId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action }),
+            credentials: "include",
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to resolve refund dispute");
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error resolving refund dispute:", error);
+        throw error;
+    }
+};
+
+export const appealRefund = async (orderId, subOrderId, appealReason) => {
+    try {
+        const response = await fetch(`${BASE_URL}/orders/${orderId}/sub-orders/${subOrderId}/appeal`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ reason: appealReason }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to submit appeal");
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error("Error submitting appeal:", error);
+        throw error;
+    }
+};
+
 export const getDashboardStats = async (sellerId) => {
     try {
         const response = await fetch(

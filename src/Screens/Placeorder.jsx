@@ -12,6 +12,7 @@ import { cartActions } from "../redux/slices/cartSlice";
 import { useDispatch } from "react-redux";
 import useSeller from "../custom-hooks/useSeller";
 import {
+    appealRefund,
     cancelOrder,
     createStripePaymentIntent,
     fetchSellerInfo,
@@ -130,6 +131,8 @@ const PlaceOrder = () => {
     const [showRefundModal, setShowRefundModal] = useState(false);
     const [selectedSubOrderId, setSelectedSubOrderId] = useState(null);
     const [timeLeft, setTimeLeft] = useState(null);
+    const [showAppealModal, setShowAppealModal] = useState(false); 
+    const [appealReason, setAppealReason] = useState("");
 
     useEffect(() => {
         if (!orderId) {
@@ -455,10 +458,42 @@ const PlaceOrder = () => {
         navigate("/cart");
     };
 
+    const handleAppealRefund = (subOrderId) => {
+        setSelectedSubOrderId(subOrderId);
+        setShowAppealModal(true); 
+    };
+
+    const submitAppeal = async () => {
+        if (!appealReason.trim()) {
+            toast.error("Please provide a reason for your appeal");
+            return;
+        }
+        try {
+            setLoading(true);
+            await appealRefund(orderId, selectedSubOrderId, appealReason);
+            setOrderDetails((prev) => ({
+                ...prev,
+                subOrders: prev.subOrders.map((sub) =>
+                    sub.id === selectedSubOrderId
+                        ? { ...sub, appealRequested: true }
+                        : sub
+                ),
+            }));
+            toast.success("Appeal submitted successfully, awaiting admin review");
+            setShowAppealModal(false);
+            setAppealReason("");
+            setSelectedSubOrderId(null);
+        } catch (error) {
+            toast.error("Error submitting appeal: " + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const renderSubOrderItems = () => {
         return subOrders.map((subOrder) => {
             const subOrderId = subOrder.id;
-    
+
             const shouldShowCancelBtn =
                 !isSeller &&
                 totalOrder.isPaid &&
@@ -466,7 +501,7 @@ const PlaceOrder = () => {
                 subOrder.cancelStatus !== "Requested" &&
                 subOrder.cancelStatus !== "Rejected" &&
                 subOrder.cancelStatus !== "Approved";
-    
+
             const shouldShowRefundBtn =
                 !isSeller &&
                 totalOrder.isPaid &&
@@ -474,7 +509,12 @@ const PlaceOrder = () => {
                 subOrder.refundStatus !== "Requested" &&
                 subOrder.refundStatus !== "Rejected" &&
                 subOrder.refundStatus !== "Refunded";
-    
+
+            const shouldShowAppealBtn =
+                !isSeller &&
+                subOrder.refundStatus === "Rejected" &&
+                !subOrder.appealRequested;
+
             return (
                 <div key={subOrder.id} className="border rounded p-3 mb-3">
                     <h6 className="seller__store">
@@ -497,7 +537,7 @@ const PlaceOrder = () => {
                                 </p>
                             </div>
                             <div className="cart__item-price">
-                                <span className="price__cartItem">${item.price}</span>
+                                <span className="price__cartItem">${item.price * item.quantity}</span>
                             </div>
                         </div>
                     ))}
@@ -511,18 +551,34 @@ const PlaceOrder = () => {
                             Refund request pending approval
                         </p>
                     )}
-                    {(shouldShowCancelBtn || shouldShowRefundBtn) && (
+                    {subOrder.appealRequested && (
+                        <p className="text-info">
+                            Appeal submitted, awaiting admin review
+                        </p>
+                    )}
+                    {(shouldShowCancelBtn || shouldShowRefundBtn || shouldShowAppealBtn) && (
                         <div className="suborder__actions">
-                            <motion.button
-                                whileTap={{ scale: 1.1 }}
-                                className="refund__btn"
-                                onClick={() => {
-                                    setSelectedSubOrderId(subOrderId);
-                                    setShowRefundModal(true);
-                                }}
-                            >
-                                {shouldShowRefundBtn ? "Return/Refund" : "Cancel Order"}
-                            </motion.button>
+                            {(shouldShowCancelBtn || shouldShowRefundBtn) && (
+                                <motion.button
+                                    whileTap={{ scale: 1.1 }}
+                                    className="refund__btn"
+                                    onClick={() => {
+                                        setSelectedSubOrderId(subOrderId);
+                                        setShowRefundModal(true);
+                                    }}
+                                >
+                                    {shouldShowRefundBtn ? "Return/Refund" : "Cancel Order"}
+                                </motion.button>
+                            )}
+                            {shouldShowAppealBtn && (
+                                <motion.button
+                                    whileTap={{ scale: 1.1 }}
+                                    className="appeal__btn"
+                                    onClick={() => handleAppealRefund(subOrderId)}
+                                >
+                                    Appeal to Admin
+                                </motion.button>
+                            )}
                             <motion.button
                                 whileTap={{ scale: 1.1 }}
                                 className="buy-again__btn"
@@ -536,6 +592,7 @@ const PlaceOrder = () => {
             );
         });
     };
+
     // Handle display Date
     const formatDate = (date) => {
         if (!date) return "N/A";
@@ -763,6 +820,36 @@ const PlaceOrder = () => {
                                             </>
                                         );
                                     })()}
+                            </Modal>
+
+                            <Modal
+                                isOpen={showAppealModal}
+                                onClose={() => {
+                                    setShowAppealModal(false);
+                                    setAppealReason("");
+                                    setSelectedSubOrderId(null);
+                                }}
+                            >
+                                <div className="p-3">
+                                    <h5>Submit Appeal</h5>
+                                    <Form>
+                                        <input
+                                            type="textarea"
+                                            placeholder="Enter your reason for appeal..."
+                                            value={appealReason}
+                                            onChange={(e) => setAppealReason(e.target.value)}
+                                            rows="4"
+                                            className="mb-3"
+                                        />
+                                        <motion.button
+                                            color="primary"
+                                            onClick={submitAppeal}
+                                            disabled={loading || !appealReason.trim()}
+                                        >
+                                            {loading ? "Submitting..." : "Submit Appeal"}
+                                        </motion.button>
+                                    </Form>
+                                </div>
                             </Modal>
                         </Col>
 

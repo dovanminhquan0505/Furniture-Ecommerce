@@ -4,17 +4,31 @@ import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
 import { Button, Col, Container, Row, Spinner } from "reactstrap";
 import Helmet from "../components/Helmet/Helmet";
-import { approvePendingOrder, getPendingOrders, rejectPendingOrder } from "../api";
+import {
+    approvePendingOrder,
+    getPendingOrders,
+    rejectPendingOrder,
+} from "../api";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 
 const PendingOrders = () => {
     const [pendingOrdersData, setPendingOrdersData] = useState([]);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
+    const reduxUser = useSelector((state) => state.user.currentUser);
 
     useEffect(() => {
         const fetchPendingOrders = async () => {
             const user = auth.currentUser;
             if (!user) {
                 toast.error("Unauthorized! Please log in again.");
+                return;
+            }
+
+            if (!reduxUser || reduxUser.role !== "admin") {
+                toast.error("You must be an admin to access this page");
+                navigate("/login");
                 return;
             }
 
@@ -40,7 +54,9 @@ const PendingOrders = () => {
 
         try {
             await approvePendingOrder(order.id);
-            setPendingOrdersData((prev) => prev.filter((o) => o.id !== order.id));
+            setPendingOrdersData((prev) =>
+                prev.filter((o) => o.id !== order.id)
+            );
             toast.success("Seller account approved and created successfully!");
         } catch (error) {
             toast.error("Error approving seller account: " + error.message);
@@ -56,7 +72,9 @@ const PendingOrders = () => {
 
         try {
             await rejectPendingOrder(orderId);
-            setPendingOrdersData((prev) => prev.filter((o) => o.id !== orderId));
+            setPendingOrdersData((prev) =>
+                prev.filter((o) => o.id !== orderId)
+            );
             toast.success("Order rejected successfully!");
         } catch (error) {
             toast.error("Error rejecting order: " + error.message);
@@ -142,7 +160,9 @@ const PendingOrders = () => {
                                             </p>
                                             <p>
                                                 <strong>Created At:</strong>{" "}
-                                                {new Date(order.createdAt).toLocaleDateString("en-US")}
+                                                {new Date(
+                                                    order.createdAt
+                                                ).toLocaleDateString("en-US")}
                                             </p>
                                             <div className="d-flex justify-content-between mt-3">
                                                 <Button

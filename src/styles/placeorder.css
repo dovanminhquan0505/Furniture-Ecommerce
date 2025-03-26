@@ -122,6 +122,25 @@ h6.fw-bold {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
+.appeal__btn {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #05a347; 
+    background-color: #ffffff; 
+    border: 1px solid #2ecc71; 
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.appeal__btn:hover{
+    color: #06893d; 
+    border-color: #2abb66;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
 .buy-again__btn {
     padding: 6px 12px;
     font-size: 0.9rem;

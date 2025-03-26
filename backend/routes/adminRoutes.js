@@ -13,6 +13,8 @@ const {
     getAllUsers,
     deleteUser,
     getDashboardData,
+    getRefundDisputes,
+    resolveRefundDispute,
 } = require("../controllers/adminController");
 const multer = require("multer");
 
@@ -44,5 +46,9 @@ router.delete("/users/:id", deleteUser);
 
 // Dashboard
 router.get("/dashboard", getDashboardData);
+
+// Refund Disputes
+router.get("/refund-disputes", getRefundDisputes);
+router.put("/refund-disputes/:orderId/:subOrderId" , resolveRefundDispute);
 
 module.exports = router;

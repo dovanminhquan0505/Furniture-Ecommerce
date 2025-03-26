@@ -8,11 +8,13 @@ import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
 import { getAllOrdersAdmin } from "../api";
+import { useSelector } from "react-redux";
 
 const Orders = () => {
     const [ordersData, setOrdersData] = useState([]);
     const { isDarkMode } = useTheme();
     const navigate = useNavigate();
+    const reduxUser = useSelector((state) => state.user.currentUser);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -20,6 +22,12 @@ const Orders = () => {
             const user = auth.currentUser;
             if (!user) {
                 toast.error("Unauthorized! Please log in again.");
+                return;
+            }
+
+            if (!reduxUser || reduxUser.role !== "admin") {
+                toast.error("You must be an admin to access this page");
+                navigate("/login");
                 return;
             }
 
@@ -37,8 +45,8 @@ const Orders = () => {
     }, []);
 
     const viewOrders = (orderId) => {
-        navigate(`/placeorder/${orderId}`)
-    }
+        navigate(`/placeorder/${orderId}`);
+    };
     return (
         <Helmet title=" Users">
             <section className={`${isDarkMode ? "dark-mode" : "light-mode"}`}>
@@ -84,14 +92,22 @@ const Orders = () => {
                                                     {order.billingInfo?.name}
                                                 </td>
                                                 <td data-label="Date">
-                                                    {new Date(order.createdAt).toLocaleDateString("en-US")}
+                                                    {new Date(
+                                                        order.createdAt
+                                                    ).toLocaleDateString(
+                                                        "en-US"
+                                                    )}
                                                 </td>
                                                 <td data-label="Total Amount">
                                                     ${order.totalPrice}
                                                 </td>
                                                 <td data-label="Paid At">
                                                     {order.paidAt
-                                                        ? new Date(order.paidAt).toLocaleDateString("en-US")
+                                                        ? new Date(
+                                                              order.paidAt
+                                                          ).toLocaleDateString(
+                                                              "en-US"
+                                                          )
                                                         : "No"}
                                                 </td>
                                                 <td data-label="Delivered At">

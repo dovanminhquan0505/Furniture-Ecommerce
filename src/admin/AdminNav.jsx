@@ -37,6 +37,10 @@ const admin_nav = [
         display: "Pending Orders",
         path: "/admin/pending-orders",
     },
+    {
+        display: "Refund Disputes",
+        path: "/admin/refund-disputes",
+    }
 ];
 
 const AdminNav = () => {

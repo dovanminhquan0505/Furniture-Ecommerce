@@ -19,17 +19,32 @@ import Helmet from "../components/Helmet/Helmet";
 import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
 import { getDashboardDataAdmin } from "../api";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
-    const [dashboardData, setDashboardData] = useState({ products: [], users: [], orders: [], sellers: [] });
+    const [dashboardData, setDashboardData] = useState({
+        products: [],
+        users: [],
+        orders: [],
+        sellers: [],
+    });
     const [loading, setLoading] = useState(true);
     const { isDarkMode } = useTheme();
+    const navigate = useNavigate();
+    const reduxUser = useSelector((state) => state.user.currentUser);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
             const user = auth.currentUser;
             if (!user) {
                 toast.error("Unauthorized! Please log in again.");
+                return;
+            }
+
+            if (!reduxUser || reduxUser.role !== "admin") {
+                toast.error("You must be an admin to access this page");
+                navigate("/login");
                 return;
             }
 
@@ -60,7 +75,7 @@ const Dashboard = () => {
 
     // Get category data for pie chart based on paidAt
     const categoryData = dashboardData.orders.reduce((acc, order) => {
-        if (order.paidAt && Array.isArray(order.cartItems)) { 
+        if (order.paidAt && Array.isArray(order.cartItems)) {
             order.cartItems.forEach((item) => {
                 const category = item.category || "Unknown";
                 acc[category] = (acc[category] || 0) + item.quantity;
@@ -85,7 +100,9 @@ const Dashboard = () => {
                 style={{ height: "100vh" }}
             >
                 <Spinner animation="border" role="status">
-                    <span className="visually-hidden">Loading dashboard data...</span>
+                    <span className="visually-hidden">
+                        Loading dashboard data...
+                    </span>
                 </Spinner>
             </Container>
         );
@@ -130,7 +147,10 @@ const Dashboard = () => {
                             <Col lg="6" className="mt-5">
                                 <h4 className="mb-3">Sales</h4>
                                 {lineChartData.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height={300}>
+                                    <ResponsiveContainer
+                                        width="100%"
+                                        height={300}
+                                    >
                                         <LineChart data={lineChartData}>
                                             <CartesianGrid strokeDasharray="3 3" />
                                             <XAxis dataKey="date" />
@@ -154,7 +174,10 @@ const Dashboard = () => {
                             <Col lg="6" className="mt-5">
                                 <h4 className="mb-2">Top Categories</h4>
                                 {pieChartData.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height={300}>
+                                    <ResponsiveContainer
+                                        width="100%"
+                                        height={300}
+                                    >
                                         <PieChart>
                                             <Pie
                                                 data={pieChartData}

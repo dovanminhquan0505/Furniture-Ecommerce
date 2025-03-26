@@ -26,6 +26,7 @@ import StoreInformation from "../seller/StoreInformation";
 import ProtectedSeller from "./ProtectedSeller";
 import Orders from "../admin/Orders";
 import Sellers from "../admin/Sellers";
+import RefundDisputes from "../admin/RefundDisputes";
 
 const Routers = () => {
     //Link URL to views for each router
@@ -61,6 +62,7 @@ const Routers = () => {
                 <Route path="pending-orders" element={<PendingOrders />} />
                 <Route path="profile" element={<ProfileAdmin />} />
                 <Route path="orders" element={<Orders />} />
+                <Route path="refund-disputes" element={<RefundDisputes />} />
             </Route>
             <Route path="login" element={<Login />} />
             <Route path="signup" element={<SignUp />} />

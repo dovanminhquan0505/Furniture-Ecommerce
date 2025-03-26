@@ -7,17 +7,27 @@ import "../styles/all-products.css";
 import { useTheme } from "../components/UI/ThemeContext";
 import Helmet from "../components/Helmet/Helmet";
 import { deleteUserAdmin, getAllUsersAdmin } from "../api";
+import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 const Users = () => {
     const [usersData, setUsersData] = useState([]);
     const [loading, setLoading] = useState(true);
     const { isDarkMode } = useTheme();
+    const navigate = useNavigate();
+    const reduxUser = useSelector((state) => state.user.currentUser);
 
     useEffect(() => {
         const fetchUsers = async () => {
             const user = auth.currentUser;
             if (!user) {
                 toast.error("Unauthorized! Please log in again.");
+                return;
+            }
+
+            if (!reduxUser || reduxUser.role !== "admin") {
+                toast.error("You must be an admin to access this page");
+                navigate("/login");
                 return;
             }
 

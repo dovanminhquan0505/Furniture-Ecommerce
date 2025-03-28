@@ -23,7 +23,10 @@ const Layout = () => {
     };
 
     const shouldShowFooter = () => {
-        return !location.pathname.startsWith("/seller") || location.pathname === "/seller/signup";
+        return !(
+            location.pathname.startsWith("/admin") ||
+            location.pathname.startsWith("/seller")
+        );
     };
 
     return (

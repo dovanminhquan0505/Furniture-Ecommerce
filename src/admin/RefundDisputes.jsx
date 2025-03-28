@@ -74,108 +74,109 @@ const RefundDisputes = () => {
 
     return (
         <Helmet title="Refund Disputes">
-            <section className="refund-disputes-section">
-                <Container>
-                    <Row>
-                        <Col lg="12">
-                            <div className="section-header">
-                                <h2 className="section-title">Refund Disputes</h2>
-                                <span className="disputes-count">
-                                    {disputes.length} {disputes.length === 1 ? "Dispute" : "Disputes"}
-                                </span>
-                            </div>
-                            {disputes.length === 0 ? (
-                                <div className="no-disputes">
-                                    <p>No refund disputes found</p>
-                                </div>
-                            ) : (
-                                <div className="disputes-table-wrapper">
-                                    <table className="disputes-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Order ID</th>
-                                                <th>Sub-Order ID</th>
-                                                <th>Seller</th>
-                                                <th>Customer</th>
-                                                <th>Reason</th>
-                                                <th>Evidence</th>
-                                                <th>Status</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {disputes.map((dispute) => (
-                                                <tr key={dispute.subOrderId}>
-                                                    <td>{dispute.orderId}</td>
-                                                    <td>{dispute.subOrderId}</td>
-                                                    <td>{dispute.sellerName}</td>
-                                                    <td>{dispute.customerName}</td>
-                                                    <td>{dispute.reason}</td>
-                                                    <td>
-                                                        {dispute.evidence.length > 0 ? (
-                                                            <a
-                                                                href={dispute.evidence[0]}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="evidence-link"
-                                                            >
-                                                                View
-                                                            </a>
-                                                        ) : (
-                                                            "N/A"
-                                                        )}
-                                                    </td>
-                                                    <td>
-                                                        <Badge
-                                                            className={`status-badge ${
-                                                                dispute.refundStatus === "Requested"
-                                                                    ? "badge-warning"
-                                                                    : dispute.refundStatus === "Refunded"
-                                                                    ? "badge-success"
-                                                                    : "badge-danger"
-                                                            }`}
+            <div className="refund-disputes-wrapper">
+                <Container className="refund-disputes mt-5">
+                    {disputes.length === 0 ? (
+                        <p className="text-center">No refund disputes found.</p>
+                    ) : (
+                        <Row>
+                            {disputes.map((dispute) => (
+                                <Col lg="6" md="12" key={dispute.subOrderId} className="mb-4">
+                                    <motion.div
+                                        className="dispute-card p-4"
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.5 }}
+                                    >
+                                        <h3 className="mb-3 text-wrap">{dispute.orderId}</h3>
+                                        <Row>
+                                            <Col xs="6">
+                                                <p>
+                                                    <strong>Sub-Order ID:</strong>{" "}
+                                                    <span className="text-wrap">{dispute.subOrderId}</span>
+                                                </p>
+                                                <p>
+                                                    <strong>Seller:</strong>{" "}
+                                                    <span className="text-wrap">{dispute.sellerName}</span>
+                                                </p>
+                                                <p>
+                                                    <strong>Customer:</strong>{" "}
+                                                    <span className="text-wrap">{dispute.customerName}</span>
+                                                </p>
+                                            </Col>
+                                            <Col xs="6">
+                                                <p>
+                                                    <strong>Reason:</strong>{" "}
+                                                    <span className="text-wrap">{dispute.reason}</span>
+                                                </p>
+                                                <p>
+                                                    <strong>Evidence:</strong>{" "}
+                                                    {dispute.evidence.length > 0 ? (
+                                                        <a
+                                                            href={dispute.evidence[0]}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="evidence-link"
                                                         >
-                                                            {dispute.refundStatus}
-                                                        </Badge>
-                                                    </td>
-                                                    <td className="actions-cell">
-                                                        <motion.button
-                                                            whileTap={{ scale: 0.95 }}
-                                                            className="action-btn approve-btn"
-                                                            onClick={() =>
-                                                                handleResolveDispute(
-                                                                    dispute.orderId,
-                                                                    dispute.subOrderId,
-                                                                    "approve"
-                                                                )
-                                                            }
-                                                        >
-                                                            Approve
-                                                        </motion.button>
-                                                        <motion.button
-                                                            whileTap={{ scale: 0.95 }}
-                                                            className="action-btn reject-btn"
-                                                            onClick={() =>
-                                                                handleResolveDispute(
-                                                                    dispute.orderId,
-                                                                    dispute.subOrderId,
-                                                                    "reject"
-                                                                )
-                                                            }
-                                                        >
-                                                            Reject
-                                                        </motion.button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </Col>
-                    </Row>
+                                                            View
+                                                        </a>
+                                                    ) : (
+                                                        "N/A"
+                                                    )}
+                                                </p>
+                                                <p className="status-container">
+                                                    <strong>Status:</strong>{" "}
+                                                    <Badge
+                                                        className={`status-badge ${
+                                                            dispute.refundStatus === "Requested"
+                                                                ? "badge-warning"
+                                                                : dispute.refundStatus === "Refunded"
+                                                                ? "badge-success"
+                                                                : "badge-danger"
+                                                        }`}
+                                                    >
+                                                        {dispute.refundStatus}
+                                                    </Badge>
+                                                </p>
+                                            </Col>
+                                        </Row>
+                                        <div className="d-flex justify-content-between mt-3">
+                                            <motion.button
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
+                                                className="btn btn-approve"
+                                                onClick={() =>
+                                                    handleResolveDispute(
+                                                        dispute.orderId,
+                                                        dispute.subOrderId,
+                                                        "approve"
+                                                    )
+                                                }
+                                            >
+                                                ✔️ Approve
+                                            </motion.button>
+                                            <motion.button
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
+                                                className="btn btn-reject"
+                                                onClick={() =>
+                                                    handleResolveDispute(
+                                                        dispute.orderId,
+                                                        dispute.subOrderId,
+                                                        "reject"
+                                                    )
+                                                }
+                                            >
+                                                ❌ Reject
+                                            </motion.button>
+                                        </div>
+                                    </motion.div>
+                                </Col>
+                            ))}
+                        </Row>
+                    )}
                 </Container>
-            </section>
+            </div>
         </Helmet>
     );
 };

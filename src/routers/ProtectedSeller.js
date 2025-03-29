@@ -8,20 +8,6 @@ import { toast } from "react-toastify";
 const ProtectedSeller = () => {
     const { currentUser, loading: authLoading } = useAuth();
     const { isSeller, isLoading: sellerLoading } = useSeller();
-
-    React.useEffect(() => {
-        console.log("ProtectedSeller Comprehensive Debug:", {
-            currentUser: currentUser ? {
-                uid: currentUser.uid,
-                email: currentUser.email,
-                role: currentUser.role,
-                status: currentUser.status,
-                sellerId: currentUser.sellerId
-            } : null,
-            isSeller
-        });
-    }, [currentUser, isSeller]);
-
     // Combine loading states
     const isLoading = authLoading || sellerLoading;
 

@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { userActions } from "../redux/slices/userSlice";
 import { toast } from "react-toastify";
-import { getUserById, googleLogin } from "../api";
+import { getUserById } from "../api";
 import { auth } from "../firebase.config";
-import { getRedirectResult } from "firebase/auth";
 
 const useAuth = () => {
     const [currentUser, setCurrentUser] = useState(null);
@@ -30,7 +29,6 @@ const useAuth = () => {
                     dispatch(userActions.setUser(updatedUserData));
                     setCurrentUser(updatedUserData);
                 } else {
-                    console.log("No user, clearing state...");
                     setCurrentUser(null);
                     dispatch(userActions.clearUser());
                 }

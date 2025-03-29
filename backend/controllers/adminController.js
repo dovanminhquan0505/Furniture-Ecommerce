@@ -344,7 +344,7 @@ exports.getRefundDisputes = async (req, res) => {
 
             const needsAdmin = await shouldAdminIntervene(subOrderData);
 
-            if (!needsAdmin) return null; 
+            if (!needsAdmin) return null;
 
             return {
                 orderId: subOrderData.totalOrderId,
@@ -355,6 +355,7 @@ exports.getRefundDisputes = async (req, res) => {
                 evidence: subOrderData.refundRequest?.evidence || [],
                 refundStatus: subOrderData.refundStatus,
                 appealRequested: subOrderData.appealRequested || false,
+                items: subOrderData.items,
             };
         }));
 

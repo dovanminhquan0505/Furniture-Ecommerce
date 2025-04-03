@@ -617,6 +617,24 @@ export const appealRefund = async (orderId, subOrderId, appealReason) => {
     }
 };
 
+export const customerConfirmReturn = async (orderId, subOrderId) => {
+    try {
+        const response = await fetch(`${BASE_URL}/orders/${orderId}/refund/confirm-return/${subOrderId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to confirm return");
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error confirming return:", error);
+        throw error;
+    }
+};
+
 export const getDashboardStats = async (sellerId) => {
     try {
         const response = await fetch(
@@ -1152,12 +1170,12 @@ export const requestRefund = async (orderId, subOrderId, refundData) => {
     }
 };
 
-export const processRefund = async (orderId, subOrderId, action) => {
+export const processRefund = async (orderId, subOrderId, data) => {
     try {
         const response = await fetch(`${BASE_URL}/orders/${orderId}/refund/${subOrderId}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action }),
+            body: JSON.stringify(data), 
             credentials: "include",
         });
         if (!response.ok) {

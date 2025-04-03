@@ -15,6 +15,7 @@ import {
     appealRefund,
     cancelOrder,
     createStripePaymentIntent,
+    customerConfirmReturn,
     fetchSellerInfo,
     getOrderById,
     processRefund,
@@ -130,7 +131,7 @@ const PlaceOrder = () => {
     const [sellerNames, setSellerNames] = useState({});
     const [showRefundModal, setShowRefundModal] = useState(false);
     const [selectedSubOrderId, setSelectedSubOrderId] = useState(null);
-    const [timeLeft, setTimeLeft] = useState(null);
+    const [timeLeft, setTimers] = useState(null);
     const [showAppealModal, setShowAppealModal] = useState(false);
     const [appealReason, setAppealReason] = useState("");
 
@@ -228,26 +229,40 @@ const PlaceOrder = () => {
     }, [orderId, navigate]);
 
     // Tính toán thời gian còn lại để hủy đơn hàng
-    useEffect(() => {
-        if (orderDetails?.totalOrder?.createdAt) {
-            const createdAt = new Date(orderDetails.totalOrder.createdAt);
-            const fiveMinutesLater = new Date(
-                createdAt.getTime() + 5 * 60 * 1000
-            );
-            const interval = setInterval(() => {
-                const now = new Date();
-                const timeDiff = fiveMinutesLater - now;
-                if (timeDiff <= 0) {
-                    setTimeLeft(0);
-                    clearInterval(interval);
-                } else {
-                    setTimeLeft(Math.floor(timeDiff / 1000));
-                }
-            }, 1000);
+    // useEffect(() => {
+    //     if (orderDetails?.subOrders) {
+    //         const newTimers = {};
+    //         orderDetails.subOrders.forEach((subOrder) => {
+    //             let deadline;
+    //             if (subOrder.refundStatus === "Requested" && subOrder.refundRequest?.requestedAt) {
+    //                 deadline = new Date(subOrder.refundRequest.requestedAt).getTime() + 5 * 60 * 1000;
+    //             } else if (subOrder.refundStatus === "Return Requested" && subOrder.returnRequestedAt) {
+    //                 deadline = new Date(subOrder.returnRequestedAt).getTime() + 5 * 60 * 1000;
+    //             } else if (subOrder.refundStatus === "Return Confirmed" && subOrder.customerConfirmedAt) {
+    //                 deadline = new Date(subOrder.customerConfirmedAt).getTime() + 5 * 60 * 1000;
+    //             }
+    //             if (deadline) {
+    //                 newTimers[subOrder.id] = deadline;
+    //             }
+    //         });
 
-            return () => clearInterval(interval);
-        }
-    }, [orderDetails]);
+    //         const interval = setInterval(() => {
+    //             setTimers((prev) => {
+    //                 const updatedTimers = { ...prev };
+    //                 Object.keys(updatedTimers).forEach((subOrderId) => {
+    //                     const timeLeft = updatedTimers[subOrderId] - Date.now();
+    //                     if (timeLeft <= 0) {
+    //                         delete updatedTimers[subOrderId];
+    //                     }
+    //                 });
+    //                 return updatedTimers;
+    //             });
+    //         }, 1000);
+
+    //         setTimers(newTimers);
+    //         return () => clearInterval(interval);
+    //     }
+    // }, [orderDetails]);
 
     if (sellerLoading || isFetchingOrder) {
         return (
@@ -524,12 +539,65 @@ const PlaceOrder = () => {
                 subOrder.status === "success" &&
                 subOrder.refundStatus !== "Requested" &&
                 subOrder.refundStatus !== "Rejected" &&
-                subOrder.refundStatus !== "Refunded";
+                subOrder.refundStatus !== "Refunded" &&
+                subOrder.refundStatus !== "Return Requested" &&
+                subOrder.refundStatus !== "Return Confirmed";
+
+            const shouldShowConfirmReturnBtn =
+                !isSeller && subOrder.refundStatus === "Return Requested";
+
+            const shouldShowSellerConfirmBtn =
+                isSeller && subOrder.refundStatus === "Return Confirmed";
 
             const shouldShowAppealBtn =
                 !isSeller &&
                 subOrder.refundStatus === "Rejected" &&
                 !subOrder.appealRequested;
+
+            const handleConfirmReturn = async (subOrderId) => {
+                try {
+                    setLoading(true);
+                    await customerConfirmReturn(orderId, subOrderId);
+                    setOrderDetails((prev) => ({
+                        ...prev,
+                        subOrders: prev.subOrders.map((sub) =>
+                            sub.id === subOrderId
+                                ? { ...sub, refundStatus: "Return Confirmed" }
+                                : sub
+                        ),
+                    }));
+                    toast.success("Return confirmed successfully!");
+                } catch (error) {
+                    toast.error("Error confirming return: " + error.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleSellerConfirmReceipt = async () => {
+                try {
+                    setLoading(true);
+                    await processRefund(orderId, subOrder.id, {
+                        action: "approve",
+                        returnReceived: true,
+                    });
+                    setOrderDetails((prev) => ({
+                        ...prev,
+                        subOrders: prev.subOrders.map((sub) =>
+                            sub.id === subOrder.id
+                                ? { ...sub, refundStatus: "Refunded" }
+                                : sub
+                        ),
+                    }));
+                    toast.success(
+                        "Return receipt confirmed, refund processed!"
+                    );
+                } catch (error) {
+                    toast.error("Error confirming receipt: " + error.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
 
             return (
                 <div key={subOrder.id} className="border rounded p-3 mb-3">
@@ -570,6 +638,19 @@ const PlaceOrder = () => {
                             Refund request pending approval
                         </p>
                     )}
+                    {subOrder.refundStatus === "Return Requested" && (
+                        <p className="text-info">
+                            Awaiting your return confirmation
+                        </p>
+                    )}
+                    {subOrder.refundStatus === "Return Confirmed" && (
+                        <p className="text-info">
+                            Awaiting seller confirmation
+                        </p>
+                    )}
+                    {subOrder.refundStatus === "Refunded" && (
+                        <p className="text-success">Refunded successfully</p>
+                    )}
                     {subOrder.appealRequested && (
                         <p className="text-info">
                             Appeal submitted, awaiting admin review
@@ -577,6 +658,8 @@ const PlaceOrder = () => {
                     )}
                     {(shouldShowCancelBtn ||
                         shouldShowRefundBtn ||
+                        shouldShowConfirmReturnBtn ||
+                        shouldShowSellerConfirmBtn ||
                         shouldShowAppealBtn) && (
                         <div className="suborder__actions">
                             {(shouldShowCancelBtn || shouldShowRefundBtn) && (
@@ -591,6 +674,26 @@ const PlaceOrder = () => {
                                     {shouldShowRefundBtn
                                         ? "Return/Refund"
                                         : "Cancel Order"}
+                                </motion.button>
+                            )}
+                            {shouldShowConfirmReturnBtn && (
+                                <motion.button
+                                    whileTap={{ scale: 1.1 }}
+                                    className="refund__btn"
+                                    onClick={() =>
+                                        handleConfirmReturn(subOrder.id)
+                                    } 
+                                >
+                                    Confirm Return
+                                </motion.button>
+                            )}
+                            {shouldShowSellerConfirmBtn && (
+                                <motion.button
+                                    whileTap={{ scale: 1.1 }}
+                                    className="refund__btn"
+                                    onClick={handleSellerConfirmReceipt}
+                                >
+                                    Confirm Receipt
                                 </motion.button>
                             )}
                             {shouldShowAppealBtn && (

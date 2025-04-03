@@ -8,6 +8,7 @@ import "../seller/styles/orders-seller.css";
 import { useTheme } from "../components/UI/ThemeContext";
 import Helmet from "../components/Helmet/Helmet";
 import { deleteOrder, fetchSellerOrders, getUserById, processCancelRequest, processRefund, updateOrder } from "../api";
+import Modal from "../components/Modal/Modal";
 
 const Orders = () => {
     const [orders, setOrders] = useState([]);
@@ -15,6 +16,8 @@ const Orders = () => {
     const navigate = useNavigate();
     const { isDarkMode } = useTheme();
     const [sellerId, setSellerId] = useState(null);
+    const [showProductModal, setShowProductModal] = useState(false);
+    const [selectedSubOrder, setSelectedSubOrder] = useState(null);
 
     useEffect(() => {
         const fetchSellerData = async () => {
@@ -100,7 +103,7 @@ const Orders = () => {
     const handleProcessRefund = async (totalOrderId, subOrderId, action) => {
         try {
             setLoading(true);
-            await processRefund(totalOrderId, subOrderId, action);
+            await processRefund(totalOrderId, subOrderId, { action }); 
             setOrders((prevOrders) =>
                 prevOrders.map((order) =>
                     order.id === subOrderId
@@ -111,6 +114,33 @@ const Orders = () => {
             toast.success(`Refund request ${action}d successfully!`);
         } catch (error) {
             toast.error(`Failed to ${action} refund request: ` + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSellerConfirmReceipt = async () => {
+        if (selectedSubOrder.refundStatus !== "Return Confirmed") {
+            toast.error("Cannot confirm receipt: Invalid refund status");
+            return;
+        }
+        try {
+            setLoading(true);
+            await processRefund(selectedSubOrder.totalOrderId, selectedSubOrder.id, { 
+                action: "approve", 
+                returnReceived: true 
+            });
+            setOrders((prevOrders) =>
+                prevOrders.map((order) =>
+                    order.id === selectedSubOrder.id
+                        ? { ...order, refundStatus: "Refunded" }
+                        : order
+                )
+            );
+            toast.success("Return receipt confirmed, refund processed!");
+            setShowProductModal(false);
+        } catch (error) {
+            toast.error("Error confirming receipt: " + error.message);
         } finally {
             setLoading(false);
         }
@@ -137,9 +167,7 @@ const Orders = () => {
 
     return (
         <Helmet title=" Orders">
-            <section
-                className={`orders__section ${isDarkMode ? "dark-mode" : ""}`}
-            >
+            <section className={`orders__section ${isDarkMode ? "dark-mode" : ""}`}>
                 <Container fluid>
                     <Row className="justify-content-center">
                         <Col lg="11">
@@ -165,7 +193,7 @@ const Orders = () => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                            {orders.length === 0 ? (
+                                                {orders.length === 0 ? (
                                                     <tr>
                                                         <td colSpan="8" className="text-center fw-bold">
                                                             No orders found
@@ -197,6 +225,19 @@ const Orders = () => {
                                                                         }}
                                                                     >
                                                                         Confirm Order
+                                                                    </motion.button>
+                                                                )}
+                                                                {order.refundStatus === "Return Confirmed" && (
+                                                                    <motion.button
+                                                                        whileTap={{ scale: 0.9 }}
+                                                                        className="btn__seller btn__seller-success"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setSelectedSubOrder(order);
+                                                                            setShowProductModal(true);
+                                                                        }}
+                                                                    >
+                                                                        Confirm Receipt
                                                                     </motion.button>
                                                                 )}
                                                             </td>
@@ -274,6 +315,56 @@ const Orders = () => {
                     </Row>
                 </Container>
             </section>
+            <Modal
+                isOpen={showProductModal}
+                onClose={() => setShowProductModal(false)}
+            >
+                {selectedSubOrder && (
+                    <div className="p-3">
+                        <h5>Sub-order Details</h5>
+                        <div className="cart__item">
+                            <img
+                                src={selectedSubOrder.items[0].imgUrl}
+                                alt={selectedSubOrder.items[0].productName}
+                                className="cart__item-img"
+                            />
+                            <div className="cart__item-info">
+                                <h6>{selectedSubOrder.items[0].productName}</h6>
+                                <p>Qty: {selectedSubOrder.items[0].quantity}</p>
+                                <p>Price: ${selectedSubOrder.items[0].price}</p>
+                            </div>
+                        </div>
+                        <h6 className="mb-1">Refund Reason:</h6>
+                        <p>{selectedSubOrder.refundRequest?.reason || "No reason provided"}</p>
+                        <h6 className="mb-2 mt-1">Evidence:</h6>
+                        {selectedSubOrder.refundRequest?.evidence?.length > 0 ? (
+                            selectedSubOrder.refundRequest.evidence.map((url, index) => (
+                                <div key={index}>
+                                    <img src={url} alt={`Evidence ${index + 1}`} className="evidence-img" />
+                                </div>
+                            ))
+                        ) : (
+                            <p>No evidence provided</p>
+                        )}
+                        <div className="mt-3">
+                            <motion.button
+                                whileTap={{ scale: 0.9 }}
+                                className="btn__seller btn__seller-danger me-2"
+                                onClick={() => setShowProductModal(false)}
+                            >
+                                Cancel
+                            </motion.button>
+                            <motion.button
+                                whileTap={{ scale: 0.9 }}
+                                className="btn__seller btn__seller-success"
+                                onClick={handleSellerConfirmReceipt}
+                            >
+                                Confirm
+                            </motion.button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
         </Helmet>
     );
 };

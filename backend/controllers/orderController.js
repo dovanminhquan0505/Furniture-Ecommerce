@@ -370,16 +370,6 @@ exports.requestRefund = async (req, res) => {
             return res.status(400).json({ message: "Refund can only be requested for successful orders" });
         }
 
-        const deliveredAt = totalOrderData.deliveredAt?.toDate(); 
-        if (!deliveredAt) {
-            return res.status(400).json({ message: "Order has not been delivered yet" });
-        }
-        const now = new Date();
-        const daysSinceDelivered = (now - deliveredAt) / (1000 * 60 * 60 * 24);
-        if (daysSinceDelivered > 15) {
-            return res.status(400).json({ message: "Refund request period (15 days from delivery) has expired" });
-        }
-
         const refundData = {
             refundStatus: "Requested",
             refundRequest: {
@@ -417,27 +407,23 @@ exports.processRefund = async (req, res) => {
         }
         const subOrderData = subOrderSnap.data();
 
-        if (subOrderData.refundStatus !== "Requested") {
-            return res.status(400).json({ message: "No refund request pending" });
-        }
-
         let updateData = {};
         let totalOrderUpdateData = null;
 
         if (action === "approve") {
-            if (subOrderData.refundRequest.isReturnRequired && !returnReceived) {
-                updateData = { refundStatus: "Return Requested" };
+            if (subOrderData.refundStatus === "Requested") {
+                updateData = {
+                    refundStatus: "Return Requested",
+                    returnRequestedAt: admin.firestore.Timestamp.now(),
+                };
                 await subOrderRef.update(updateData);
-                return res.status(200).json({ message: "Return requested, awaiting confirmation" });
-            }
+                return res.status(200).json({ message: "Return requested, awaiting customer confirmation" });
+            } else if (subOrderData.refundStatus === "Return Confirmed" && returnReceived) {
+                updateData = {
+                    refundStatus: "Refunded",
+                    refundedAt: admin.firestore.Timestamp.now(),
+                };
 
-            updateData = {
-                refundStatus: returnReceived ? "Refunded" : "Return Received",
-                refundedAt: returnReceived ? admin.firestore.Timestamp.now() : null,
-                returnReceivedAt: returnReceived ? null : admin.firestore.Timestamp.now(),
-            };
-
-            if (returnReceived) {
                 const paymentResult = totalOrderData.paymentResult;
                 const refundAmount = subOrderData.totalAmount;
                 if (paymentResult && totalOrderData.paymentMethod === "stripe") {
@@ -455,7 +441,6 @@ exports.processRefund = async (req, res) => {
                     updateData.refundResult = { id: refund.result.id, status: refund.result.status };
                 }
 
-                // Loại bỏ sản phẩm khỏi totalOrder.items
                 const updatedItems = totalOrderData.items.filter(
                     (item) => !subOrderData.items.some((subItem) => subItem.id === item.id)
                 );
@@ -478,25 +463,51 @@ exports.processRefund = async (req, res) => {
                 };
 
                 await totalOrderRef.update(totalOrderUpdateData);
+            } else {
+                return res.status(400).json({ message: "Invalid refund status for approval" });
             }
-
-            await subOrderRef.update(updateData);
-            res.status(200).json({ 
-                message: returnReceived ? "Refund approved successfully" : "Return received, awaiting final refund",
-                updatedTotalOrder: totalOrderUpdateData
-            });
         } else if (action === "reject") {
             updateData = {
                 refundStatus: "Rejected",
                 rejectedAt: admin.firestore.Timestamp.now(),
             };
-            await subOrderRef.update(updateData);
-            res.status(200).json({ message: "Refund rejected successfully" });
         } else {
             return res.status(400).json({ message: "Invalid action" });
         }
+
+        await subOrderRef.update(updateData);
+        res.status(200).json({ 
+            message: `Refund ${action}ed successfully`,
+            updatedTotalOrder: totalOrderUpdateData
+        });
     } catch (error) {
         res.status(500).json({ message: "Error processing refund", error: error.message });
+    }
+};
+
+exports.customerConfirmReturn = async (req, res) => {
+    try {
+        const { orderId, subOrderId } = req.params;
+
+        const subOrderRef = db.collection("subOrders").doc(subOrderId);
+        const subOrderSnap = await subOrderRef.get();
+        if (!subOrderSnap.exists) {
+            return res.status(404).json({ message: "Sub-order not found" });
+        }
+
+        const subOrderData = subOrderSnap.data();
+        if (subOrderData.refundStatus !== "Return Requested") {
+            return res.status(400).json({ message: "Cannot confirm return at this stage" });
+        }
+
+        await subOrderRef.update({
+            refundStatus: "Return Confirmed",
+            customerConfirmedAt: admin.firestore.Timestamp.now(),
+        });
+
+        res.status(200).json({ message: "Return confirmed by customer, awaiting seller confirmation" });
+    } catch (error) {
+        res.status(500).json({ message: "Error confirming return", error: error.message });
     }
 };
 

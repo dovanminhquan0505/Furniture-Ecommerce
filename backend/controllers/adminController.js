@@ -16,6 +16,9 @@ const shouldAdminIntervene = async (subOrderData) => {
     const now = new Date();
     const requestedAt = subOrderData.refundRequest?.requestedAt?.toDate();
     const returnRequestedAt = subOrderData.returnRequestedAt?.toDate();
+    const customerConfirmedAt = subOrderData.customerConfirmedAt?.toDate();
+
+    const FIVE_MINUTES = 5 * 60 * 1000;
 
     // Trường hợp 1: Seller từ chối và khách hàng khiếu nại 
     if (subOrderData.refundStatus === "Rejected" && subOrderData.appealRequested) {
@@ -34,6 +37,14 @@ const shouldAdminIntervene = async (subOrderData) => {
     if (subOrderData.refundStatus === "Return Requested" && returnRequestedAt) {
         const daysSinceReturnRequested = (now - returnRequestedAt) / (1000 * 60 * 60 * 24);
         if (daysSinceReturnRequested > 1) {
+            return true;
+        }
+    }
+
+    // Trường hợp 4: Khách xác nhận trả hàng nhưng seller chưa confirm trong 5 phút
+    if (subOrderData.refundStatus === "Return Confirmed" && customerConfirmedAt) {
+        const timeSinceConfirmed = now - customerConfirmedAt;
+        if (timeSinceConfirmed > FIVE_MINUTES) {
             return true;
         }
     }

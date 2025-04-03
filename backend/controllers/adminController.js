@@ -331,7 +331,7 @@ exports.getDashboardData = async (req, res) => {
 exports.getRefundDisputes = async (req, res) => {
     try {
         const subOrdersSnap = await db.collection("subOrders")
-            .where("refundStatus", "in", ["Requested", "Rejected", "Return Requested"])
+            .where("refundStatus", "in", ["Requested", "Return Requested", "Rejected"])
             .get();
 
         const disputes = await Promise.all(subOrdersSnap.docs.map(async (doc) => {
@@ -343,6 +343,10 @@ exports.getRefundDisputes = async (req, res) => {
             const sellerName = sellerSnap.exists ? sellerSnap.data().storeName : "Unknown";
 
             const needsAdmin = await shouldAdminIntervene(subOrderData);
+
+            if (subOrderData.resolvedByAdmin && !subOrderData.appealRequested) {
+                return null;
+            }
 
             if (!needsAdmin) return null;
 
@@ -385,8 +389,12 @@ exports.resolveRefundDispute = async (req, res) => {
         }
         const subOrderData = subOrderSnap.data();
 
-        if (subOrderData.refundStatus !== "Requested") {
-            return res.status(400).json({ message: "No refund request pending" });
+        const validStatuses = ["Requested", "Return Requested", "Rejected"];
+        if (!validStatuses.includes(subOrderData.refundStatus)) {
+            return res.status(400).json({ 
+                message: "Refund dispute cannot be resolved in current status",
+                currentStatus: subOrderData.refundStatus 
+            });
         }
 
         let updateData = {};
@@ -394,6 +402,8 @@ exports.resolveRefundDispute = async (req, res) => {
             updateData = {
                 refundStatus: "Refunded",
                 refundedAt: admin.firestore.Timestamp.now(),
+                appealRequested: false,
+                resolvedByAdmin: true 
             };
 
             const paymentResult = totalOrderData.paymentResult;
@@ -413,7 +423,6 @@ exports.resolveRefundDispute = async (req, res) => {
                 updateData.refundResult = { id: refund.result.id, status: refund.result.status };
             }
 
-            // Loại bỏ sản phẩm khỏi totalOrder.items
             const updatedItems = totalOrderData.items.filter(
                 (item) => !subOrderData.items.some((subItem) => subItem.id === item.id)
             );
@@ -438,14 +447,22 @@ exports.resolveRefundDispute = async (req, res) => {
             await totalOrderRef.update(totalOrderUpdateData);
             await subOrderRef.update(updateData);
 
-            res.status(200).json({ message: "Refund dispute approved by admin", updatedTotalOrder: totalOrderUpdateData });
+            res.status(200).json({ 
+                message: "Refund dispute approved by admin", 
+                updatedTotalOrder: totalOrderUpdateData 
+            });
         } else if (action === "reject") {
             updateData = {
                 refundStatus: "Rejected",
                 rejectedAt: admin.firestore.Timestamp.now(),
+                appealRequested: false, 
+                resolvedByAdmin: true 
             };
             await subOrderRef.update(updateData);
-            res.status(200).json({ message: "Refund dispute rejected by admin" });
+            res.status(200).json({ 
+                message: "Refund dispute rejected by admin",
+                subOrderId: subOrderId
+            });
         } else {
             return res.status(400).json({ message: "Invalid action" });
         }

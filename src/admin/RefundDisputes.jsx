@@ -51,22 +51,31 @@ const RefundDisputes = () => {
         try {
             setLoading(true);
             await resolveRefundDispute(orderId, subOrderId, action);
-            setDisputes((prev) =>
-                prev.map((dispute) =>
-                    dispute.subOrderId === subOrderId
-                        ? {
-                              ...dispute,
-                              refundStatus:
-                                  action === "approve"
-                                      ? "Refunded"
-                                      : "Rejected",
-                          }
-                        : dispute
-                )
-            );
+            
+            if (action === "approve") {
+                setDisputes((prev) =>
+                    prev.map((dispute) =>
+                        dispute.subOrderId === subOrderId
+                            ? {
+                                  ...dispute,
+                                  refundStatus: "Refunded",
+                              }
+                            : dispute
+                    )
+                );
+            } else if (action === "reject") {
+                setDisputes((prev) =>
+                    prev.filter((dispute) => dispute.subOrderId !== subOrderId)
+                );
+            }
+            
             toast.success(`Refund dispute ${action}d successfully!`);
         } catch (error) {
-            toast.error(`Failed to ${action} dispute: ` + error.message);
+            console.error("Error in handleResolveDispute:", error);
+            const errorMessage = error.message.includes("current status")
+                ? "Cannot resolve dispute in its current state"
+                : `Failed to ${action} dispute: ${error.message}`;
+            toast.error(errorMessage);
         } finally {
             setLoading(false);
         }

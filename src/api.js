@@ -583,10 +583,12 @@ export const resolveRefundDispute = async (orderId, subOrderId, action) => {
             body: JSON.stringify({ action }),
             credentials: "include",
         });
+        
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.message || "Failed to resolve refund dispute");
         }
+        
         return await response.json();
     } catch (error) {
         console.error("Error resolving refund dispute:", error);

@@ -38,7 +38,6 @@
     color: #ff4444;
 }
 
-/* Custom styles cho nội dung Modal */
 .modal-content h5 {
     font-size: 1.5rem;
     color: #333;
@@ -64,18 +63,6 @@
     outline: none;
     box-shadow: 0 0 4px rgba(0, 123, 255, 0.3);
 }
-
-/* .modal-content button {
-    padding: 0px 8px;
-    font-size: 1rem;
-    font-weight: 500;
-    border-radius: 8px;
-    border: none;
-    background: #007bff;
-    color: #fff;
-    cursor: pointer;
-    transition: background 0.3s ease, transform 0.2s ease;
-} */
 
 .modal-content button:disabled {
     border-radius: 8px;

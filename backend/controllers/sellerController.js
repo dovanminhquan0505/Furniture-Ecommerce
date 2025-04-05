@@ -219,3 +219,107 @@ exports.getSellerIdByUserId = async (req, res) => {
         res.status(500).json({ message: "Error fetching seller info", error });
     }
 };
+
+exports.getDashboardStats = async (req, res) => {
+    try {
+        const sellerId = req.params.sellerId;
+        if (!sellerId) {
+            return res.status(400).json({ message: 'Seller ID is required' });
+        }
+
+        const now = new Date();
+        const dayAgo = new Date(now - 24 * 60 * 60 * 1000);
+        const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+        const monthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+
+        // Truy vấn subOrders dựa trên sellerId
+        const subOrdersSnapshot = await db
+            .collection('subOrders')
+            .where('sellerId', '==', sellerId)
+            .where('createdAt', '>=', monthAgo)
+            .get();
+
+        let dailyRevenue = 0, weeklyRevenue = 0, monthlyRevenue = 0, profit = 0, orderCount = 0;
+        const revenueByDay = {};
+        const productSales = {};
+
+        // Lấy danh sách totalOrderIds từ subOrders
+        const totalOrderIds = [...new Set(subOrdersSnapshot.docs.map(doc => doc.data().totalOrderId))];
+
+        // Truy vấn totalOrders để kiểm tra isPaid
+        const totalOrdersSnapshot = await db
+            .collection('totalOrders')
+            .where(admin.firestore.FieldPath.documentId(), 'in', totalOrderIds)
+            .get();
+
+        const paidOrderIds = totalOrdersSnapshot.docs
+            .filter(doc => doc.data().isPaid === true)
+            .map(doc => doc.id);
+
+        // Xử lý dữ liệu từ subOrders
+        subOrdersSnapshot.forEach(doc => {
+            const subOrder = doc.data();
+            const orderDate = subOrder.createdAt.toDate();
+
+            // Chỉ xử lý nếu totalOrder tương ứng đã thanh toán
+            if (paidOrderIds.includes(subOrder.totalOrderId)) {
+                const revenue = subOrder.totalAmount || 0;
+                const orderProfit = revenue * 0.2; // 20% profit margin
+
+                monthlyRevenue += revenue;
+                profit += orderProfit;
+                orderCount++;
+
+                if (orderDate >= dayAgo) dailyRevenue += revenue;
+                if (orderDate >= weekAgo) weeklyRevenue += revenue;
+
+                const dateString = orderDate.toISOString().split('T')[0];
+                revenueByDay[dateString] = (revenueByDay[dateString] || 0) + revenue;
+
+                // Xử lý sản phẩm từ subOrder.items
+                if (Array.isArray(subOrder.items)) {
+                    subOrder.items.forEach(item => {
+                        const productId = item.id || 'unknown';
+                        if (!productSales[productId]) {
+                            productSales[productId] = {
+                                product: item.productName || 'Unknown Product',
+                                imgUrl: item.imgUrl || '',
+                                totalQuantity: 0,
+                                totalRevenue: 0
+                            };
+                        }
+                        productSales[productId].totalQuantity += Number(item.quantity) || 0;
+                        productSales[productId].totalRevenue += Number(item.totalPrice) || 0;
+                    });
+                }
+            }
+        });
+
+        const revenueData = Object.entries(revenueByDay)
+            .map(([date, revenue]) => ({
+                date: new Date(date).getTime(),
+                revenue: parseFloat(revenue.toFixed(2)),
+            }))
+            .sort((a, b) => a.date - b.date);
+
+        const allProducts = Object.values(productSales).map(product => ({
+            product: product.product,
+            imgUrl: product.imgUrl,
+            totalQuantity: product.totalQuantity,
+            totalRevenue: parseFloat(product.totalRevenue.toFixed(2))
+        }));
+
+        res.json({
+            dailyRevenue,
+            weeklyRevenue,
+            monthlyRevenue,
+            orderCount,
+            profit,
+            revenueData,
+            topProducts: allProducts
+        });
+    } catch (error) {
+        console.error('Error in getDashboardStats:', error);
+        res.status(500).json({ message: 'Error fetching dashboard stats', error: error.message });
+    }
+};

@@ -12,8 +12,8 @@ const {
     getSellerOrders,
     deleteSellerOrder,
     getSellerIdByUserId,
+    getDashboardStats,
 } = require("../controllers/sellerController");
-const { getDashboardStats } = require("../controllers/dashboardController");
 const { requireSeller } = require("../controllers/authController");
 const router = express.Router();
 

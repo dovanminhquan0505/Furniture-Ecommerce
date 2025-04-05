@@ -186,18 +186,28 @@ const DashboardSeller = () => {
                 <Col md={12}>
                     <Card className="top-products__card">
                         <CardBody>
-                            <CardTitle tag="h5">Top 5 Products</CardTitle>
-                            <Table>
+                            <CardTitle tag="h5">All Sold Products</CardTitle>
+                            <Table responsive>
                                 <thead>
                                     <tr>
-                                        <th>Product</th>
+                                        <th>Image</th>
+                                        <th>Product Name</th>
+                                        <th>Total Revenue</th>
                                         <th>Quantity Sold</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {topProducts.map((product, index) => (
                                         <tr key={index}>
+                                            <td>
+                                                <img
+                                                    src={product.imgUrl || 'default-image.jpg'}
+                                                    alt={product.product}
+                                                    style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                                                />
+                                            </td>
                                             <td>{product.product}</td>
+                                            <td>${product.totalRevenue.toFixed(2)}</td>
                                             <td>{product.totalQuantity}</td>
                                         </tr>
                                     ))}

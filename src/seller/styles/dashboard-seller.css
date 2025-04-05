@@ -30,6 +30,14 @@
     margin-top: 30px;
 }
 
+.top-products__card img {
+    border-radius: 5px;
+}
+
+.top-products__card th, .top-products__card td {
+    vertical-align: middle;
+}
+
 .loading__message,
 .error__message {
     text-align: center;
@@ -50,7 +58,7 @@
 .top-products__card td {
     padding: 10px;
     border-bottom: 1px solid #ddd;
-    text-align: left;
+    text-align: center;
 }
 
 .top-products__card th {

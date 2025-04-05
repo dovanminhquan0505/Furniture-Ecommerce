@@ -328,29 +328,23 @@ exports.getSellerNotifications = async (req, res) => {
     try {
         const sellerId = req.params.sellerId;
         if (!sellerId) {
-            return res.status(400).json({ message: 'Seller ID is required' });
+            return res.status(400).json({ message: "Seller ID is required" });
         }
 
-        console.log('Fetching notifications for sellerId:', sellerId);
-
         const notificationsSnapshot = await db
-            .collection('sellerNotifications')
-            .where('sellerId', '==', sellerId)
-            .orderBy('createdAt', 'desc')
+            .collection("sellerNotifications")
+            .where("sellerId", "==", sellerId)
+            .orderBy("createdAt", "desc")
             .limit(10)
             .get();
-
-        console.log('Notifications found:', notificationsSnapshot.size);
 
         const notifications = await Promise.all(
             notificationsSnapshot.docs.map(async (doc) => {
                 const data = doc.data();
-                console.log('Notification data:', data);
-
-                let userData = { displayName: 'Unknown', photoURL: '' };
+                let userData = { displayName: "Unknown", photoURL: "" };
                 if (data.userId) {
                     try {
-                        const userDoc = await db.collection('users').doc(data.userId).get();
+                        const userDoc = await db.collection("users").doc(data.userId).get();
                         userData = userDoc.exists ? userDoc.data() : userData;
                     } catch (userError) {
                         console.error(`Error fetching user ${data.userId}:`, userError);
@@ -360,18 +354,42 @@ exports.getSellerNotifications = async (req, res) => {
                 return {
                     id: doc.id,
                     ...data,
-                    userName: userData.displayName || 'Unknown',
-                    userAvatar: userData.photoURL || '',
+                    userName: userData.displayName || "Unknown",
+                    userAvatar: userData.photoURL || "",
                     createdAt: data.createdAt && data.createdAt.toDate
                         ? data.createdAt.toDate().toISOString()
                         : new Date().toISOString(),
+                    isRead: data.isRead || false, 
                 };
             })
         );
 
         res.json(notifications);
     } catch (error) {
-        console.error('Error in getSellerNotifications:', error);
-        res.status(500).json({ message: 'Error fetching notifications', error: error.message });
+        console.error("Error in getSellerNotifications:", error);
+        res.status(500).json({ message: "Error fetching notifications", error: error.message });
+    }
+};
+
+exports.markNotificationAsRead = async (req, res) => {
+    try {
+        const { sellerId, notificationId } = req.params;
+
+        const notificationRef = db.collection("sellerNotifications").doc(notificationId);
+        const notificationDoc = await notificationRef.get();
+
+        if (!notificationDoc.exists) {
+            return res.status(404).json({ message: "Notification not found" });
+        }
+
+        const notificationData = notificationDoc.data();
+        if (notificationData.sellerId !== sellerId) {
+            return res.status(403).json({ message: "Unauthorized to update this notification" });
+        }
+
+        await notificationRef.update({ isRead: true });
+        res.json({ message: "Notification marked as read" });
+    } catch (error) {
+        res.status(500).json({ message: "Error updating notification status", error: error.message });
     }
 };

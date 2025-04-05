@@ -327,9 +327,9 @@
     font-size: 11px;
     color: #888;
     font-style: italic;
-    display: block;  /* Make it a block element */
-    margin-top: 3px;  /* Add space between message and time */
-    text-align: left;  /* Align left with message */
+    display: block;  
+    margin-top: 3px;  
+    text-align: left;  
 }
 
 .notification__empty {
@@ -338,6 +338,34 @@
     color: #777;
     font-size: 14px;
     font-style: italic;
+}
+
+.notification__item {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 6px;
+    margin-bottom: 5px;
+    position: relative; 
+}
+
+.notification__item:not(.read)::after {
+    content: "";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background-color: #ff6600;
+    border-radius: 50%;
+}
+
+.notification__item.read::after {
+    display: none;
 }
 
 /* Media queries */

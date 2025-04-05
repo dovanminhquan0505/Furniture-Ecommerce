@@ -9,7 +9,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
-import { getSellerNotifications, getUserById, logoutUser } from "../api";
+import { getSellerNotifications, getUserById, logoutUser, markNotificationAsRead } from "../api";
 
 const seller_nav = [
     {
@@ -89,6 +89,20 @@ const SellerNav = () => {
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    // Hàm đánh dấu notification là đã đọc
+    const markAsRead = async (notificationId) => {
+        try {
+            await markNotificationAsRead(sellerId, notificationId);
+            setNotifications((prev) =>
+                prev.map((notif) =>
+                    notif.id === notificationId ? { ...notif, isRead: true } : notif
+                )
+            );
+        } catch (error) {
+            toast.error("Error marking notification as read: " + error.message);
+        }
+    };
 
     if (isLoading) {
         return (
@@ -180,7 +194,10 @@ const SellerNav = () => {
                                     <div
                                         key={notif.id}
                                         className={`notification__item ${notif.isRead ? "read" : ""}`}
-                                        onClick={() => navigate("/seller/orders")}
+                                        onClick={() => {
+                                            if (!notif.isRead) markAsRead(notif.id);
+                                            navigate("/seller/orders");
+                                        }}
                                     >
                                         <img
                                             src={notif.userAvatar || "default-avatar.png"}
@@ -189,13 +206,17 @@ const SellerNav = () => {
                                         />
                                         <div className="notification__content">
                                             <p>
-                                                {notif.message.includes('#') ? (
+                                                {notif.message.includes("#") ? (
                                                     <>
-                                                        {notif.message.split('#')[0]}
-                                                        <strong className="order-id">#{notif.message.split('#')[1].split(' ')[0]}</strong>
-                                                        {notif.message.split('#')[1].split(' ').slice(1).join(' ')}
+                                                        {notif.message.split("#")[0]}
+                                                        <strong className="order-id">
+                                                            #{notif.message.split("#")[1].split(" ")[0]}
+                                                        </strong>
+                                                        {notif.message.split("#")[1].split(" ").slice(1).join(" ")}
                                                     </>
-                                                ) : notif.message}
+                                                ) : (
+                                                    notif.message
+                                                )}
                                             </p>
                                             <span className="notification__time">
                                                 {timeAgo(notif.createdAt)}

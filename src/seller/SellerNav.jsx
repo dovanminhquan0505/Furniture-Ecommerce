@@ -5,7 +5,7 @@ import { useLocation, NavLink, Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import useSeller from "../custom-hooks/useSeller";
 import { Container, Spinner } from "reactstrap";
-import { signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
@@ -42,21 +42,31 @@ const SellerNav = () => {
     const [showNotifications, setShowNotifications] = useState(false);
 
     useEffect(() => {
-        const fetchSellerId = async () => {
-            const currentUser = auth.currentUser;
-            if (!currentUser) {
-                toast.error("You must be logged in");
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                setSellerId(null);
                 navigate("/login");
-                return;
             }
-
-            const userData = await getUserById(currentUser.uid);
-            setSellerId(userData.sellerId);
-        };
-        fetchSellerId();
+        });
+        return () => unsubscribe();
     }, [navigate]);
 
     useEffect(() => {
+        const fetchSellerId = async () => {
+            const currentUser = auth.currentUser;
+            if (!currentUser) return;
+            try {
+                const userData = await getUserById(currentUser.uid);
+                setSellerId(userData.sellerId);
+            } catch (error) {
+                toast.error("Failed to fetch seller ID: " + error.message);
+            }
+        };
+        fetchSellerId();
+    }, []);
+
+    useEffect(() => {
+        if (!sellerId) return;
         const fetchNotifications = async () => {
             if (!sellerId) return;
             try {
@@ -124,6 +134,7 @@ const SellerNav = () => {
         try {
             await logoutUser();
             await signOut(auth);
+            setSellerId(null);
             toast.success("Logged out successfully");
             navigate("/login");
         } catch (error) {

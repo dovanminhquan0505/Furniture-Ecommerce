@@ -76,68 +76,107 @@ exports.registerUser = async (req, res) => {
 
 exports.loginUser = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, captchaToken } = req.body;
 
         if (!email || !password) {
-            return res
-                .status(400)
-                .json({ error: "Email and password are required" });
+            return res.status(400).json({ message: "Email and password are required" });
+        }
+
+        if (!captchaToken) {
+            return res.status(400).json({ message: "CAPTCHA verification is required" });
+        }
+
+        try {
+            // Xác minh reCAPTCHA token với Google với timeout
+            const recaptchaResponse = await axios.post(
+                "https://www.google.com/recaptcha/api/siteverify",
+                null,
+                {
+                    params: {
+                        secret: process.env.RECAPTCHA_SECRET_KEY,
+                        response: captchaToken,
+                    },
+                    timeout: 10000, 
+                }
+            );
+
+            const { success } = recaptchaResponse.data;
+            if (!success) {
+                return res.status(403).json({ message: "CAPTCHA verification failed" });
+            }
+        } catch (recaptchaError) {
+            console.error("reCAPTCHA verification error:", recaptchaError);
+            if (recaptchaError.code === 'ECONNABORTED' || recaptchaError.message.includes('timeout')) {
+                return res.status(408).json({ message: "CAPTCHA verification timed out. Please try again." });
+            }
+            return res.status(500).json({ message: "Error verifying CAPTCHA" });
         }
 
         // Gọi Firebase Identity Toolkit để xác thực
-        const response = await axios.post(
-            `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${process.env.FIREBASE_API_KEY}`,
-            { email, password, returnSecureToken: true }
-        );
+        try {
+            const response = await axios.post(
+                `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${process.env.FIREBASE_API_KEY}`,
+                { email, password, returnSecureToken: true },
+                { timeout: 10000 } // Thêm timeout 10 giây
+            );
 
-        const firebaseUser = response.data;
-        const uid = firebaseUser.localId;
+            const firebaseUser = response.data;
+            const uid = firebaseUser.localId;
 
-        // Lấy thông tin người dùng từ Firestore
-        const userDoc = await db.collection("users").doc(uid).get();
-        if (!userDoc.exists) {
-            return res
-                .status(404)
-                .json({ error: "User not found in database" });
-        }
-
-        const userData = userDoc.data();
-
-        // Tạo session token
-        const sessionToken = jwt.sign(
-            { uid, role: userData.role, sellerId: userData.sellerId || null },
-            process.env.JWT_SECRET,
-            { expiresIn: "1h" }
-        );
-
-        // Gửi cookie HTTP-only
-        res.cookie("session", sessionToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "Strict",
-            maxAge: 3600000,
-        });
-
-        return res.status(200).json({
-            message: "Login successful",
-            user: {
-                uid,
-                username: userData.displayName,
-                email: userData.email,
-                photoURL: userData.photoURL,
-                role: userData.role,
-                sellerId: userData.sellerId || null,
-            },
-        });
-    } catch (error) {
-        if (error.response?.data?.error) {
-            const firebaseError = error.response.data.error;
-            if (firebaseError.message.includes("EMAIL_NOT_FOUND")) {
-                return res.status(404).json({ error: "Account not found" });
-            } else if (firebaseError.message.includes("INVALID_PASSWORD")) {
-                return res.status(401).json({ error: "Wrong password" });
+            // Lấy thông tin người dùng từ Firestore
+            const userDoc = await db.collection("users").doc(uid).get();
+            if (!userDoc.exists) {
+                return res
+                    .status(404)
+                    .json({ error: "User not found in database" });
             }
+
+            const userData = userDoc.data();
+
+            // Tạo session token
+            const sessionToken = jwt.sign(
+                { uid, role: userData.role, sellerId: userData.sellerId || null },
+                process.env.JWT_SECRET,
+                { expiresIn: "1h" }
+            );
+
+            // Gửi cookie HTTP-only
+            res.cookie("session", sessionToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "Strict",
+                maxAge: 3600000,
+            });
+
+            return res.status(200).json({
+                message: "Login successful",
+                user: {
+                    uid,
+                    username: userData.displayName,
+                    email: userData.email,
+                    photoURL: userData.photoURL,
+                    role: userData.role,
+                    sellerId: userData.sellerId || null,
+                },
+            });
+        } catch (authError) {
+            console.error("Firebase authentication error:", authError);
+            if (authError.code === 'ECONNABORTED' || authError.message.includes('timeout')) {
+                return res.status(408).json({ error: "Authentication request timed out. Please try again." });
+            }
+            
+            if (authError.response?.data?.error) {
+                const firebaseError = authError.response.data.error;
+                if (firebaseError.message.includes("EMAIL_NOT_FOUND")) {
+                    return res.status(404).json({ error: "Account not found" });
+                } else if (firebaseError.message.includes("INVALID_PASSWORD")) {
+                    return res.status(401).json({ error: "Wrong password" });
+                }
+            }
+            return res.status(500).json({ error: "Authentication error: " + authError.message });
         }
+    } catch (error) {
+        console.error("Login error:", error);
         return res.status(500).json({ error: "Server error: " + error.message });
     }
 };
@@ -359,5 +398,37 @@ exports.refreshToken = async (req, res) => {
         return res
             .status(401)
             .json({ error: "Invalid or expired refresh token" });
+    }
+};
+
+exports.checkSession = async (req, res) => {
+    try {
+        const sessionToken = req.cookies.session;
+        if (!sessionToken) {
+            return res.status(401).json({ authenticated: false });
+        }
+
+        const decoded = jwt.verify(sessionToken, process.env.JWT_SECRET);
+        const userDoc = await db.collection("users").doc(decoded.uid).get();
+        
+        if (!userDoc.exists) {
+            return res.status(404).json({ authenticated: false });
+        }
+
+        const userData = userDoc.data();
+        
+        return res.status(200).json({ 
+            authenticated: true, 
+            user: {
+                uid: decoded.uid,
+                username: userData.displayName,
+                email: userData.email,
+                photoURL: userData.photoURL,
+                role: userData.role,
+                sellerId: userData.sellerId || null
+            }
+        });
+    } catch (error) {
+        return res.status(401).json({ authenticated: false });
     }
 };

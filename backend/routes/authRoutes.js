@@ -8,6 +8,7 @@ const {
     requireAdmin,
     refreshToken,
     registerSeller,
+    checkSession,
 } = require("../controllers/authController");
 const router = express.Router();
 
@@ -16,6 +17,7 @@ router.post("/login", loginUser);
 router.post("/logout", logoutUser);
 router.post("/google-login", googleLogin);
 router.post('/seller/register', registerSeller);
+router.get('/check-session', checkSession);
 
 // Route bảo vệ (example) - yêu cầu xác thực
 router.get("/user", authenticateUser, (req, res) => {

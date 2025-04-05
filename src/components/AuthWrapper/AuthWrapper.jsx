@@ -9,6 +9,20 @@ const AuthWrapper = ({ children }) => {
     const dispatch = useDispatch();
 
     useEffect(() => {
+        const checkSession = async () => {
+            try {
+                const response = await fetch('http://localhost:5000/api/auth/check-session', { 
+                    credentials: 'include'  
+                });
+                if (response.ok) {
+                    const userData = await response.json();
+                    dispatch(userActions.setUser(userData.user));
+                }
+            } catch (error) {
+                console.error("Error checking session:", error);
+            }
+        };
+
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const userData = {
@@ -56,7 +70,8 @@ const AuthWrapper = ({ children }) => {
                 dispatch(userActions.setUser(null));
             }
         });
-
+        
+        checkSession();
         // Cleanup subscription on unmount
         return () => unsubscribe();
     }, [dispatch]);

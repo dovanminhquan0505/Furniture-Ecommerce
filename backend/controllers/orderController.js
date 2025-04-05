@@ -350,6 +350,14 @@ exports.createStripePaymentIntent = async (req, res) => {
             metadata: { orderId },
         });
 
+        await totalOrderRef.update({
+            paymentResult: {
+                id: paymentIntent.id,
+                status: paymentIntent.status
+            },
+            paymentMethod: "stripe"
+        });
+
         res.status(200).json({ clientSecret: paymentIntent.client_secret });
     } catch (error) {
         res.status(500).json({
@@ -538,6 +546,17 @@ exports.customerConfirmReturn = async (req, res) => {
             customerConfirmedAt: admin.firestore.Timestamp.now(),
         });
 
+        await db.collection('sellerNotifications').add({
+            sellerId: subOrderData.sellerId,
+            type: 'confirm_request',
+            message: `Customer has confirmed to return product for order ${subOrderId}. Please review.`,
+            userId: subOrderData.userId,
+            totalOrderId: orderId,
+            subOrderId: subOrderId,
+            createdAt: admin.firestore.Timestamp.now(),
+            isRead: false,
+        });
+
         res.status(200).json({ message: "Return confirmed by customer, awaiting seller confirmation" });
     } catch (error) {
         res.status(500).json({ message: "Error confirming return", error: error.message });
@@ -672,7 +691,7 @@ exports.cancelOrder = async (req, res) => {
             await db.collection('sellerNotifications').add({
                 sellerId: subOrderData.sellerId,
                 type: 'cancel_request',
-                message: `Customer has requested to cancel sub-order ${subOrderId}. Please review.`,
+                message: `Customer has requested to cancel order ${subOrderId}. Please review.`,
                 userId: subOrderData.userId,
                 totalOrderId: orderId,
                 subOrderId: subOrderId,
@@ -727,10 +746,24 @@ exports.processCancelRequest = async (req, res) => {
             if (totalOrderData.isPaid) {
                 const refundAmount = subOrderData.totalAmount;
                 const paymentResult = totalOrderData.paymentResult;
+
                 if (paymentResult && totalOrderData.paymentMethod === "stripe") {
+                    // Kiểm tra xem payment_intent có tồn tại và hợp lệ không
+                    const paymentIntentId = paymentResult.id;
+                    if (!paymentIntentId || !paymentIntentId.startsWith("pi_")) {
+                        throw new Error("Invalid Stripe Payment Intent ID");
+                    }
+
+                    // Lấy thông tin payment_intent để kiểm tra trạng thái
+                    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+                    if (paymentIntent.status !== "succeeded") {
+                        throw new Error("Payment Intent has not been successfully captured");
+                    }
+
+                    // Thực hiện refund
                     const refund = await stripe.refunds.create({
-                        payment_intent: paymentResult.id,
-                        amount: Math.round(refundAmount * 100),
+                        payment_intent: paymentIntentId,
+                        amount: Math.round(refundAmount * 100), 
                     });
                     updateData.refundResult = { id: refund.id, status: refund.status };
                     updateData.refundedAt = admin.firestore.Timestamp.now();

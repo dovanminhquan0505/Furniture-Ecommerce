@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "../styles/login.css";
 import Helmet from "../components/Helmet/Helmet";
 import { Container, Row, Col, Form, FormGroup, Spinner } from "reactstrap";
@@ -11,14 +11,20 @@ import { userActions } from "../redux/slices/userSlice";
 import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { auth } from "../firebase.config";
 import { getUserById, googleLogin, loginUser } from "../api";
+import ReCAPTCHA from "react-google-recaptcha";
+
+const siteKeyRecaptcha = process.env.REACT_APP_SITE_KEY_RECAPTCHA;
 
 const Login = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [captchaToken, setCaptchaToken] = useState(null);
+    const [captchaError, setCaptchaError] = useState(false);
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const reduxUser = useSelector((state) => state.user.currentUser);
+    const recaptchaRef = useRef(null);
 
     const signIn = async (e) => {
         e.preventDefault();
@@ -36,20 +42,30 @@ const Login = () => {
             return;
         }
 
+        if(!captchaToken) {
+            toast.error("Please check captcha")
+            setLoading(false);
+            return;
+        }
+
         try {
-            // Đăng nhập Firebase để lấy idToken
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const idToken = await userCredential.user.getIdToken();
-
             // Gửi idToken lên backend để nhận cookie
-            const response = await loginUser({ email, password });
-
+            const response = await loginUser({ email, password, captchaToken });
+            await signInWithEmailAndPassword(auth, email, password);
             dispatch(userActions.setUser(response.user));
             setLoading(false);
             toast.success("Successfully logged in!");
+            if (recaptchaRef.current) { 
+                recaptchaRef.current.reset();
+            }
+            setCaptchaToken(null);
         } catch (error) {
             setLoading(false);
             toast.error(error.message || "Login failed!");
+            if (recaptchaRef.current) { 
+                recaptchaRef.current.reset();
+            }
+            setCaptchaToken(null);
         }
     };
 
@@ -80,6 +96,24 @@ const Login = () => {
             toast.error(error.message || "Failed to login with Google!");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleCaptchaChange = (token) => {
+        setCaptchaToken(token);
+        setCaptchaError(false);
+    };
+    
+    const handleCaptchaError = () => {
+        setCaptchaError(true);
+        setCaptchaToken(null);
+        toast.error("CAPTCHA verification failed. Please try again.");
+    };
+    
+    const handleCaptchaExpired = () => {
+        setCaptchaToken(null);
+        if (recaptchaRef.current) {
+            recaptchaRef.current.reset();
         }
     };
     
@@ -152,10 +186,26 @@ const Login = () => {
                                             }
                                         />
                                     </FormGroup>
+                                    {/* Thêm reCAPTCHA */}
+                                    <FormGroup className="login-form-group">
+                                        <ReCAPTCHA
+                                            ref={recaptchaRef}
+                                            sitekey={siteKeyRecaptcha}
+                                            onChange={handleCaptchaChange}
+                                            onError={handleCaptchaError}
+                                            onExpired={handleCaptchaExpired}
+                                        />
+                                        {captchaError && (
+                                            <div className="text-danger mt-2">
+                                                CAPTCHA verification failed. Please try again.
+                                            </div>
+                                        )}
+                                    </FormGroup>
                                     <motion.button
                                         whileTap={{ scale: 1.2 }}
                                         type="submit"
                                         className="login-btn"
+                                        disabled={loading || !captchaToken}
                                     >
                                         Login
                                     </motion.button>

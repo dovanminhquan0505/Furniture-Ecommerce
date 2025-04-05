@@ -1,18 +1,20 @@
-/* Seller Nav */
+/* Seller Nav - Enhanced Professional Design */
 .seller__nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: #dce1e2;
+    background: linear-gradient(to right, #f8f9fa, #e9ecef);
     padding: 15px 30px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-radius: 10px;
     transition: all 0.3s ease;
     position: sticky;
     top: 0;
     z-index: 100;
+    margin-bottom: 20px;
 }
 
+/* Logo Styling */
 .logo__seller {
     display: flex;
     align-items: center;
@@ -20,22 +22,38 @@
 }
 
 .logo__seller-text {
-    font-size: 24px;
-    font-weight: bold;
-    color: #333; 
+    font-size: 26px;
+    font-weight: 700;
+    color: #2b2d42;
     text-transform: uppercase;
     letter-spacing: 2px;
-    transition: color 0.3s ease;
-    margin: 0 !important;
-    padding: 0 !important;
+    transition: all 0.3s ease;
+    margin: 0;
+    padding: 0;
+    position: relative;
 }
 
 .logo__seller-text:hover {
-    color: #444; 
-    opacity: 0.8;
+    color: #ff6600;
+    transform: scale(1.03);
 }
 
+.logo__seller-text::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 30%;
+    height: 3px;
+    background-color: #ff6600;
+    transition: width 0.3s ease;
+}
 
+.logo__seller-text:hover::after {
+    width: 100%;
+}
+
+/* Navigation List */
 .seller__nav__list {
     display: flex;
     list-style-type: none;
@@ -44,7 +62,7 @@
 }
 
 .seller__nav__item {
-    margin-right: 25px;
+    margin-right: 30px;
     cursor: pointer;
     position: relative;
     transition: all 0.3s ease;
@@ -52,10 +70,13 @@
 
 .seller__nav__item a {
     text-decoration: none;
-    color: #333;
+    color: #4a4a4a;
     font-weight: 600;
-    transition: color 0.3s ease;
+    transition: all 0.3s ease;
     margin-left: 10px;
+    padding: 8px 0;
+    font-size: 15px;
+    letter-spacing: 0.5px;
 }
 
 .seller__nav__item::after {
@@ -67,6 +88,7 @@
     height: 3px;
     background-color: #ff6600;
     transition: width 0.3s ease, left 0.3s ease;
+    border-radius: 3px;
 }
 
 .seller__nav__item.active::after {
@@ -79,39 +101,59 @@
 
 .seller__nav__item.active a {
     color: #ff6600;
+    font-weight: 700;
 }
 
-/* Seller Actions */
+.seller__nav__item:hover a {
+    color: #ff6600;
+    transform: translateY(-2px);
+}
+
+/* Action Section */
 .seller__nav__actions {
     display: flex;
     align-items: center;
-    column-gap: 0.5rem;
+    column-gap: 1rem;
 }
 
+/* Notification Area */
 .seller__nav__notification {
     position: relative;
     margin-right: 20px;
     cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 8px;
+    border-radius: 50%;
 }
 
 .seller__nav__notification:hover {
     color: #ff6600;
+    background-color: rgba(255, 102, 0, 0.1);
+    transform: translateY(-2px);
 }
 
 .seller__nav__notification__badge {
     position: absolute;
-    top: -5px;
-    right: -5px;
-    width: 10px;
-    height: 10px;
+    top: 0;
+    right: 0;
+    width: 18px;
+    height: 18px;
     background-color: #ff6600;
     border-radius: 50%;
     border: 2px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(255, 102, 0, 0.4);
 }
 
+/* Avatar and Profile */
 .seller__avatar {
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
     display: flex;
     justify-content: center;
@@ -120,43 +162,217 @@
     overflow: hidden;
     transition: all 0.3s ease;
     object-fit: cover;
+    border: 2px solid transparent;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-.seller__nav__avatar:hover {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    transform: scale(1.05);
+.seller__avatar:hover {
+    border-color: #ff6600;
+    transform: scale(1.08);
 }
 
-.seller__nav__actions .profile__seller {
+.profile__seller {
     position: relative;
     z-index: 9;
 }
 
-.seller__nav__actions .profile__seller .profile__seller__actions {
+.profile__seller__actions {
     position: absolute;
-    top: 98%;
-    left: -30px;
-    width: 100px;
+    top: 120%;
+    right: 0;
+    width: 120px;
     z-index: 10;
     padding: 10px;
     background: #fff;
-    border: 1px solid #8f8e8e7d;
-    border-radius: 5px;
+    border: none;
+    border-radius: 8px;
     line-height: 30px;
     cursor: pointer;
     display: none;
+    animation: slideDown 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .active__profileActions {
     display: block !important;
 }
 
-.seller__nav__actions .profile__seller .logout__seller {
-    width: 110%;
+.logout__seller {
+    width: 100%;
     border-radius: 5px;
-    padding-left: 10px;
+    padding: 5px 10px;
+    transition: all 0.3s ease;
 }
 
-.seller__nav__actions .profile__seller .logout__seller:hover {
+.logout__seller__profile {
+    color: #4a4a4a;
+    text-decoration: none;
+    font-weight: 500;
+    display: block;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.logout__seller:hover {
+    background: #f8f9fa;
+}
+
+.logout__seller:hover .logout__seller__profile {
+    color: #ff6600;
+    transform: translateX(5px);
+}
+
+/* Notification Dropdown */
+.notification__dropdown {
+    position: absolute;
+    top: 120%;
+    right: -10px;
+    width: 320px;
+    max-height: 400px;
+    overflow-y: auto;
+    background: #fff;
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    padding: 10px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.notification__dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+
+.notification__dropdown::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.notification__dropdown::-webkit-scrollbar-thumb {
+    background: #d1d1d1;
+    border-radius: 10px;
+}
+
+.notification__dropdown::-webkit-scrollbar-thumb:hover {
+    background: #b1b1b1;
+}
+
+.notification__item {
+    display: flex;
+    align-items: flex-start;  /* Changed from center to flex-start for better vertical alignment */
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 6px;
+    margin-bottom: 5px;
+}
+
+.notification__item.read {
     background: #f5f5f5;
+    opacity: 0.8;
+}
+
+.notification__item:hover {
+    background: #f0f0f0;
+    transform: translateX(5px);
+}
+
+.notification__avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    margin-right: 12px;
+    object-fit: cover;
+    border: 2px solid #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.notification__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;  /* Stack children vertically */
+}
+
+.notification__content p {
+    margin: 0 0 6px 0;  /* Increase bottom margin to create space for time */
+    font-size: 14px;
+    color: #333;
+    line-height: 1.4;
+}
+
+.notification__time {
+    font-size: 11px;
+    color: #888;
+    font-style: italic;
+    display: block;  /* Make it a block element */
+    margin-top: 3px;  /* Add space between message and time */
+    text-align: left;  /* Align left with message */
+}
+
+.notification__empty {
+    text-align: center;
+    padding: 25px 15px;
+    color: #777;
+    font-size: 14px;
+    font-style: italic;
+}
+
+/* Media queries */
+@media (max-width: 768px) {
+    .seller__nav {
+        padding: 12px 15px;
+    }
+    
+    .logo__seller-text {
+        font-size: 20px;
+    }
+    
+    .seller__nav__item {
+        margin-right: 15px;
+    }
+    
+    .seller__nav__item a {
+        font-size: 14px;
+    }
+    
+    .notification__dropdown {
+        width: 280px;
+        right: -50px;
+    }
+}
+
+/* Animation for active state */
+@keyframes pulseActive {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 102, 0, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(255, 102, 0, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 102, 0, 0);
+    }
 }

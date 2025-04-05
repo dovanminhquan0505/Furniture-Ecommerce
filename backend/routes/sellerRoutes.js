@@ -13,6 +13,7 @@ const {
     deleteSellerOrder,
     getSellerIdByUserId,
     getDashboardStats,
+    getSellerNotifications,
 } = require("../controllers/sellerController");
 const { requireSeller } = require("../controllers/authController");
 const router = express.Router();
@@ -31,6 +32,7 @@ router.delete('/:productId', deleteSellerProduct);
 router.get("/:sellerId/dashboard", getDashboardStats);
 router.get('/:sellerId/orders', getSellerOrders);
 router.delete('/:sellerId/orders/:orderId', deleteSellerOrder);
-router.get("/by-user/:userId", getSellerIdByUserId)
+router.get("/by-user/:userId", getSellerIdByUserId);
+router.get('/:sellerId/notifications', getSellerNotifications);
 
 module.exports = router;

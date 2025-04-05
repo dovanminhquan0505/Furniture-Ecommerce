@@ -264,6 +264,27 @@ exports.updateOrder = async (req, res) => {
 
         if (Object.keys(updateData).length > 0) {
             await totalOrderRef.update(updateData);
+
+            // Tạo thông báo khi isPaid = true
+            if (isPaid === true) {
+                const subOrdersSnap = await db.collection('subOrders')
+                    .where('totalOrderId', '==', orderId)
+                    .get();
+                const notificationPromises = subOrdersSnap.docs.map(async (doc) => {
+                    const subOrder = doc.data();
+                    return db.collection('sellerNotifications').add({
+                        sellerId: subOrder.sellerId,
+                        type: 'payment',
+                        message: `Customer has paid for order ${orderId}. Please confirm the order.`,
+                        userId: subOrder.userId,
+                        totalOrderId: orderId,
+                        subOrderId: doc.id,
+                        createdAt: admin.firestore.Timestamp.now(),
+                        isRead: false,
+                    });
+                });
+                await Promise.all(notificationPromises);
+            }
         }
 
         if (subOrderId && status) {
@@ -381,6 +402,18 @@ exports.requestRefund = async (req, res) => {
         };
 
         await subOrderRef.update(refundData);
+
+        // Tạo thông báo khi yêu cầu refund
+        await db.collection('sellerNotifications').add({
+            sellerId: subOrderData.sellerId,
+            type: 'refund_request',
+            message: `Customer has requested a refund for sub-order ${subOrderId}. Please review.`,
+            userId: subOrderData.userId,
+            totalOrderId: orderId,
+            subOrderId: subOrderId,
+            createdAt: admin.firestore.Timestamp.now(),
+            isRead: false,
+        });
 
         res.status(200).json({ message: "Return & Refund request submitted successfully" });
     } catch (error) {
@@ -634,6 +667,18 @@ exports.cancelOrder = async (req, res) => {
             };
 
             await subOrderRef.update(updateData);
+
+            // Tạo thông báo khi yêu cầu hủy
+            await db.collection('sellerNotifications').add({
+                sellerId: subOrderData.sellerId,
+                type: 'cancel_request',
+                message: `Customer has requested to cancel sub-order ${subOrderId}. Please review.`,
+                userId: subOrderData.userId,
+                totalOrderId: orderId,
+                subOrderId: subOrderId,
+                createdAt: admin.firestore.Timestamp.now(),
+                isRead: false,
+            });
 
             res.status(200).json({ message: "Cancellation request submitted, awaiting seller approval" });
         } else {

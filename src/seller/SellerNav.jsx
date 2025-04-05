@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "../seller/styles/seller-nav.css";
 import { Bell } from "lucide-react";
 import { useLocation, NavLink, Link, useNavigate } from "react-router-dom";
@@ -9,7 +9,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
-import { logoutUser } from "../api";
+import { getSellerNotifications, getUserById, logoutUser } from "../api";
 
 const seller_nav = [
     {
@@ -33,9 +33,43 @@ const seller_nav = [
 const SellerNav = () => {
     const location = useLocation();
     const profileActionRef = useRef();
+    const notificationRef = useRef();
     const { currentUser } = useSelector((state) => state.user);
     const { isSeller, isLoading } = useSeller();
     const navigate = useNavigate();
+    const [notifications, setNotifications] = useState([]);
+    const [sellerId, setSellerId] = useState(null);
+    const [showNotifications, setShowNotifications] = useState(false);
+
+    useEffect(() => {
+        const fetchSellerId = async () => {
+            const currentUser = auth.currentUser;
+            if (!currentUser) {
+                toast.error("You must be logged in");
+                navigate("/login");
+                return;
+            }
+
+            const userData = await getUserById(currentUser.uid);
+            setSellerId(userData.sellerId);
+        };
+        fetchSellerId();
+    }, [navigate]);
+
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            if (!sellerId) return;
+            try {
+                const data = await getSellerNotifications(sellerId);
+                setNotifications(data);
+            } catch (error) {
+                toast.error("Error fetching notifications: " + error.message);
+            }
+        };
+        fetchNotifications();
+        const interval = setInterval(fetchNotifications, 60000); // Cập nhật mỗi 60 giây
+        return () => clearInterval(interval);
+    }, [sellerId]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -43,19 +77,17 @@ const SellerNav = () => {
                 profileActionRef.current &&
                 !profileActionRef.current.contains(event.target)
             ) {
-                profileActionRef.current.classList.remove(
-                    "active__profileActions"
-                );
+                profileActionRef.current.classList.remove("active__profileActions");
+            }
+            if (
+                notificationRef.current &&
+                !notificationRef.current.contains(event.target)
+            ) {
+                setShowNotifications(false);
             }
         };
-
-        // Add event listener
         document.addEventListener("mousedown", handleClickOutside);
-
-        // Cleanup event listener when component is unmounted
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     if (isLoading) {
@@ -91,6 +123,19 @@ const SellerNav = () => {
         }
     };
 
+    const toggleNotifications = () => {
+        setShowNotifications(!showNotifications);
+    };
+
+    const timeAgo = (date) => {
+        const now = new Date();
+        const diff = Math.floor((now - new Date(date)) / 1000);
+        if (diff < 60) return `${diff} seconds ago`;
+        if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+        return `${Math.floor(diff / 86400)} days ago`;
+    };
+
     return (
         <nav className="seller__nav">
             <div className="logo__seller">
@@ -119,9 +164,48 @@ const SellerNav = () => {
                 ))}
             </ul>
             <div className="seller__nav__actions">
-                <div className="seller__nav__notification">
-                    <Bell size={20} />
-                    <span className="seller__nav__notification__badge"></span>
+                <div className="seller__nav__notification" ref={notificationRef}>
+                    <Bell size={20} onClick={toggleNotifications} />
+                    {notifications.length > 0 && (
+                        <span className="seller__nav__notification__badge">
+                            {notifications.filter(n => !n.isRead).length}
+                        </span>
+                    )}
+                    {showNotifications && (
+                        <div className="notification__dropdown">
+                            {notifications.length === 0 ? (
+                                <p className="notification__empty">No notifications</p>
+                            ) : (
+                                notifications.map((notif) => (
+                                    <div
+                                        key={notif.id}
+                                        className={`notification__item ${notif.isRead ? "read" : ""}`}
+                                        onClick={() => navigate("/seller/orders")}
+                                    >
+                                        <img
+                                            src={notif.userAvatar || "default-avatar.png"}
+                                            alt={notif.userName}
+                                            className="notification__avatar"
+                                        />
+                                        <div className="notification__content">
+                                            <p>
+                                                {notif.message.includes('#') ? (
+                                                    <>
+                                                        {notif.message.split('#')[0]}
+                                                        <strong className="order-id">#{notif.message.split('#')[1].split(' ')[0]}</strong>
+                                                        {notif.message.split('#')[1].split(' ').slice(1).join(' ')}
+                                                    </>
+                                                ) : notif.message}
+                                            </p>
+                                            <span className="notification__time">
+                                                {timeAgo(notif.createdAt)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    )}
                 </div>
                 <div className="profile__seller">
                     <motion.img
@@ -131,7 +215,6 @@ const SellerNav = () => {
                         className="seller__avatar"
                         onClick={toggleProfileActions}
                     />
-
                     <div
                         className="profile__seller__actions"
                         ref={profileActionRef}

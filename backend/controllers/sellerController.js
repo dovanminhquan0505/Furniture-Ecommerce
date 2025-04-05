@@ -323,3 +323,55 @@ exports.getDashboardStats = async (req, res) => {
         res.status(500).json({ message: 'Error fetching dashboard stats', error: error.message });
     }
 };
+
+exports.getSellerNotifications = async (req, res) => {
+    try {
+        const sellerId = req.params.sellerId;
+        if (!sellerId) {
+            return res.status(400).json({ message: 'Seller ID is required' });
+        }
+
+        console.log('Fetching notifications for sellerId:', sellerId);
+
+        const notificationsSnapshot = await db
+            .collection('sellerNotifications')
+            .where('sellerId', '==', sellerId)
+            .orderBy('createdAt', 'desc')
+            .limit(10)
+            .get();
+
+        console.log('Notifications found:', notificationsSnapshot.size);
+
+        const notifications = await Promise.all(
+            notificationsSnapshot.docs.map(async (doc) => {
+                const data = doc.data();
+                console.log('Notification data:', data);
+
+                let userData = { displayName: 'Unknown', photoURL: '' };
+                if (data.userId) {
+                    try {
+                        const userDoc = await db.collection('users').doc(data.userId).get();
+                        userData = userDoc.exists ? userDoc.data() : userData;
+                    } catch (userError) {
+                        console.error(`Error fetching user ${data.userId}:`, userError);
+                    }
+                }
+
+                return {
+                    id: doc.id,
+                    ...data,
+                    userName: userData.displayName || 'Unknown',
+                    userAvatar: userData.photoURL || '',
+                    createdAt: data.createdAt && data.createdAt.toDate
+                        ? data.createdAt.toDate().toISOString()
+                        : new Date().toISOString(),
+                };
+            })
+        );
+
+        res.json(notifications);
+    } catch (error) {
+        console.error('Error in getSellerNotifications:', error);
+        res.status(500).json({ message: 'Error fetching notifications', error: error.message });
+    }
+};

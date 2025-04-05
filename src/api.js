@@ -658,6 +658,24 @@ export const getDashboardStats = async (sellerId) => {
     }
 };
 
+export const getSellerNotifications = async (sellerId) => {
+    try {
+        const response = await fetch(`${BASE_URL}/sellers/${sellerId}/notifications`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch notifications");
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching notifications:", error);
+        throw error;
+    }
+};
+
 export const getSellerIdByUserId = async (userId) => {
     try {
         const response = await fetch(`${BASE_URL}/sellers/by-user/${userId}`, {

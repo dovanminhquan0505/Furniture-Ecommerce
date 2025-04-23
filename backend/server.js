@@ -15,7 +15,7 @@ admin.initializeApp({
 const app = express();
 app.use(
   cors({
-      origin: "https://furniture-ecommerce-frontend-in54r3ac5.vercel.app",
+      origin: "https://furniture-ecommerce-frontend-9rhvgv413.vercel.app",
       credentials: true,
       methods: "GET,POST,PUT,DELETE",
       allowedHeaders: "Content-Type,Authorization",

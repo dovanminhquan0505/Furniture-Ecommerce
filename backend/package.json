@@ -1,25 +1,25 @@
 {
-  "name": "backend",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "@paypal/checkout-server-sdk": "^1.0.3",
-    "axios": "^1.7.9",
-    "bcryptjs": "^3.0.2",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "firebase-admin": "^13.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.1",
-    "stripe": "^17.7.0"
-  }
+    "name": "backend",
+    "version": "1.0.0",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "@paypal/checkout-server-sdk": "^1.0.3",
+        "axios": "^1.7.9",
+        "bcryptjs": "^3.0.2",
+        "cookie-parser": "^1.4.7",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.7",
+        "express": "^4.21.2",
+        "firebase-admin": "^13.1.0",
+        "jsonwebtoken": "^9.0.2",
+        "multer": "^1.4.5-lts.1",
+        "stripe": "^17.7.0"
+    }
 }

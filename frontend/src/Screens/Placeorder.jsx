@@ -40,7 +40,6 @@ const clientId = process.env.REACT_APP_PAYPAL_CLIENT_ID;
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 const paypalIcon =
     "https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_37x23.jpg";
-const momoIcon = "https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png";
 const stripeIcon = "https://stripe.com/img/v3/home/social.png";
 
 const CheckoutForm = ({ orderId, totalPrice, onSuccess, billingInfo }) => {
@@ -331,13 +330,6 @@ const PlaceOrder = () => {
                         status: details.status,
                         update_time: details.created || paidAt,
                         email_address: details.billing_details?.email || "N/A",
-                    };
-                    break;
-                case "momo":
-                    paymentResult = {
-                        method: "momo",
-                        status: "completed",
-                        update_time: paidAt,
                     };
                     break;
                 default:
@@ -766,8 +758,6 @@ const PlaceOrder = () => {
         !isSeller && totalOrder && !totalOrder.isPaid && !showPayment;
     const shouldShowPaypal =
         totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "paypal";
-    const shouldShowMomo =
-        totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "momo";
     const shouldShowStripe =
         totalOrder && !totalOrder.isPaid && selectedPaymentMethod === "stripe";
     const shouldShowRefundStatus = totalOrder.refundStatus !== "None";
@@ -1053,26 +1043,6 @@ const PlaceOrder = () => {
                                         <motion.button
                                             whileTap={{ scale: 1.1 }}
                                             className={`payment__option ${
-                                                selectedPaymentMethod === "momo"
-                                                    ? "payment__option--selected"
-                                                    : ""
-                                            }`}
-                                            onClick={() =>
-                                                handleSelectPaymentMethod(
-                                                    "momo"
-                                                )
-                                            }
-                                        >
-                                            <img
-                                                src={momoIcon}
-                                                alt="MoMo"
-                                                className="payment__icon"
-                                            />
-                                            MoMo
-                                        </motion.button>
-                                        <motion.button
-                                            whileTap={{ scale: 1.1 }}
-                                            className={`payment__option ${
                                                 selectedPaymentMethod ===
                                                 "stripe"
                                                     ? "payment__option--selected"
@@ -1137,29 +1107,6 @@ const PlaceOrder = () => {
                                                     }}
                                                 />
                                             </PayPalScriptProvider>
-                                        </div>
-                                    )}
-
-                                    {/* Display MoMo payment button if selected */}
-                                    {shouldShowMomo && (
-                                        <div className="momo__button">
-                                            <motion.button
-                                                whileTap={{ scale: 1.1 }}
-                                                className="buy__btn auth__btn w-100"
-                                                onClick={() =>
-                                                    handlePaymentSuccess(
-                                                        {
-                                                            id:
-                                                                "momo_" +
-                                                                Date.now(),
-                                                            status: "completed",
-                                                        },
-                                                        "momo"
-                                                    )
-                                                }
-                                            >
-                                                Confirm MoMo Payment
-                                            </motion.button>
                                         </div>
                                     )}
 

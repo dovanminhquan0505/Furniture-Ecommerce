@@ -96,7 +96,7 @@ exports.loginUser = async (req, res) => {
                         secret: process.env.RECAPTCHA_SECRET_KEY,
                         response: captchaToken,
                     },
-                    timeout: 10000, 
+                    timeout: 20000, // 20s 
                 }
             );
 
@@ -117,7 +117,7 @@ exports.loginUser = async (req, res) => {
             const response = await axios.post(
                 `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${process.env.FIREBASE_API_KEY}`,
                 { email, password, returnSecureToken: true },
-                { timeout: 10000 } // Thêm timeout 10 giây
+                { timeout: 20000 } //  20s
             );
 
             const firebaseUser = response.data;

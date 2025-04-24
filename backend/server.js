@@ -3,14 +3,27 @@ const cors = require("cors");
 const multer = require("multer");
 const admin = require("firebase-admin");
 const cookieParser = require("cookie-parser");
+const fs = require("fs");
 require("dotenv").config();
 
 // Khởi tạo Firebase Admin SDK
-const serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-});
+let serviceAccount;
+try {
+    if (process.env.FIREBASE_CREDENTIALS.startsWith("./")) {
+        const filePath = process.env.FIREBASE_CREDENTIALS;
+        serviceAccount = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    } else {
+        serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
+    }
+    console.log("Parsed serviceAccount:", serviceAccount);
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    });
+} catch (error) {
+    console.error("Firebase initialization error:", error);
+    throw error;
+}
 
 const app = express();
 app.use(

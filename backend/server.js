@@ -2,26 +2,29 @@ const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const admin = require("firebase-admin");
-const cookieParser = require('cookie-parser');
+const cookieParser = require("cookie-parser");
 require("dotenv").config();
 
 // Khởi tạo Firebase Admin SDK
 const serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    credential: admin.credential.cert(serviceAccount),
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
 });
 
 const app = express();
 app.use(
-  cors({
-      origin: "https://furniture-ecommerce-frontend-nine.vercel.app",
-      credentials: true,
-      methods: "GET,POST,PUT,DELETE",
-      allowedHeaders: "Content-Type,Authorization",
-  })
+    cors({
+        origin: "https://furniture-ecommerce-frontend-nine.vercel.app",
+        credentials: true,
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+    })
 );
-app.use(express.json());
+app.options("*", cors());
+
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(cookieParser());
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -42,10 +45,10 @@ const authRoutes = require("./routes/authRoutes");
 app.use("/api/auth", authRoutes);
 
 const sellerRoutes = require("./routes/sellerRoutes");
-app.use("/api/sellers",sellerRoutes);
+app.use("/api/sellers", sellerRoutes);
 
 const adminRoutes = require("./routes/adminRoutes");
-app.use("/api/admin",adminRoutes);
+app.use("/api/admin", adminRoutes);
 
 const { uploadFile } = require("./controllers/uploadController");
 app.post("/api/upload", upload.single("file"), uploadFile);

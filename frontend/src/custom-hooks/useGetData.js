@@ -11,7 +11,7 @@ const useGetData = (endpoint) => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await fetch(`https://furniture-ecommerce-backend-mauve.vercel.app/api/${endpoint}`, {
+                const response = await fetch(`${BASE_URL}/${endpoint}`, {
                     method: "GET",
                     headers: { "Content-Type": "application/json" },
                     credentials: "include",

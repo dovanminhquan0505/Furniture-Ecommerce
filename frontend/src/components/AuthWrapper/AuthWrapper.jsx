@@ -5,13 +5,15 @@ import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase.config";
 import { userActions } from "../../redux/slices/userSlice";
 
+const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+
 const AuthWrapper = ({ children }) => {
     const dispatch = useDispatch();
 
     useEffect(() => {
         const checkSession = async () => {
             try {
-                const response = await fetch('http://localhost:5000/api/auth/check-session', { 
+                const response = await fetch(`${BASE_URL}/auth/check-session`, { 
                     credentials: 'include'  
                 });
                 if (response.ok) {

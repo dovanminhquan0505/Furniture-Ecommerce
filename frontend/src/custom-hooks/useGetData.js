@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
+const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+
 const useGetData = (endpoint) => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -9,7 +11,7 @@ const useGetData = (endpoint) => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await fetch(`http://localhost:5000/api/${endpoint}`, {
+                const response = await fetch(`https://furniture-ecommerce-backend-mauve.vercel.app/api/${endpoint}`, {
                     method: "GET",
                     headers: { "Content-Type": "application/json" },
                     credentials: "include",

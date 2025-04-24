@@ -6,7 +6,7 @@ const cookieParser = require('cookie-parser');
 require("dotenv").config();
 
 // Khởi tạo Firebase Admin SDK
-const serviceAccount = require(process.env.FIREBASE_CREDENTIALS);
+const serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   storageBucket: process.env.FIREBASE_STORAGE_BUCKET,

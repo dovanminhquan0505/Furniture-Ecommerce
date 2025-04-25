@@ -49,11 +49,8 @@ const Login = () => {
         }
 
         try {
-            // Thông báo cho người dùng biết đang xác thực
             toast.info("Authenticating, please wait...", { autoClose: false, toastId: 'auth-process' });
-            // Gửi idToken lên backend để nhận cookie
             const response = await loginUser({ email, password, captchaToken });
-            // Đóng toast thông báo
             toast.dismiss('auth-process');
             await signInWithEmailAndPassword(auth, email, password);
             dispatch(userActions.setUser(response.user));
@@ -194,7 +191,7 @@ const Login = () => {
                                     <FormGroup className="login-form-group">
                                         <ReCAPTCHA
                                             ref={recaptchaRef}
-                                            sitekey={siteKeyRecaptcha}
+                                            sitekey={process.env.REACT_APP_SITE_KEY_RECAPTCHA}
                                             onChange={handleCaptchaChange}
                                             onError={handleCaptchaError}
                                             onExpired={handleCaptchaExpired}

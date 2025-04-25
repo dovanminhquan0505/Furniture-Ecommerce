@@ -86,6 +86,10 @@ exports.loginUser = async (req, res) => {
             return res.status(400).json({ message: "CAPTCHA verification is required" });
         }
 
+        if (!captchaToken) {
+            return res.status(403).json({ message: "CAPTCHA token is required" });
+        }
+
         try {
             // Xác minh reCAPTCHA token với Google với timeout
             const recaptchaResponse = await axios.post(
@@ -102,6 +106,7 @@ exports.loginUser = async (req, res) => {
 
             const { success } = recaptchaResponse.data;
             if (!success) {
+                console.error("reCAPTCHA verification failed. Error codes:", errorCodes);
                 return res.status(403).json({ message: "CAPTCHA verification failed" });
             }
         } catch (recaptchaError) {

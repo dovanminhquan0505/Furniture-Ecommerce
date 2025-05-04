@@ -74,6 +74,8 @@
         "identity-obj-proxy": "^3.0.0",
         "redux-mock-store": "^1.5.5",
         "text-encoding": "^0.7.0",
-        "web-streams-polyfill": "^4.1.0"
+        "web-streams-polyfill": "^4.1.0",
+        "@firebase/rules-unit-testing": "^3.0.0",
+        "@firebase/auth": "^0.23.2"
     }
 }

@@ -47,8 +47,8 @@ describe('ProductCard Component with Firestore', () => {
   });
 
   test('Product name and product price in product list', async () => {
-    const targetProductName = 'Smart Tivi';
-    const targetPrice = 200;
+    const targetProductName = 'Smart Tivi Xiaomi';
+    const targetPrice = 210;
 
     const products = await getProducts();
     const matchedProduct = products.find(

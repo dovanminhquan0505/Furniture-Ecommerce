@@ -26,6 +26,7 @@ try {
 }
 
 const app = express();
+console.log("NODE_ENV:", process.env.NODE_ENV);
 
 const corsOptions = {
     origin: [

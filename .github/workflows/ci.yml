@@ -1,0 +1,111 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: Run Jest Unit Tests for React Components
+        run: |
+          cd frontend
+          npm run test
+        env:
+          CI: true
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm install
+
+      - name: Run Jest Unit Tests for NodeJS API
+        run: |
+          cd backend
+          npm run test
+        env:
+          CI: true
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: unit-test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm install
+
+      - name: Setup Firebase Emulator
+        run: |
+          npm install -g firebase-tools
+          cd backend
+          firebase emulators:start --only firestore &
+          sleep 10 # Wait for emulator to start
+
+      - name: Run Supertest Integration Tests
+        run: |
+          cd backend
+          npm run test:integration
+        env:
+          FIRESTORE_EMULATOR_HOST: localhost:8080
+          CI: true
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: integration-test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+          queries: security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [unit-test, integration-test, security-scan]
+    if: failure()
+    steps:
+      - name: Send failure notification
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: 'CI/CD Pipeline failed. Please check the logs for details.'
+            })

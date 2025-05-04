@@ -100,7 +100,7 @@ exports.loginUser = async (req, res) => {
                         secret: process.env.RECAPTCHA_SECRET_KEY,
                         response: captchaToken,
                     },
-                    timeout: 20000, // 20s 
+                    timeout: 50000, // 20s 
                 }
             );
 

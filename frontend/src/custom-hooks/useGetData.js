@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
-const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const BASE_URL =
+    process.env.NODE_ENV === "production"
+        ? process.env.REACT_APP_API_URL
+        : "http://localhost:5000/api";
 
 const useGetData = (endpoint) => {
     const [data, setData] = useState([]);
@@ -19,14 +22,20 @@ const useGetData = (endpoint) => {
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        throw new Error("Session expired. Please log in again.");
+                        throw new Error(
+                            "Session expired. Please log in again."
+                        );
                     } else if (response.status === 404) {
-                        console.warn(`Endpoint /${endpoint} not found, returning empty array`);
+                        console.warn(
+                            `Endpoint /${endpoint} not found, returning empty array`
+                        );
                         setData([]);
                         setLoading(false);
                         return;
                     } else {
-                        throw new Error(`Server error! Status: ${response.status}`);
+                        throw new Error(
+                            `Server error! Status: ${response.status}`
+                        );
                     }
                 }
 

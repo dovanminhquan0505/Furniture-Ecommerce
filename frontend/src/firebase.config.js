@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { collection, getDocs, getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const apiKey = process.env.REACT_APP_FIREBASE_API_KEY;
@@ -23,8 +23,22 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
+const getProducts = async () => {
+  try {
+    const productsCol = collection(db, 'products'); 
+    const productSnapshot = await getDocs(productsCol);
+    const products = productSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(), 
+    }));
+    return products;
+  } catch (error) {
+    console.error("Error fetching products from Firestore:", error);
+    throw error; 
+  }
+};
 
 // Export services
-export { auth, db, storage, googleProvider };
+export { auth, db, storage, googleProvider, getProducts };
 
 export default app;

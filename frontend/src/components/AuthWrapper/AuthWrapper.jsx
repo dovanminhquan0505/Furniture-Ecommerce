@@ -5,7 +5,10 @@ import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase.config";
 import { userActions } from "../../redux/slices/userSlice";
 
-const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const BASE_URL =
+    process.env.NODE_ENV === "production"
+        ? process.env.REACT_APP_API_URL
+        : "http://localhost:5000/api";
 
 const AuthWrapper = ({ children }) => {
     const dispatch = useDispatch();
@@ -13,8 +16,8 @@ const AuthWrapper = ({ children }) => {
     useEffect(() => {
         const checkSession = async () => {
             try {
-                const response = await fetch(`${BASE_URL}/auth/check-session`, { 
-                    credentials: 'include'  
+                const response = await fetch(`${BASE_URL}/auth/check-session`, {
+                    credentials: "include",
                 });
                 if (response.ok) {
                     const userData = await response.json();
@@ -72,7 +75,7 @@ const AuthWrapper = ({ children }) => {
                 dispatch(userActions.setUser(null));
             }
         });
-        
+
         checkSession();
         // Cleanup subscription on unmount
         return () => unsubscribe();

@@ -5,7 +5,7 @@
     "scripts": {
         "start": "node server.js",
         "test": "jest",
-        "test:integration": "jest tests/integration"
+        "test:integration": "jest __tests__/integration"
     },
     "keywords": [],
     "author": "",

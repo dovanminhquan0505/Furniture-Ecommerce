@@ -1,11 +1,22 @@
-import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import configureStore from 'redux-mock-store';
 import { MemoryRouter } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import ProductCard from '../components/UI/ProductCard';
-import { getProducts } from '../firebase.config';
+
+// Mock firebase.config.js
+jest.mock('../firebase.config', () => ({
+  getProducts: jest.fn(() =>
+    Promise.resolve([
+      {
+        id: '1',
+        productName: 'Smart Tivi Xiaomi',
+        price: 210,
+      },
+    ])
+  ),
+}));
 
 // Mock react-toastify
 jest.mock('react-toastify', () => ({
@@ -27,7 +38,6 @@ jest.mock('framer-motion', () => ({
 // Tạo mock store
 const mockStore = configureStore([]);
 
-// Set global timeout
 jest.setTimeout(15000);
 
 describe('ProductCard Component with Firestore', () => {
@@ -50,23 +60,10 @@ describe('ProductCard Component with Firestore', () => {
     const targetProductName = 'Smart Tivi Xiaomi';
     const targetPrice = 210;
 
-    const products = await getProducts();
-    const matchedProduct = products.find(
-      (product) =>
-        product.productName === targetProductName &&
-        Number(product.price) === targetPrice
-    );
-
-    if (!matchedProduct) {
-      throw new Error(
-        `Test failed: No product found with name "${targetProductName}" and price $${targetPrice} in Firestore`
-      );
-    }
-
     render(
       <Provider store={store}>
         <MemoryRouter>
-          <ProductCard item={matchedProduct} />
+          <ProductCard item={{ productName: targetProductName, price: targetPrice }} />
         </MemoryRouter>
       </Provider>
     );

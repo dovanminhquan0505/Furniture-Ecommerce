@@ -9,13 +9,27 @@ require("dotenv").config();
 // Khởi tạo Firebase Admin SDK
 let serviceAccount;
 try {
-    if (process.env.FIREBASE_CREDENTIALS.startsWith("./")) {
+    if (
+        process.env.FIREBASE_CREDENTIALS &&
+        process.env.FIREBASE_CREDENTIALS.startsWith("./")
+    ) {
         const filePath = process.env.FIREBASE_CREDENTIALS;
         serviceAccount = JSON.parse(fs.readFileSync(filePath, "utf8"));
     } else {
-        serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
+        serviceAccount = {
+            type: "service_account",
+            project_id: "furniture-ecommerce-435809",
+            private_key_id: "34ce2310c6e3fc906afedfcbcb649d3b22114e8d",
+            private_key: process.env.FIREBASE_PRIVATE_KEY,
+            client_email: "firebase-adminsdk-6ba3g@furniture-ecommerce-435809.iam.gserviceaccount.com",
+            client_id: "100529504381321459560",
+            auth_uri: "https://accounts.google.com/o/oauth2/auth",
+            token_uri: "https://oauth2.googleapis.com/token",
+            auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+            client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-6ba3g%40furniture-ecommerce-435809.iam.gserviceaccount.com",
+            universe_domain: "googleapis.com"
+        };
     }
-    console.log("Parsed serviceAccount:", serviceAccount);
     admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
         storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
@@ -26,12 +40,11 @@ try {
 }
 
 const app = express();
-console.log("NODE_ENV:", process.env.NODE_ENV);
 
 const corsOptions = {
     origin: [
         "https://furniture-ecommerce-frontend-nine.vercel.app",
-        "http://localhost:3000", 
+        "http://localhost:3000",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -73,5 +86,11 @@ app.post("/api/upload", upload.single("file"), uploadFile);
 const productRoutes = require("./routes/productRoutes");
 app.use("/api/products", productRoutes);
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// const PORT = process.env.PORT || 5000;
+// app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+if (process.env.NODE_ENV !== 'test') {
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  }
+  
+  module.exports = app;

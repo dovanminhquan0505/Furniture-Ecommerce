@@ -163,18 +163,18 @@ jobs:
               uses: github/codeql-action/analyze@v3
 
     notify:
-    runs-on: ubuntu-latest
-    needs: [unit-test, integration-test, security-scan]
-    if: failure()
-    steps:
-        - name: Create issue on failure
-          uses: actions/github-script@v7
-          with:
-              script: |
-                  github.rest.issues.create({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    title: 'CI/CD Pipeline Failure',
-                    body: 'The CI/CD pipeline failed. Please check the logs for details.\n\nRun ID: ${{ github.run_id }}',
-                    labels: ['pipeline-failure']
-                  })
+      runs-on: ubuntu-latest
+      needs: [unit-test, integration-test, security-scan]
+      if: failure()
+      steps:
+          - name: Create issue on failure
+            uses: actions/github-script@v7
+            with:
+                script: |
+                    github.rest.issues.create({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      title: 'CI/CD Pipeline Failure',
+                      body: 'The CI/CD pipeline failed. Please check the logs for details.\n\nRun ID: ${{ github.run_id }}',
+                      labels: ['pipeline-failure']
+                    })

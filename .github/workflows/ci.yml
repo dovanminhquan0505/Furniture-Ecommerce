@@ -78,12 +78,17 @@ jobs:
                   cd backend
                   npm install
 
+            - name: Check and Free Port 9090
+              run: |
+                sudo lsof -i :9090 || true
+                sudo kill -9 $(lsof -t -i :9090) || true
+
             - name: Setup Firebase Emulator for Backend
               run: |
                 npm install -g firebase-tools
                 cd backend
-                firebase emulators:start --only firestore &
-                sleep 15 # Increased wait time
+                firebase emulators:start --only firestore --no-localhost &
+                sleep 30 
 
             - name: Run Jest Unit Tests for NodeJS API
               run: |
@@ -91,7 +96,7 @@ jobs:
                   npm run test -- --coverage
               env:
                   CI: true
-                  FIRESTORE_EMULATOR_HOST: localhost:8080
+                  FIRESTORE_EMULATOR_HOST: localhost:9090
                   FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
                 
             - name: Archive backend test coverage
@@ -130,6 +135,11 @@ jobs:
                   cd backend
                   npm install
 
+            - name: Check and Free Port 9090
+              run: |
+                sudo lsof -i :9090 || true
+                sudo kill -9 $(lsof -t -i :9090) || true
+
             - name: Setup Firebase Emulator
               run: |
                 npm install -g firebase-tools
@@ -142,7 +152,7 @@ jobs:
                   cd backend
                   npm run test:integration
               env:
-                  FIRESTORE_EMULATOR_HOST: localhost:8080
+                  FIRESTORE_EMULATOR_HOST: localhost:9090
                   CI: true
                   FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
 

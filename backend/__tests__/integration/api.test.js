@@ -5,7 +5,7 @@ describe('Product API Integration', () => {
     let server;
 
     beforeAll(() => {
-        process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
+        process.env.FIRESTORE_EMULATOR_HOST = 'localhost:9090';
         server = app.listen(0);
     });
 

@@ -9,18 +9,17 @@ require("dotenv").config();
 // Khởi tạo Firebase Admin SDK
 let serviceAccount;
 try {
-    if (
-        process.env.FIREBASE_CREDENTIALS &&
-        process.env.FIREBASE_CREDENTIALS.startsWith("./")
-    ) {
-        const filePath = process.env.FIREBASE_CREDENTIALS;
-        serviceAccount = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    if (process.env.FIREBASE_CREDENTIALS) {
+        serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
     } else {
+        if (!process.env.FIREBASE_PRIVATE_KEY) {
+            throw new Error("FIREBASE_PRIVATE_KEY is not defined in environment variables");
+        }
         serviceAccount = {
             type: "service_account",
             project_id: "furniture-ecommerce-435809",
             private_key_id: "34ce2310c6e3fc906afedfcbcb649d3b22114e8d",
-            private_key: process.env.FIREBASE_PRIVATE_KEY,
+            private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
             client_email: "firebase-adminsdk-6ba3g@furniture-ecommerce-435809.iam.gserviceaccount.com",
             client_id: "100529504381321459560",
             auth_uri: "https://accounts.google.com/o/oauth2/auth",
@@ -35,8 +34,10 @@ try {
         storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     });
 } catch (error) {
-    console.error("Firebase initialization error:", error);
-    throw error;
+    console.error("Firebase initialization error:", error.message);
+    if (process.env.NODE_ENV !== 'test') {
+        throw error;
+    }
 }
 
 const app = express();

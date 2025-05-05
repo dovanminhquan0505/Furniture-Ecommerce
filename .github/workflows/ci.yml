@@ -14,118 +14,116 @@ on:
       - develop
 
 jobs:
-  unit-test:
+  unit-test-frontend:
     runs-on: ubuntu-latest
-    unit-test-frontend:
-      runs-on: ubuntu-latest
-      environment: Production - furniture-ecommerce-frontend
-      steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
+    environment: Production - furniture-ecommerce-frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        - name: Setup Node.js
-          uses: actions/setup-node@v4
-          with:
-            node-version: "20"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-        - name: Install Java
-          run: |
-            sudo apt-get update
-            sudo apt-get install -y openjdk-11-jre
-            java -version
+      - name: Install Java
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openjdk-11-jre
+          java -version
 
-        - name: Cache frontend dependencies
-          uses: actions/cache@v4
-          with:
-            path: frontend/node_modules
-            key: ${{ runner.os }}-frontend-${{ hashFiles('frontend/package-lock.json') }}
-            restore-keys: ${{ runner.os }}-frontend-
+      - name: Cache frontend dependencies
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-frontend-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-frontend-
 
-        - name: Install frontend dependencies
-          run: |
-            cd frontend
-            npm install
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
 
-        - name: Setup Firebase Emulator for Frontend
-          run: |
-            npm install -g firebase-tools
-            cd frontend
-            firebase emulators:start --only firestore &
-            sleep 15
+      - name: Setup Firebase Emulator for Frontend
+        run: |
+          npm install -g firebase-tools
+          cd frontend
+          firebase emulators:start --only firestore &
+          sleep 15
 
-        - name: Run Jest Unit Tests for React Components
-          run: |
-            cd frontend
-            npm run test -- --coverage
-          env:
-            CI: true
-            FIRESTORE_EMULATOR_HOST: localhost:8080
-            REACT_APP_FIREBASE_API_KEY: ${{ secrets.REACT_APP_FIREBASE_API_KEY }}
-            REACT_APP_FIREBASE_AUTH_DOMAIN: ${{ secrets.REACT_APP_FIREBASE_AUTH_DOMAIN }}
+      - name: Run Jest Unit Tests for React Components
+        run: |
+          cd frontend
+          npm run test -- --coverage
+        env:
+          CI: true
+          FIRESTORE_EMULATOR_HOST: localhost:8080
+          REACT_APP_FIREBASE_API_KEY: ${{ secrets.REACT_APP_FIREBASE_API_KEY }}
+          REACT_APP_FIREBASE_AUTH_DOMAIN: ${{ secrets.REACT_APP_FIREBASE_AUTH_DOMAIN }}
 
-        - name: Archive frontend test coverage
-          uses: actions/upload-artifact@v4
-          with:
-            name: frontend-coverage
-            path: frontend/coverage
+      - name: Archive frontend test coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
 
-    unit-test-backend:
-      runs-on: ubuntu-latest
-      environment: Production - furniture-ecommerce-backend
-      steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
+  unit-test-backend:
+    runs-on: ubuntu-latest
+    environment: Production - furniture-ecommerce-backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        - name: Setup Node.js
-          uses: actions/setup-node@v4
-          with:
-            node-version: "20"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-        - name: Install Java
-          run: |
-            sudo apt-get update
-            sudo apt-get install -y openjdk-11-jre
-            java -version
+      - name: Install Java
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openjdk-11-jre
+          java -version
 
-        - name: Cache backend dependencies
-          uses: actions/cache@v4
-          with:
-            path: backend/node_modules
-            key: ${{ runner.os }}-backend-${{ hashFiles('backend/package-lock.json') }}
-            restore-keys: ${{ runner.os }}-backend-
+      - name: Cache backend dependencies
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: ${{ runner.os }}-backend-${{ hashFiles('backend/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-backend-
 
-        - name: Install backend dependencies
-          run: |
-            cd backend
-            npm install
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm install
 
-        - name: Check and Free Port 9090
-          run: |
-            sudo lsof -i :9090 || true
-            sudo kill -9 $(lsof -t -i :9090) || true
+      - name: Check and Free Port 9090
+        run: |
+          sudo lsof -i :9090 || true
+          sudo kill -9 $(lsof -t -i :9090) || true
 
-        - name: Setup Firebase Emulator for Backend
-          run: |
-            npm install -g firebase-tools
-            cd backend
-            firebase emulators:start --only firestore &
-            sleep 30
+      - name: Setup Firebase Emulator for Backend
+        run: |
+          npm install -g firebase-tools
+          cd backend
+          firebase emulators:start --only firestore &
+          sleep 30
 
-        - name: Run Jest Unit Tests for NodeJS API
-          run: |
-            cd backend
-            npm run test -- --coverage
-          env:
-            CI: true
-            FIRESTORE_EMULATOR_HOST: localhost:9090
-            FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
-            FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+      - name: Run Jest Unit Tests for NodeJS API
+        run: |
+          cd backend
+          npm run test -- --coverage
+        env:
+          CI: true
+          FIRESTORE_EMULATOR_HOST: localhost:9090
+          FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
 
-        - name: Archive backend test coverage
-          uses: actions/upload-artifact@v4
-          with:
-            name: backend-coverage
-            path: backend/coverage
+      - name: Archive backend test coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage
 
   integration-test:
     runs-on: ubuntu-latest

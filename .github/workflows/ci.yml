@@ -94,7 +94,7 @@ jobs:
       - name: Run Jest Unit Tests for Product Controller
         run: |
           cd backend
-          npm run test:integration -- --coverage
+          npm run test:unit -- --coverage
         env:
           CI: true
           NODE_ENV: test
@@ -154,8 +154,7 @@ jobs:
           cd backend
           firebase emulators:start --only firestore &
           sleep 30
-          curl --retry 5 --retry-delay 5 http://localhost:9090 || exit 1
-          npm run test:integration || (cat *.log; exit 1)
+          npm run test:integration
         env:
           CI: true
           NODE_ENV: test

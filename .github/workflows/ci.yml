@@ -2,6 +2,9 @@ name: CI/CD Pipeline
 
 permissions:
   issues: write
+  contents: read
+  security-events: write
+  actions: read
 
 on:
   push:
@@ -115,7 +118,7 @@ jobs:
   integration-test:
     runs-on: ubuntu-latest
     environment: Production - furniture-ecommerce-backend
-    needs: unit-test-backend
+    needs: [unit-test-frontend, unit-test-backend]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

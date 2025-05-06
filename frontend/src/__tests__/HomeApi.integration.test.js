@@ -9,8 +9,8 @@ import '@testing-library/jest-dom';
 
 // Mock các component con để tập trung vào việc test tương tác API
 jest.mock('../../src/services/Services', () => () => <div data-testid="services-component" />);
-jest.mock('../../src/components/footer/Footer', () => () => <div data-testid="footer-component" />);
-jest.mock('../../src/components/header/Header', () => () => <div data-testid="header-component" />);
+jest.mock('../../src/components/Footer/Footer', () => () => <div data-testid="footer-component" />);
+jest.mock('../../src/components/Header/Header', () => () => <div data-testid="header-component" />);
 
 // Mock react-toastify
 jest.mock('react-toastify', () => ({

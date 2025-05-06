@@ -198,7 +198,7 @@ jobs:
 
   notify:
     runs-on: ubuntu-latest
-    needs: [unit-test-frontend, unit-test-backend, integration-test, security-scan]
+    needs: [unit-test-frontend, unit-test-backend, integration-test]
     if: failure()
     steps:
       - name: Create issue on failure

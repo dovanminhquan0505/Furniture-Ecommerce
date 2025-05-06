@@ -6,7 +6,7 @@
         "start": "node server.js",
         "test": "jest",
         "test:unit": "jest __tests__/unit",
-        "test:integration": "jest __tests__/integration",
+        "test:integration": "jest __tests__/integration --detectOpenHandles --forceExit",
         "test:all": "jest --detectOpenHandles --forceExit",
         "test:coverage": "jest --coverage"
     },

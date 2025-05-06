@@ -44,7 +44,7 @@ describe('Product API Integration Tests', () => {
         },
       ];
   
-      // Thêm tất cả sản phẩm vào batch
+      // Add all products to batch
       testProductIds = [];
       for (const product of testProducts) {
         const docRef = productsRef.doc(); 
@@ -60,8 +60,6 @@ describe('Product API Integration Tests', () => {
       console.error('Firebase initialization or data seeding failed:', error.message);
       throw error;
     }
-
-    server = app.listen(0);
   }, 60000);
 
   afterAll(async () => {
@@ -77,19 +75,32 @@ describe('Product API Integration Tests', () => {
         }
         
         await batch.commit();
+        console.log('Test products cleaned up successfully');
       }
       
-      if (server) {
-        await new Promise(resolve => server.close(resolve)); 
-      }
+      // Close the server first
+      await new Promise((resolve) => {
+        if (server) {
+          server.close(() => {
+            console.log('Server closed successfully');
+            resolve();
+          });
+        } else {
+          resolve();
+        }
+      });
       
-      if (admin.apps.length) {
-        await Promise.all(admin.apps.map(app => app.delete()));
-      }
+      await admin.firestore().terminate();
+      
+      await Promise.all(
+        admin.apps.map(app => app.delete())
+      );
+      
+      console.log('All Firebase resources cleaned up');
     } catch (error) {
       console.error('Cleanup failed:', error.message);
     }
-  }, 15000);
+  }, 30000);
 
   it('GET /api/products should return all products', async () => {
     const res = await request(app)

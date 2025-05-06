@@ -36,6 +36,5 @@ console.warn = (...args) => {
 
 // Add global cleanup
 afterAll(async () => {
-  // Make sure we give time for any hanging connections to close
   await new Promise(resolve => setTimeout(resolve, 500));
-});
+}, 1000);

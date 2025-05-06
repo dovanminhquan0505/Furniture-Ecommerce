@@ -98,6 +98,13 @@ jobs:
         env:
           CI: true
           NODE_ENV: test
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY}}
+          RECAPTCHA_SECRET_KEY: ${{ secrets.RECAPTCHA_SECRET_KEY}}
+          REACT_APP_FURNITURE_ECOMMERCE_ADMIN_EMAIL: admin@gmail.com
+          PAYPAL_CLIENT_SECRET: ${{ secrets.PAYPAL_CLIENT_SECRET}}
+          PAYPAL_CLIENT_ID: ${{ secrets.PAYPAL_CLIENT_ID}}
+          JWT_SECRET: ${{ secrets.JWT_SECRET}}
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY}}
 
       - name: Archive backend test coverage
         uses: actions/upload-artifact@v4
@@ -153,6 +160,13 @@ jobs:
           CI: true
           NODE_ENV: test
           FIRESTORE_EMULATOR_HOST: localhost:9090
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY}}
+          RECAPTCHA_SECRET_KEY: ${{ secrets.RECAPTCHA_SECRET_KEY}}
+          REACT_APP_FURNITURE_ECOMMERCE_ADMIN_EMAIL: admin@gmail.com
+          PAYPAL_CLIENT_SECRET: ${{ secrets.PAYPAL_CLIENT_SECRET}}
+          PAYPAL_CLIENT_ID: ${{ secrets.PAYPAL_CLIENT_ID}}
+          JWT_SECRET: ${{ secrets.JWT_SECRET}}
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY}}
 
       - name: Install frontend dependencies
         run: |

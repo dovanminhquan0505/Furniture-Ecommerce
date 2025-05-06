@@ -23,7 +23,6 @@ import {
     getUserById,
     getSellerIdByUserId
 } from "../api.js";
-import { auth } from "../firebase.config.js";
 import DefaultAvatar from "../assets/images/user-icon.png";
 
 const ProductDetails = () => {
@@ -37,7 +36,7 @@ const ProductDetails = () => {
     const [ loading, setLoading ] = useState(true);
     const { data: products } = useGetData("products");
     const [isStaticProduct, setIsStaticProduct] = useState(false);
-    const { isAdmin, isLoading: adminLoading } = useAdmin();
+    const { isLoading: adminLoading } = useAdmin();
     const { currentUser } = useAuth();
     // Set Reviews Comment State
     const [replyingTo, setReplyingTo] = useState(null);
@@ -339,15 +338,6 @@ const ProductDetails = () => {
             toast.error("User data not loaded yet. Please try again.");
             return;
         }
-
-        const replyObject = {
-            userId: userData.userId,
-            userName: userData.userName,
-            avatar: userData.avatar,    
-            message: replyMessage,
-            createdAt: new Date().toISOString(),
-            likes: []
-        };
 
         try {
             await addReplyToReview(id, reviewIndex, {

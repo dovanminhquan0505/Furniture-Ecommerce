@@ -8,7 +8,7 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { userActions } from "../redux/slices/userSlice";
-import { signInWithCustomToken, signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase.config";
 import { registerUser, uploadFile } from "../api";
 

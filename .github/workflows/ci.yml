@@ -148,13 +148,17 @@ jobs:
           sudo lsof -i :9090 || true
           sudo kill -9 $(lsof -t -i :9090) || true
 
-      - name: Setup Firebase Emulator and Run Integration Tests
+      - name: Setup Firebase Emulator for Integration
         run: |
           npm install -g firebase-tools
           cd backend
           firebase emulators:start --only firestore &
           sleep 30
-          npm run test:integration
+
+      - name: Run Integration Tests
+        run: |
+          cd backend
+          npm run test:integration -- --coverage
         env:
           CI: true
           NODE_ENV: test
@@ -175,7 +179,7 @@ jobs:
       - name: Run Frontend Integration Tests
         run: |
           cd frontend
-          npm run test:integration || (cat *.log; exit 1)
+          npm run test:integration 
         env:
           CI: true
           NODE_ENV: test

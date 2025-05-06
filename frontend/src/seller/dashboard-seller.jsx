@@ -39,7 +39,7 @@ const DashboardSeller = () => {
     const [revenueData, setRevenueData] = useState([]);
     const [topProducts, setTopProducts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [error] = useState(null);
     const [sellerId, setSellerId] = useState(null);
     const navigate = useNavigate();
 

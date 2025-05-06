@@ -13,8 +13,6 @@ import { auth } from "../firebase.config";
 import { getUserById, googleLogin, loginUser } from "../api";
 import ReCAPTCHA from "react-google-recaptcha";
 
-const siteKeyRecaptcha = process.env.REACT_APP_SITE_KEY_RECAPTCHA;
-
 const Login = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");

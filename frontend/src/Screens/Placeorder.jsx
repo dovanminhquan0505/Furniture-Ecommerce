@@ -130,7 +130,6 @@ const PlaceOrder = () => {
     const [sellerNames, setSellerNames] = useState({});
     const [showRefundModal, setShowRefundModal] = useState(false);
     const [selectedSubOrderId, setSelectedSubOrderId] = useState(null);
-    const [timeLeft, setTimers] = useState(null);
     const [showAppealModal, setShowAppealModal] = useState(false);
     const [appealReason, setAppealReason] = useState("");
 

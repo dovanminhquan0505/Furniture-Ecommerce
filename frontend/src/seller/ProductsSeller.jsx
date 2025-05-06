@@ -50,6 +50,7 @@ const AllProducts = () => {
         };
 
         fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sellerId]);
 
     const deleteProductHandler = async (id) => {

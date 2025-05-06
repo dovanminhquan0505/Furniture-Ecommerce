@@ -6,7 +6,8 @@
     "scripts": {
         "start": "react-scripts start",
         "build": "react-scripts build",
-        "test": "react-scripts test",
+        "test": "react-scripts test ProductCard.test.js",
+        "test:integration": "react-scripts test HomeApi.integration.test.js",
         "eject": "react-scripts eject"
     },
     "author": "",

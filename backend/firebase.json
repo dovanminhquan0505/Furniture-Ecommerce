@@ -1,7 +1,14 @@
 {
-    "emulators": {
-      "firestore": {
-        "port": 9090
-      }
+  "emulators": {
+    "firestore": {
+      "port": 9090
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
     }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
   }
+}

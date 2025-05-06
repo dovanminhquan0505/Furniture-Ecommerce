@@ -9,9 +9,31 @@ require("dotenv").config();
 // Khởi tạo Firebase Admin SDK
 let serviceAccount;
 try {
-    if (process.env.FIREBASE_CREDENTIALS) {
-        serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
+    if (process.env.NODE_ENV === 'test' && !process.env.FIRESTORE_EMULATOR_HOST) {
+        console.log("Skipping Firebase initialization in test mode with mocked Firestore");
+        // Mocked Firebase will handle initialization
+    } else if (process.env.FIRESTORE_EMULATOR_HOST) {
+        console.log("Initializing Firebase for emulator:", process.env.FIRESTORE_EMULATOR_HOST);
+        admin.initializeApp({
+            projectId: "furniture-ecommerce-435809",
+        });
+    } else if (process.env.FIREBASE_CREDENTIALS) {
+        console.log("Attempting to parse FIREBASE_CREDENTIALS");
+        try {
+            let credentials = process.env.FIREBASE_CREDENTIALS;
+            if (credentials.startsWith('./') || credentials.startsWith('/')) {
+                credentials = fs.readFileSync(credentials, 'utf8');
+            }
+            serviceAccount = JSON.parse(credentials);
+            admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount),
+                storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+            });
+        } catch (parseError) {
+            throw new Error(`Invalid FIREBASE_CREDENTIALS: ${parseError.message}`);
+        }
     } else {
+        console.log("Using environment variable FIREBASE_PRIVATE_KEY");
         if (!process.env.FIREBASE_PRIVATE_KEY) {
             throw new Error("FIREBASE_PRIVATE_KEY is not defined in environment variables");
         }
@@ -28,16 +50,17 @@ try {
             client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-6ba3g%40furniture-ecommerce-435809.iam.gserviceaccount.com",
             universe_domain: "googleapis.com"
         };
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+        });
     }
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-    });
 } catch (error) {
     console.error("Firebase initialization error:", error.message);
     if (process.env.NODE_ENV !== 'test') {
         throw error;
     }
+    console.warn("Continuing in test mode without Firebase initialization");
 }
 
 const app = express();
@@ -89,9 +112,9 @@ app.use("/api/products", productRoutes);
 
 // const PORT = process.env.PORT || 5000;
 // app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== "test") {
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-  }
-  
-  module.exports = app;
+}
+
+module.exports = app;

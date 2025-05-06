@@ -79,12 +79,6 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install Java
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y openjdk-11-jre
-          java -version
-
       - name: Cache backend dependencies
         uses: actions/cache@v4
         with:
@@ -97,27 +91,13 @@ jobs:
           cd backend
           npm install
 
-      - name: Check and Free Port 9090
-        run: |
-          sudo lsof -i :9090 || true
-          sudo kill -9 $(lsof -t -i :9090) || true
-
-      - name: Setup Firebase Emulator for Backend
-        run: |
-          npm install -g firebase-tools
-          cd backend
-          firebase emulators:start --only firestore &
-          sleep 30
-
-      - name: Run Jest Unit Tests for NodeJS API
+      - name: Run Jest Unit Tests for Product Controller
         run: |
           cd backend
-          npm run test -- --coverage
+          npm run test:integration -- --coverage
         env:
           CI: true
-          FIRESTORE_EMULATOR_HOST: localhost:9090
-          FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
-          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          NODE_ENV: test
 
       - name: Archive backend test coverage
         uses: actions/upload-artifact@v4
@@ -161,22 +141,31 @@ jobs:
           sudo lsof -i :9090 || true
           sudo kill -9 $(lsof -t -i :9090) || true
 
-      - name: Setup Firebase Emulator
+      - name: Setup Firebase Emulator and Run Integration Tests
         run: |
           npm install -g firebase-tools
           cd backend
           firebase emulators:start --only firestore &
-          sleep 15
-
-      - name: Run Supertest Integration Tests
-        run: |
-          cd backend
-          npm run test:integration
+          sleep 30
+          curl --retry 5 --retry-delay 5 http://localhost:9090 || exit 1
+          npm run test:integration || (cat *.log; exit 1)
         env:
-          FIRESTORE_EMULATOR_HOST: localhost:9090
           CI: true
-          FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
-          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          NODE_ENV: test
+          FIRESTORE_EMULATOR_HOST: localhost:9090
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: Run Frontend Integration Tests
+        run: |
+          cd frontend
+          npm run test:integration || (cat *.log; exit 1)
+        env:
+          CI: true
+          NODE_ENV: test
 
   security-scan:
     runs-on: ubuntu-latest

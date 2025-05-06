@@ -1,11 +1,13 @@
 const admin = require("firebase-admin");
-const db = admin.firestore();
 const jwt = require("jsonwebtoken");
 const { default: axios } = require("axios");
 const bcrypt = require("bcryptjs");
 
-exports.registerUser = async (req, res) => {
+const getDb = () => admin.firestore();
+
+const registerUser = async (req, res) => {
     try {
+        const db = getDb();
         const { username, email, password, fileURL } = req.body;
 
         if (!email.includes("@")) {
@@ -74,8 +76,9 @@ exports.registerUser = async (req, res) => {
     }
 };
 
-exports.loginUser = async (req, res) => {
+const loginUser = async (req, res) => {
     try {
+        const db = getDb();
         const { email, password, captchaToken } = req.body;
 
         if (!email || !password) {
@@ -186,7 +189,7 @@ exports.loginUser = async (req, res) => {
     }
 };
 
-exports.logoutUser = async (req, res) => {
+const logoutUser = async (req, res) => {
     try {
         const sessionToken = req.cookies.session;
         if (!sessionToken) {
@@ -208,8 +211,9 @@ exports.logoutUser = async (req, res) => {
 };
 
 //Seller
-exports.registerSeller = async (req, res) => {
+const registerSeller = async (req, res) => {
     try {
+        const db = getDb();
         const {
             fullName,
             phoneNumber,
@@ -259,8 +263,9 @@ exports.registerSeller = async (req, res) => {
     }
 };
 
-exports.googleLogin = async (req, res) => {
+const googleLogin = async (req, res) => {
     try {
+        const db = getDb();
         const { idToken } = req.body;
 
         const decodedToken = await admin.auth().verifyIdToken(idToken);
@@ -323,7 +328,7 @@ exports.googleLogin = async (req, res) => {
     }
 };
 
-exports.authenticateUser = async (req, res, next) => {
+const authenticateUser = async (req, res, next) => {
     try {
         const sessionToken = req.cookies.session;
         if (!sessionToken) {
@@ -338,7 +343,7 @@ exports.authenticateUser = async (req, res, next) => {
     }
 };
 
-exports.requireSeller = (req, res, next) => {
+const requireSeller = (req, res, next) => {
     if (
         req.user &&
         (req.user.status === "seller" || req.user.status === "approved")
@@ -351,7 +356,7 @@ exports.requireSeller = (req, res, next) => {
     }
 };
 
-exports.requireAdmin = (req, res, next) => {
+const requireAdmin = (req, res, next) => {
     if (req.user && req.user.role === "admin") {
         next();
     } else {
@@ -361,8 +366,9 @@ exports.requireAdmin = (req, res, next) => {
     }
 };
 
-exports.refreshToken = async (req, res) => {
+const refreshToken = async (req, res) => {
     try {
+        const db = getDb();
         const { refreshToken } = req.body;
 
         if (!refreshToken) {
@@ -406,8 +412,9 @@ exports.refreshToken = async (req, res) => {
     }
 };
 
-exports.checkSession = async (req, res) => {
+const checkSession = async (req, res) => {
     try {
+        const db = getDb();
         const sessionToken = req.cookies.session;
         if (!sessionToken) {
             return res.status(401).json({ authenticated: false });
@@ -436,4 +443,17 @@ exports.checkSession = async (req, res) => {
     } catch (error) {
         return res.status(401).json({ authenticated: false });
     }
+};
+
+module.exports = {
+    registerUser,
+    loginUser,
+    logoutUser,
+    googleLogin,
+    authenticateUser,
+    requireAdmin,
+    refreshToken,
+    registerSeller,
+    checkSession,
+    requireSeller,
 };

@@ -1,9 +1,11 @@
 const admin = require("firebase-admin");
-const db = admin.firestore();
 
-exports.getAllSellers = [
+const getDb = () => admin.firestore();
+
+const getAllSellers = [
     async (req, res) => {
         try {
+            const db = getDb();
             const snapshot = await db.collection("sellers").get();
             const sellers = snapshot.docs.map((doc) => ({
                 id: doc.id,
@@ -16,8 +18,9 @@ exports.getAllSellers = [
     },
 ];
 
-exports.getSellerById = async (req, res) => {
+const getSellerById = async (req, res) => {
     try {
+        const db = getDb();
         const sellerDoc = await db
             .collection("sellers")
             .doc(req.params.sellerId)
@@ -30,8 +33,9 @@ exports.getSellerById = async (req, res) => {
     }
 };
 
-exports.getSellerInfo = async (req, res) => {
+const getSellerInfo = async (req, res) => {
     try {
+        const db = getDb();
         const sellerDoc = await db
             .collection("sellers")
             .doc(req.params.sellerId)
@@ -44,8 +48,9 @@ exports.getSellerInfo = async (req, res) => {
     }
 };
 
-exports.getSellerProducts = async (req, res) => {
+const getSellerProducts = async (req, res) => {
     try {
+        const db = getDb();
         const productsSnapshot = await db
             .collection("products")
             .where("sellerId", "==", req.params.sellerId)
@@ -60,8 +65,9 @@ exports.getSellerProducts = async (req, res) => {
     }
 };
 
-exports.updateSellerProduct = async (req, res) => {
+const updateSellerProduct = async (req, res) => {
     try {
+        const db = getDb();
         const productRef = db.collection("products").doc(req.params.productId);
         const productDoc = await productRef.get();
         if (!productDoc.exists)
@@ -75,8 +81,9 @@ exports.updateSellerProduct = async (req, res) => {
     }
 };
 
-exports.createSellerProduct = async (req, res) => {
+const createSellerProduct = async (req, res) => {
     try {
+        const db = getDb();
         const sellerId = req.params.sellerId;
         const productData = { ...req.body, sellerId };
 
@@ -93,8 +100,9 @@ exports.createSellerProduct = async (req, res) => {
     }
 };
 
-exports.deleteSellerProduct = async (req, res) => {
+const deleteSellerProduct = async (req, res) => {
     try {
+        const db = getDb();
         const productRef = db.collection("products").doc(req.params.productId);
         const productDoc = await productRef.get();
         if (!productDoc.exists)
@@ -107,8 +115,9 @@ exports.deleteSellerProduct = async (req, res) => {
     }
 };
 
-exports.getSellerOrders = async (req, res) => {
+const getSellerOrders = async (req, res) => {
     try {
+        const db = getDb();
         const ordersSnapshot = await db
             .collection("subOrders")
             .where("sellerId", "==", req.params.sellerId)
@@ -145,8 +154,9 @@ exports.getSellerOrders = async (req, res) => {
     }
 };
 
-exports.deleteSellerOrder = async (req, res) => {
+const deleteSellerOrder = async (req, res) => {
     try {
+        const db = getDb();
         const { sellerId, orderId } = req.params;
         const orderRef = db.collection("subOrders").doc(orderId);
         const orderDoc = await orderRef.get();
@@ -165,8 +175,9 @@ exports.deleteSellerOrder = async (req, res) => {
     }
 };
 
-exports.updateSellerInfo = async (req, res) => {
+const updateSellerInfo = async (req, res) => {
     try {
+        const db = getDb();
         const sellerRef = db.collection("sellers").doc(req.params.sellerId);
         const sellerDoc = await sellerRef.get();
         if (!sellerDoc.exists)
@@ -180,8 +191,9 @@ exports.updateSellerInfo = async (req, res) => {
     }
 };
 
-exports.getCurrentSeller = async (req, res) => {
+const getCurrentSeller = async (req, res) => {
     try {
+        const db = getDb();
         const userDoc = await db.collection("users").doc(req.user.uid).get();
         if (!userDoc.exists)
             return res.status(404).json({ message: "User not found" });
@@ -200,8 +212,9 @@ exports.getCurrentSeller = async (req, res) => {
     }
 };
 
-exports.getSellerIdByUserId = async (req, res) => {
+const getSellerIdByUserId = async (req, res) => {
     try {
+        const db = getDb();
         const userId = req.params.userId;
         const sellerSnapshot = await db.collection("sellers")
             .where("userId", "==", userId)
@@ -209,19 +222,20 @@ exports.getSellerIdByUserId = async (req, res) => {
             .get();
 
         if (sellerSnapshot.empty) {
-            return res.status(200).json({ sellerId: null }); // Trả về null nếu không tìm thấy
+            return res.status(200).json({ sellerId: null }); 
         }
 
         const sellerData = sellerSnapshot.docs[0].data();
-        res.status(200).json({ sellerId: sellerData.sellerId || sellerSnapshot.docs[0].id }); // Trả về sellerId hoặc Document ID
+        res.status(200).json({ sellerId: sellerData.sellerId || sellerSnapshot.docs[0].id }); 
     } catch (error) {
         console.error("Error fetching seller by user:", error);
         res.status(500).json({ message: "Error fetching seller info", error });
     }
 };
 
-exports.getDashboardStats = async (req, res) => {
+const getDashboardStats = async (req, res) => {
     try {
+        const db = getDb();
         const sellerId = req.params.sellerId;
         if (!sellerId) {
             return res.status(400).json({ message: 'Seller ID is required' });
@@ -264,7 +278,7 @@ exports.getDashboardStats = async (req, res) => {
             // Chỉ xử lý nếu totalOrder tương ứng đã thanh toán
             if (paidOrderIds.includes(subOrder.totalOrderId)) {
                 const revenue = subOrder.totalAmount || 0;
-                const orderProfit = revenue * 0.2; // 20% profit margin
+                const orderProfit = revenue * 0.2; 
 
                 monthlyRevenue += revenue;
                 profit += orderProfit;
@@ -324,8 +338,9 @@ exports.getDashboardStats = async (req, res) => {
     }
 };
 
-exports.getSellerNotifications = async (req, res) => {
+const getSellerNotifications = async (req, res) => {
     try {
+        const db = getDb();
         const sellerId = req.params.sellerId;
         if (!sellerId) {
             return res.status(400).json({ message: "Seller ID is required" });
@@ -371,8 +386,9 @@ exports.getSellerNotifications = async (req, res) => {
     }
 };
 
-exports.markNotificationAsRead = async (req, res) => {
+const markNotificationAsRead = async (req, res) => {
     try {
+        const db = getDb();
         const { sellerId, notificationId } = req.params;
 
         const notificationRef = db.collection("sellerNotifications").doc(notificationId);
@@ -393,3 +409,21 @@ exports.markNotificationAsRead = async (req, res) => {
         res.status(500).json({ message: "Error updating notification status", error: error.message });
     }
 };
+
+module.exports = {
+    getSellerById,
+    getSellerInfo,
+    getSellerProducts,
+    updateSellerProduct,
+    createSellerProduct,
+    deleteSellerProduct,
+    getSellerOrders,
+    deleteSellerOrder,
+    updateSellerInfo,
+    getCurrentSeller,
+    getSellerIdByUserId,
+    getDashboardStats,
+    getSellerNotifications,
+    markNotificationAsRead,
+    getAllSellers
+}

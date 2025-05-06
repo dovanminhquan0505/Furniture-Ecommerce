@@ -1,10 +1,12 @@
 const admin = require("firebase-admin");
-const db = admin.firestore();
+
+const getDb = () => admin.firestore();
 
 // Lấy tất cả người dùng
-exports.getAllUsers = [
+const getAllUsers = [
     async (req, res) => {
         try {
+            const db = getDb();
             const snapshot = await db.collection("users").get();
             const users = snapshot.docs.map((doc) => ({
                 id: doc.id,
@@ -18,8 +20,9 @@ exports.getAllUsers = [
 ];
 
 // Lấy thông tin của người dùng hiện tại
-exports.getUserById = async (req, res) => {
+const getUserById = async (req, res) => {
     try {
+        const db = getDb();
         const { id } = req.params;
 
         const userDoc = await db.collection("users").doc(id).get();
@@ -40,8 +43,9 @@ exports.getUserById = async (req, res) => {
 };
 
 // Cập nhật thông tin người dùng
-exports.updateUserById = async (req, res) => {
+const updateUserById = async (req, res) => {
     try {
+        const db = getDb();
         const { id } = req.params;
         const { displayName, birthDate, phone, address } = req.body;
 
@@ -73,8 +77,9 @@ exports.updateUserById = async (req, res) => {
     }
 };
 
-exports.getUserProfileById = async (req, res) => {
+const getUserProfileById = async (req, res) => {
     try {
+        const db = getDb();
         const { id } = req.params;
         const userDoc = await db.collection("users").doc(id).get();
 
@@ -102,8 +107,9 @@ exports.getUserProfileById = async (req, res) => {
     }
 };
 
-exports.updateUserPhoto = async (req, res) => {
+const updateUserPhoto = async (req, res) => {
     try {
+        const db = getDb();
         const { id } = req.params;
         const { photoURL } = req.body;
         if (!photoURL) {
@@ -116,7 +122,7 @@ exports.updateUserPhoto = async (req, res) => {
     }
 };
 
-exports.updateUserPassword = async (req, res) => {
+const updateUserPassword = async (req, res) => {
     try {
         const { id } = req.params;
         const { newPassword } = req.body;
@@ -132,8 +138,9 @@ exports.updateUserPassword = async (req, res) => {
     }
 };
 
-exports.getUserOrders = async (req, res) => {
+const getUserOrders = async (req, res) => {
     try {
+        const db = getDb();
         const { id } = req.params;
         const snapshot = await db
             .collection("totalOrders")
@@ -156,8 +163,9 @@ exports.getUserOrders = async (req, res) => {
     }
 };
 
-exports.deleteUserOrder = async (req, res) => {
+const deleteUserOrder = async (req, res) => {
     try {
+        const db = getDb();
         const { orderId } = req.params;
         await db.collection("totalOrders").doc(orderId).delete();
         res.status(200).json({ message: "Order deleted successfully" });
@@ -165,3 +173,14 @@ exports.deleteUserOrder = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+module.exports = {
+    getUserById,
+    updateUserById,
+    getUserProfileById,
+    updateUserPhoto,
+    updateUserPassword,
+    getUserOrders,
+    deleteUserOrder,
+    getAllUsers
+}

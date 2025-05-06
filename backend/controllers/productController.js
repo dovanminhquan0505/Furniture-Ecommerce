@@ -1,21 +1,32 @@
 const admin = require("firebase-admin");
-const db = admin.firestore();
 
-exports.getProducts = async (req, res) => {
+const getDb = () => {
+    console.log('Initializing Firestore');
+    const db = admin.firestore();
+    console.log('Firestore instance:', db);
+    return db;
+};
+
+const getProducts = async (req, res) => {
     try {
+        const db = getDb();
+        console.log('Fetching products from Firestore');
         const snapshot = await db.collection("products").get();
+        console.log('Snapshot received:', snapshot.docs.length, 'documents', snapshot);
         const products = snapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
         }));
         res.status(200).json(products);
     } catch (error) {
-        res.status(500).json({ message: "Error fetching products", error });
+        console.error('Error fetching products:', error.message, error.stack);
+        res.status(500).json({ message: "Error fetching products", error: error.message });
     }
 };
 
-exports.getProductById = async (req, res) => {
+const getProductById = async (req, res) => {
     try {
+        const db = getDb();
         const productId = req.params.id;
         const productDoc = await db.collection("products").doc(productId).get();
 
@@ -42,8 +53,9 @@ exports.getProductById = async (req, res) => {
     }
 };
 
-exports.addReview = async (req, res) => {
+const addReview = async (req, res) => {
     try {
+        const db = getDb();
         const productId = req.params.id;
         const { userName, message, rating, avatar } = req.body;
         const userId = req.body.userId;
@@ -82,8 +94,9 @@ exports.addReview = async (req, res) => {
     }
 };
 
-exports.deleteReview = async (req, res) => {
+const deleteReview = async (req, res) => {
     try {
+        const db = getDb();
         const productId = req.params.id;
         const { review, userId, userSellerId } = req.body;
 
@@ -129,8 +142,9 @@ exports.deleteReview = async (req, res) => {
     }
 };
 
-exports.toggleLikeReview = async (req, res) => {
+const toggleLikeReview = async (req, res) => {
     try {
+        const db = getDb();
         const productId = req.params.id;
         const { reviewIndex, userId } = req.body;
 
@@ -166,8 +180,9 @@ exports.toggleLikeReview = async (req, res) => {
     }
 };
 
-exports.addReplyToReview = async (req, res) => {
+const addReplyToReview = async (req, res) => {
     try {
+        const db = getDb();
         const productId = req.params.id;
         const { reviewIndex, userName, message, avatar } = req.body;
 
@@ -207,8 +222,9 @@ exports.addReplyToReview = async (req, res) => {
     }
 };
 
-exports.toggleLikeReply = async (req, res) => {
+const toggleLikeReply = async (req, res) => {
     try {
+        const db = getDb();
         const productId = req.params.id;
         const { reviewIndex, replyIndex, userId } = req.body;
 
@@ -255,8 +271,9 @@ exports.toggleLikeReply = async (req, res) => {
 };
 
 /**************************** SELLER ****************************/
-exports.getSellerInfo = async (req, res) => {
+const getSellerInfo = async (req, res) => {
     try {
+        const db = getDb();
         const sellerId = req.params.id;
         const sellerDoc = await db.collection("sellers").doc(sellerId).get();
 
@@ -270,3 +287,14 @@ exports.getSellerInfo = async (req, res) => {
         res.status(500).json({ message: "Error fetching seller info", error });
     }
 };
+
+module.exports = {
+    getProducts,
+    getProductById,
+    addReview,
+    deleteReview,
+    toggleLikeReview,
+    addReplyToReview,
+    toggleLikeReply,
+    getSellerInfo
+}

@@ -1,5 +1,6 @@
 const admin = require("firebase-admin");
-const db = admin.firestore();
+
+const getDb = () => admin.firestore();
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const paypal = require("@paypal/checkout-server-sdk");
@@ -52,8 +53,9 @@ const shouldAdminIntervene = async (subOrderData) => {
 };
 
 /* Profile Admin */
-exports.getAdminProfileById = async (req, res) => {
+const getAdminProfileById = async (req, res) => {
     try {
+        const db = getDb();
         const { id } = req.params;
         const userDoc = await db.collection("users").doc(id).get();
 
@@ -83,8 +85,9 @@ exports.getAdminProfileById = async (req, res) => {
     }
 };
 
-exports.updateAdminProfile = async (req, res) => {
+const updateAdminProfile = async (req, res) => {
     try {
+        const db = getDb();
         const { id } = req.params;
         const { displayName, birthDate, phone, address } = req.body;
 
@@ -112,8 +115,9 @@ exports.updateAdminProfile = async (req, res) => {
     }
 };
 
-exports.updateAdminPhoto = async (req, res) => {
+const updateAdminPhoto = async (req, res) => {
     try {
+        const db = getDb();
         const { id } = req.params;
         const { photoURL } = req.body;
         if (!photoURL) {
@@ -134,8 +138,9 @@ exports.updateAdminPhoto = async (req, res) => {
     }
 };
 
-exports.updateAdminPassword = async (req, res) => {
+const updateAdminPassword = async (req, res) => {
     try {
+        const db = getDb();
         const { id } = req.params;
         const { newPassword } = req.body;
 
@@ -158,8 +163,9 @@ exports.updateAdminPassword = async (req, res) => {
 };
 
 /* Pending Orders & Notifications */
-exports.getPendingOrders = async (req, res) => {
+const getPendingOrders = async (req, res) => {
     try {
+        const db = getDb();
         const pendingOrdersSnapshot = await db
             .collection("pendingOrders")
             .where("status", "==", "pending")
@@ -188,8 +194,9 @@ exports.getPendingOrders = async (req, res) => {
     }
 };
 
-exports.approvePendingOrder = async (req, res) => {
+const approvePendingOrder = async (req, res) => {
     try {
+        const db = getDb();
         const { id } = req.params;
         const orderDoc = await db.collection("pendingOrders").doc(id).get();
         if (!orderDoc.exists) {
@@ -236,8 +243,9 @@ exports.approvePendingOrder = async (req, res) => {
     }
 };
 
-exports.rejectPendingOrder = async (req, res) => {
+const rejectPendingOrder = async (req, res) => {
     try {
+        const db = getDb();
         const { id } = req.params;
         const orderDoc = await db.collection("pendingOrders").doc(id).get();
         if (!orderDoc.exists) {
@@ -252,8 +260,9 @@ exports.rejectPendingOrder = async (req, res) => {
 };
 
 /* Orders */
-exports.getAllOrders = async (req, res) => {
+const getAllOrders = async (req, res) => {
     try {
+        const db = getDb();
         const ordersSnapshot = await db.collection("totalOrders").get();
         const orders = ordersSnapshot.docs.map((doc) => ({
             id: doc.id,
@@ -268,8 +277,9 @@ exports.getAllOrders = async (req, res) => {
 };
 
 /* Sellers */
-exports.getAllSellers = async (req, res) => {
+const getAllSellers = async (req, res) => {
     try {
+        const db = getDb();
         const sellersSnapshot = await db.collection("sellers").get();
         const sellers = sellersSnapshot.docs.map((doc) => ({
             id: doc.id,
@@ -281,8 +291,9 @@ exports.getAllSellers = async (req, res) => {
     }
 };
 
-exports.deleteSeller = async (req, res) => {
+const deleteSeller = async (req, res) => {
     try {
+        const db = getDb();
         const { id } = req.params;
         await db.collection("sellers").doc(id).delete();
         res.status(200).json({ message: "Seller deleted successfully" });
@@ -292,8 +303,9 @@ exports.deleteSeller = async (req, res) => {
 };
 
 /* Users */
-exports.getAllUsers = async (req, res) => {
+const getAllUsers = async (req, res) => {
     try {
+        const db = getDb();
         const usersSnapshot = await db.collection("users").get();
         const users = usersSnapshot.docs.map((doc) => ({
             uid: doc.id,
@@ -305,8 +317,9 @@ exports.getAllUsers = async (req, res) => {
     }
 };
 
-exports.deleteUser = async (req, res) => {
+const deleteUser = async (req, res) => {
     try {
+        const db = getDb();
         const { id } = req.params;
         await db.collection("users").doc(id).delete();
         res.status(200).json({ message: "User deleted successfully" });
@@ -316,8 +329,9 @@ exports.deleteUser = async (req, res) => {
 };
 
 /* Dashboard */
-exports.getDashboardData = async (req, res) => {
+const getDashboardData = async (req, res) => {
     try {
+        const db = getDb();
         const productsSnapshot = await db.collection("products").get();
         const usersSnapshot = await db.collection("users").get();
         const ordersSnapshot = await db.collection("totalOrders").get();
@@ -339,8 +353,9 @@ exports.getDashboardData = async (req, res) => {
     }
 };
 
-exports.getRefundDisputes = async (req, res) => {
+const getRefundDisputes = async (req, res) => {
     try {
+        const db = getDb();
         const subOrdersSnap = await db.collection("subOrders")
             .where("refundStatus", "in", ["Requested", "Return Requested", "Rejected"])
             .get();
@@ -381,8 +396,9 @@ exports.getRefundDisputes = async (req, res) => {
     }
 };
 
-exports.resolveRefundDispute = async (req, res) => {
+const resolveRefundDispute = async (req, res) => {
     try {
+        const db = getDb();
         const { orderId, subOrderId } = req.params;
         const { action } = req.body;
 
@@ -481,3 +497,21 @@ exports.resolveRefundDispute = async (req, res) => {
         res.status(500).json({ message: "Error resolving refund dispute", error: error.message });
     }
 };
+
+module.exports = {
+    getAdminProfileById,
+    updateAdminProfile,
+    updateAdminPhoto,
+    updateAdminPassword,
+    getPendingOrders,
+    approvePendingOrder,
+    rejectPendingOrder,
+    getAllOrders,
+    getAllSellers,
+    deleteSeller,
+    getAllUsers,
+    deleteUser,
+    getDashboardData,
+    getRefundDisputes,
+    resolveRefundDispute
+}

@@ -1,5 +1,8 @@
 const admin = require("firebase-admin");
-const db = admin.firestore();
+
+const getDb = () => {
+    return admin.firestore();
+};
 
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const paypal = require("@paypal/checkout-server-sdk");
@@ -14,6 +17,7 @@ const paypalClient = new paypal.core.PayPalHttpClient(paypalEnv);
 // Hàm để lên lịch chuyển trạng thái
 const scheduleStatusUpdate = async (orderId, subOrderId, currentStatus, delay) => {
     setTimeout(async () => {
+        const db = getDb();
         const subOrderRef = db.collection("subOrders").doc(subOrderId);
         const subOrderSnap = await subOrderRef.get();
         if (!subOrderSnap.exists) return;
@@ -56,8 +60,9 @@ const scheduleStatusUpdate = async (orderId, subOrderId, currentStatus, delay) =
     }, delay);
 };
 
-exports.getOrders = async (req, res) => {
+const getOrders = async (req, res) => {
     try {
+        const db = getDb();
         const snapshot = await db.collection("totalOrders").get();
         const totalOrders = snapshot.docs.map((doc) => ({
             id: doc.id,
@@ -69,8 +74,9 @@ exports.getOrders = async (req, res) => {
     }
 };
 
-exports.createOrder = async (req, res) => {
+const createOrder = async (req, res) => {
     try {
+        const db = getDb();
         const {
             userId,
             billingInfo,
@@ -183,8 +189,9 @@ exports.createOrder = async (req, res) => {
     }
 };
 
-exports.getOrderById = async (req, res) => {
+const getOrderById = async (req, res) => {
     try {
+        const db = getDb();
         const { orderId } = req.params;
         const totalOrderRef = db.collection("totalOrders").doc(orderId);
         const totalOrderSnap = await totalOrderRef.get();
@@ -240,8 +247,9 @@ exports.getOrderById = async (req, res) => {
 };
 
 // orderController.js
-exports.updateOrder = async (req, res) => {
+const updateOrder = async (req, res) => {
     try {
+        const db = getDb();
         const { orderId } = req.params;
         const { subOrderId, isPaid, paidAt, paymentResult, status } = req.body;
 
@@ -332,8 +340,9 @@ exports.updateOrder = async (req, res) => {
 };
 
 // Stripe function Payment method
-exports.createStripePaymentIntent = async (req, res) => {
+const createStripePaymentIntent = async (req, res) => {
     try {
+        const db = getDb();
         const { orderId } = req.params;
         const { amount } = req.body;
 
@@ -368,8 +377,9 @@ exports.createStripePaymentIntent = async (req, res) => {
 };
 
 // Refund
-exports.requestRefund = async (req, res) => {
+const requestRefund = async (req, res) => {
     try {
+        const db = getDb();
         const { orderId, subOrderId } = req.params;
         const { reason, evidence } = req.body;
 
@@ -429,8 +439,9 @@ exports.requestRefund = async (req, res) => {
     }
 };
 
-exports.processRefund = async (req, res) => {
+const processRefund = async (req, res) => {
     try {
+        const db = getDb();
         const { orderId, subOrderId } = req.params;
         const { action, returnReceived } = req.body;
 
@@ -526,8 +537,9 @@ exports.processRefund = async (req, res) => {
     }
 };
 
-exports.customerConfirmReturn = async (req, res) => {
+const customerConfirmReturn = async (req, res) => {
     try {
+        const db = getDb();
         const { orderId, subOrderId } = req.params;
 
         const subOrderRef = db.collection("subOrders").doc(subOrderId);
@@ -563,8 +575,9 @@ exports.customerConfirmReturn = async (req, res) => {
     }
 };
 
-exports.cancelOrder = async (req, res) => {
+const cancelOrder = async (req, res) => {
     try {
+        const db = getDb();
         const { orderId, subOrderId } = req.params;
         const { reason } = req.body;
 
@@ -708,8 +721,9 @@ exports.cancelOrder = async (req, res) => {
     }
 };
 
-exports.processCancelRequest = async (req, res) => {
+const processCancelRequest = async (req, res) => {
     try {
+        const db = getDb();
         const { orderId, subOrderId } = req.params;
         const { action } = req.body;
 
@@ -838,8 +852,9 @@ exports.processCancelRequest = async (req, res) => {
     }
 };
 
-exports.requestAppeal = async (req, res) => {
+const requestAppeal = async (req, res) => {
     try {
+        const db = getDb();
         const { orderId, subOrderId } = req.params;
         const { reason } = req.body;
 
@@ -864,4 +879,19 @@ exports.requestAppeal = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: "Error submitting appeal", error: error.message });
     }
+};
+
+module.exports = {
+    getDb,
+    getOrders,
+    createOrder,
+    getOrderById,
+    updateOrder,
+    createStripePaymentIntent,
+    requestRefund,
+    processRefund,
+    cancelOrder,
+    processCancelRequest,
+    requestAppeal,
+    customerConfirmReturn,
 };

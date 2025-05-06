@@ -153,7 +153,9 @@ jobs:
           npm install -g firebase-tools
           cd backend
           firebase emulators:start --only firestore &
-          sleep 30
+          EMULATOR_PID=$!
+          echo "Waiting for emulator to start..."
+          sleep 45
 
       - name: Run Integration Tests
         run: |
@@ -170,6 +172,22 @@ jobs:
           PAYPAL_CLIENT_ID: ${{ secrets.PAYPAL_CLIENT_ID}}
           JWT_SECRET: ${{ secrets.JWT_SECRET}}
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY}}
+
+      - name: Stop Firebase Emulator
+        if: always()  
+        run: |
+          cd backend
+          if [ -n "$EMULATOR_PID" ]; then
+            kill -9 $EMULATOR_PID || true
+            wait $EMULATOR_PID 2>/dev/null || true
+          fi
+
+      - name: Archive backend test coverage
+        if: always() 
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-integration-coverage
+          path: backend/coverage
 
       - name: Install frontend dependencies
         run: |

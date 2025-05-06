@@ -77,11 +77,10 @@ describe('Product API Integration Tests', () => {
         }
         
         await batch.commit();
-        console.log('Test products cleaned up');
       }
       
       if (server) {
-        await new Promise(resolve => server.close(resolve));
+        await new Promise(resolve => server.close(resolve)); 
       }
       
       if (admin.apps.length) {

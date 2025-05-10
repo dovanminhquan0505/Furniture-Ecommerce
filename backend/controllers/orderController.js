@@ -74,6 +74,34 @@ const getOrders = async (req, res) => {
     }
 };
 
+const getSubOrders = async (req, res) => {
+    try {
+        const db = getDb();
+        const snapshot = await db.collection("subOrders").get();
+        const subOrders = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
+        res.status(200).json(subOrders);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching orders", error });
+    }
+};
+
+const getPendingOrders = async (req, res) => {
+    try {
+        const db = getDb();
+        const snapshot = await db.collection("pendingOrders").get();
+        const pendingOrders = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
+        res.status(200).json(pendingOrders);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching orders", error });
+    }
+};
+
 const createOrder = async (req, res) => {
     try {
         const db = getDb();
@@ -894,4 +922,6 @@ module.exports = {
     processCancelRequest,
     requestAppeal,
     customerConfirmReturn,
+    getSubOrders,
+    getPendingOrders
 };

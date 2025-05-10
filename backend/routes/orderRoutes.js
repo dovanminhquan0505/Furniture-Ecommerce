@@ -11,11 +11,15 @@ const {
     processCancelRequest,
     requestAppeal,
     customerConfirmReturn,
+    getSubOrders,
+    getPendingOrders
 } = require("../controllers/orderController");
 const { authenticateUser } = require("../controllers/authController");
 const router = express.Router();
 
 router.get("/", getOrders);
+router.get("/subOrders", getSubOrders);
+router.get("/pendingOrders", getPendingOrders);
 router.post("/", createOrder);
 router.get("/:orderId", getOrderById);
 router.put("/:orderId", updateOrder);

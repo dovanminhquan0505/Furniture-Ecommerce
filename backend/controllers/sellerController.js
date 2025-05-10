@@ -18,6 +18,20 @@ const getAllSellers = [
     },
 ];
 
+const getSellerNotification = async (req, res) => {
+    try {
+        const db = getDb();
+        const snapshot = await db.collection("sellerNotifications").get();
+        const sellerNotifications = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
+        res.status(200).json(sellerNotifications);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching orders", error });
+    }
+};
+
 const getSellerById = async (req, res) => {
     try {
         const db = getDb();
@@ -425,5 +439,6 @@ module.exports = {
     getDashboardStats,
     getSellerNotifications,
     markNotificationAsRead,
+    getSellerNotification,
     getAllSellers
 }

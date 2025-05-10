@@ -52,6 +52,20 @@ const shouldAdminIntervene = async (subOrderData) => {
     return false;
 };
 
+const getAdminNotifications = async (req, res) => {
+    try {
+        const db = getDb();
+        const snapshot = await db.collection("adminNotifications").get();
+        const adminNotifications = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
+        res.status(200).json(adminNotifications);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching orders", error });
+    }
+};
+
 /* Profile Admin */
 const getAdminProfileById = async (req, res) => {
     try {
@@ -513,5 +527,6 @@ module.exports = {
     deleteUser,
     getDashboardData,
     getRefundDisputes,
-    resolveRefundDispute
+    resolveRefundDispute,
+    getAdminNotifications
 }

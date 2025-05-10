@@ -15,6 +15,7 @@ const {
     getDashboardStats,
     getSellerNotifications,
     markNotificationAsRead,
+    getSellerNotification,
 } = require("../controllers/sellerController");
 const { requireSeller } = require("../controllers/authController");
 const router = express.Router();
@@ -22,6 +23,7 @@ const router = express.Router();
 // router.use(requireSeller);
 
 router.get("/", getAllSellers);
+router.get("/sellerNotifications", getSellerNotification);
 router.get("/me", getCurrentSeller);
 router.get("/:sellerId", getSellerById);
 router.get("/:sellerId/store", getSellerInfo);

@@ -111,14 +111,12 @@ describe('Product API Integration Tests', () => {
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.length).toBeGreaterThanOrEqual(2);
     
-    // Check if our test products are included in the response
     const productNames = res.body.map(item => item.productName);
     expect(productNames).toContain('Smart Tivi Xiaomi');
     expect(productNames).toContain('Arm chair');
   }, 10000);
 
   it('GET /api/products/:id should return a specific product', async () => {
-    // Assuming we have at least one product ID from our test products
     if (testProductIds.length > 0) {
       const res = await request(app)
         .get(`/api/products/${testProductIds[0]}`)

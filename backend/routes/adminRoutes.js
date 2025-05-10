@@ -15,12 +15,15 @@ const {
     getDashboardData,
     getRefundDisputes,
     resolveRefundDispute,
+    getAdminNotifications
 } = require("../controllers/adminController");
 const multer = require("multer");
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 const router = express.Router();
+
+router.get("/adminNotifications", getAdminNotifications);
 
 // Profile Admin
 router.get("/:id/profile", getAdminProfileById);

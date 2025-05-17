@@ -89,10 +89,6 @@ const loginUser = async (req, res) => {
             return res.status(400).json({ message: "CAPTCHA verification is required" });
         }
 
-        if (!captchaToken) {
-            return res.status(403).json({ message: "CAPTCHA token is required" });
-        }
-
         try {
             // Xác minh reCAPTCHA token với Google với timeout
             const recaptchaResponse = await axios.post(
@@ -103,13 +99,13 @@ const loginUser = async (req, res) => {
                         secret: process.env.RECAPTCHA_SECRET_KEY,
                         response: captchaToken,
                     },
-                    timeout: 8000, // 8s 
+                    timeout: 8000, // 8s
                 }
             );
 
             const { success } = recaptchaResponse.data;
             if (!success) {
-                console.error("reCAPTCHA verification failed. Error codes:", errorCodes);
+                console.error("reCAPTCHA verification failed:", recaptchaResponse.data["error-codes"]);
                 return res.status(403).json({ message: "CAPTCHA verification failed" });
             }
         } catch (recaptchaError) {
@@ -120,12 +116,19 @@ const loginUser = async (req, res) => {
             return res.status(500).json({ message: "Error verifying CAPTCHA" });
         }
 
+        // Validate FIREBASE_API_KEY
+        if (!process.env.FIREBASE_API_KEY) {
+            console.error("FIREBASE_API_KEY is not defined");
+            return res.status(500).json({ message: "Server configuration error: Missing Firebase API key" });
+        }
+        const apiKey = process.env.FIREBASE_API_KEY.replace(/^"|"$/g, ''); // Remove surrounding quotes if present
+
         // Gọi Firebase Identity Toolkit để xác thực
         try {
             const response = await axios.post(
-                `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${process.env.FIREBASE_API_KEY}`,
+                `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
                 { email, password, returnSecureToken: true },
-                { timeout: 8000 } //  8s
+                { timeout: 8000 } // 8s
             );
 
             const firebaseUser = response.data;
@@ -172,13 +175,15 @@ const loginUser = async (req, res) => {
             if (authError.code === 'ECONNABORTED' || authError.message.includes('timeout')) {
                 return res.status(408).json({ error: "Authentication request timed out. Please try again." });
             }
-            
+
             if (authError.response?.data?.error) {
                 const firebaseError = authError.response.data.error;
                 if (firebaseError.message.includes("EMAIL_NOT_FOUND")) {
                     return res.status(404).json({ error: "Account not found" });
                 } else if (firebaseError.message.includes("INVALID_PASSWORD")) {
                     return res.status(401).json({ error: "Wrong password" });
+                } else if (firebaseError.message.includes("INVALID_LOGIN_CREDENTIALS")) {
+                    return res.status(401).json({ error: "Invalid login credentials" });
                 }
             }
             return res.status(500).json({ error: "Authentication error: " + authError.message });

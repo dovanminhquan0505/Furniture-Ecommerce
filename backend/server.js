@@ -56,6 +56,13 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 
+// Ensure CORS headers are set for all responses
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+    next();
+});
+
 app.use(express.json());
 app.use(cookieParser());
 

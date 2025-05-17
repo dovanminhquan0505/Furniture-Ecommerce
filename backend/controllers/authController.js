@@ -54,7 +54,7 @@ const registerUser = async (req, res) => {
         res.cookie("session", sessionToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production", 
-            sameSite: "Strict",
+            sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
             maxAge: 3600000, // 1h
         });
 
@@ -155,7 +155,7 @@ const loginUser = async (req, res) => {
             res.cookie("session", sessionToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === "production",
-                sameSite: "Strict",
+                sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
                 maxAge: 3600000,
             });
 
@@ -204,7 +204,7 @@ const logoutUser = async (req, res) => {
         res.cookie("session", "", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "Strict",
+            sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
             maxAge: 0,
         });
 

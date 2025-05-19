@@ -16,7 +16,6 @@ try {
             projectId: "furniture-ecommerce-435809",
         });
     } else {
-        console.log("Initializing Firebase with FIREBASE_CREDENTIALS");
         if (!process.env.FIREBASE_CREDENTIALS) {
             throw new Error("FIREBASE_CREDENTIALS is not defined");
         }
@@ -31,7 +30,6 @@ try {
             credential: admin.credential.cert(credentials),
             storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
         });
-        console.log("Firebase initialized successfully");
     }
 } catch (error) {
     console.error("Firebase initialization error:", error.message);

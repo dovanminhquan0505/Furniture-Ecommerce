@@ -8,9 +8,10 @@ import useAdmin from "../custom-hooks/useAdmin";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase.config";
 import { toast } from "react-toastify";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { getPendingOrders, logoutUser } from "../api";
 import defaultAvatar from "../assets/images/user-icon.png";
+import { userActions } from "../redux/slices/userSlice";
 
 const admin_nav = [
     {
@@ -51,6 +52,7 @@ const AdminNav = () => {
     const [pendingRequests, setPendingRequests] = useState([]);
     const [showNotifications, setShowNotifications] = useState(false);
     const navigate = useNavigate();
+    const dispatch = useDispatch();
 
     useEffect(() => {
         if (isAdmin && currentUser) {
@@ -88,10 +90,8 @@ const AdminNav = () => {
             }
         };
 
-        // Add event listener
         document.addEventListener("mousedown", handleClickOutside);
 
-        // Cleanup event listener when component is unmounted
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
@@ -104,6 +104,7 @@ const AdminNav = () => {
     const handleLogOut = async () => {
         try {
             await logoutUser();
+            dispatch(userActions.clearUser());
             await signOut(auth);
             toast.success("Logged out successfully");
             navigate("/login");

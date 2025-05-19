@@ -42,7 +42,7 @@ const scheduleStatusUpdate = async (orderId, subOrderId, currentStatus, delay) =
             await subOrderRef.update(updateData);
 
             if (newStatus === "shipping") {
-                scheduleStatusUpdate(orderId, subOrderId, "shipping", 300000);
+                scheduleStatusUpdate(orderId, subOrderId, "shipping", 45000); //45s
             }
 
             const subOrdersSnap = await db.collection("subOrders")
@@ -339,9 +339,9 @@ const updateOrder = async (req, res) => {
             await subOrderRef.update(subUpdateData);
 
             if (status === "processing") {
-                scheduleStatusUpdate(orderId, subOrderId, "processing", 300000);
+                scheduleStatusUpdate(orderId, subOrderId, "processing", 45000); //45s
             } else if (status === "shipping") {
-                scheduleStatusUpdate(orderId, subOrderId, "shipping", 300000);
+                scheduleStatusUpdate(orderId, subOrderId, "shipping", 45000);
             }
 
             const subOrdersSnap = await db.collection("subOrders")

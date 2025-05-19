@@ -123,7 +123,7 @@ const Login = () => {
             } else if (reduxUser.sellerId) {
                 navigate("/seller/dashboard");
             } else {
-                navigate("/checkout");
+                navigate("/home");
             }
         }
     }, [reduxUser, navigate]);

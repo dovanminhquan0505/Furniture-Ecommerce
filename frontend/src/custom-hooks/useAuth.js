@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { userActions } from "../redux/slices/userSlice";
 import { toast } from "react-toastify";
 import { getUserById } from "../api";
@@ -9,7 +9,6 @@ const useAuth = () => {
     const [currentUser, setCurrentUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const dispatch = useDispatch();
-    const reduxUser = useSelector((state) => state.user.currentUser);
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -44,7 +43,7 @@ const useAuth = () => {
         return () => unsubscribe();
     }, [dispatch]);
 
-    return { currentUser: reduxUser || currentUser, loading };
+    return { currentUser, loading };
 };
 
 export default useAuth;

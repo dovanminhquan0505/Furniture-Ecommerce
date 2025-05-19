@@ -19,7 +19,11 @@ const ProtectedAdminRoute = () => {
         );
     }
 
-    if (!currentUser || currentUser.role !== "admin") {
+    if (!currentUser) {
+        return <Navigate to="/login" replace />;
+    }
+
+    if (currentUser.role !== "admin") {
         return <Navigate to="/home" replace />;
     }
 

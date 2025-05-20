@@ -226,42 +226,6 @@ const PlaceOrder = () => {
         fetchOrderDetails();
     }, [orderId, navigate]);
 
-    // Tính toán thời gian còn lại để hủy đơn hàng
-    // useEffect(() => {
-    //     if (orderDetails?.subOrders) {
-    //         const newTimers = {};
-    //         orderDetails.subOrders.forEach((subOrder) => {
-    //             let deadline;
-    //             if (subOrder.refundStatus === "Requested" && subOrder.refundRequest?.requestedAt) {
-    //                 deadline = new Date(subOrder.refundRequest.requestedAt).getTime() + 5 * 60 * 1000;
-    //             } else if (subOrder.refundStatus === "Return Requested" && subOrder.returnRequestedAt) {
-    //                 deadline = new Date(subOrder.returnRequestedAt).getTime() + 5 * 60 * 1000;
-    //             } else if (subOrder.refundStatus === "Return Confirmed" && subOrder.customerConfirmedAt) {
-    //                 deadline = new Date(subOrder.customerConfirmedAt).getTime() + 5 * 60 * 1000;
-    //             }
-    //             if (deadline) {
-    //                 newTimers[subOrder.id] = deadline;
-    //             }
-    //         });
-
-    //         const interval = setInterval(() => {
-    //             setTimers((prev) => {
-    //                 const updatedTimers = { ...prev };
-    //                 Object.keys(updatedTimers).forEach((subOrderId) => {
-    //                     const timeLeft = updatedTimers[subOrderId] - Date.now();
-    //                     if (timeLeft <= 0) {
-    //                         delete updatedTimers[subOrderId];
-    //                     }
-    //                 });
-    //                 return updatedTimers;
-    //             });
-    //         }, 1000);
-
-    //         setTimers(newTimers);
-    //         return () => clearInterval(interval);
-    //     }
-    // }, [orderDetails]);
-
     if (sellerLoading || isFetchingOrder) {
         return (
             <Container
@@ -465,8 +429,9 @@ const PlaceOrder = () => {
     // Handle Buy Again
     const handleBuyAgain = (item) => {
         dispatch(
-            cartActions.addItem({
+            cartActions.addItemToCart({
                 id: item.id,
+                category: item.category,
                 productName: item.productName,
                 price: item.price,
                 imgUrl: item.imgUrl,

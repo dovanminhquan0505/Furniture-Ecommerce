@@ -222,9 +222,6 @@ const registerSeller = async (req, res) => {
         const {
             fullName,
             phoneNumber,
-            email,
-            password,
-            confirmPassword,
             storeName,
             storeDescription,
             businessType,
@@ -234,31 +231,33 @@ const registerSeller = async (req, res) => {
             userId,
         } = req.body;
 
-        if (password !== confirmPassword) {
-            return res.status(400).json({ message: "Passwords do not match" });
+        if (!storeEmail || !userId || !fullName || !storeName || !phoneNumber || !address || !city || !businessType) {
+            return res.status(400).json({ message: "All required fields must be provided" });
         }
+
+        const normalizedEmail = storeEmail.toLowerCase();
 
         // Kiểm tra nếu email đã tồn tại trong pendingOrders
         const pendingSnapshot = await db.collection("pendingOrders")
-            .where("email", "==", email)
+            .where("storeEmail", "==", normalizedEmail)
             .get();
         if (!pendingSnapshot.empty) {
-            return res.status(400).json({ message: "Email already registered" });
+            return res.status(400).json({ message: "Email already registered in pending orders" });
         }
 
         const pendingOrderData = {
             fullName,
             phoneNumber,
-            email,
             storeName,
-            storeDescription,
+            storeDescription: storeDescription || "",
             businessType,
             address,
             city,
-            storeEmail,
-            userId, 
+            storeEmail: normalizedEmail,
+            email: normalizedEmail,
+            userId,
             status: "pending",
-            createdAt: new Date(),
+            createdAt: admin.firestore.Timestamp.now(),
         };
 
         await db.collection("pendingOrders").add(pendingOrderData);

@@ -23,6 +23,7 @@ const useAuth = () => {
                         photoURL: fullUserData.photoURL || user.photoURL,
                         role: fullUserData.role || "user",
                         sellerId: fullUserData.sellerId || null,
+                        status: fullUserData.status || "user",
                     };
 
                     dispatch(userActions.setUser(updatedUserData));

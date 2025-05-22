@@ -52,8 +52,18 @@ const DashboardSeller = () => {
               return;
             }
 
-            const userData = await getUserById(currentUser.uid);
-            setSellerId(userData.sellerId);
+            try {
+                const userData = await getUserById(currentUser.uid);
+                if (!userData.sellerId) {
+                    toast.error("Seller account not found");
+                    navigate("/home");
+                    return;
+                }
+                setSellerId(userData.sellerId);
+            } catch (error) {
+                toast.error("Error fetching user data: " + error.message);
+                navigate("/login");
+            }
           };
           fetchSellerId();
     }, [navigate]);
@@ -62,20 +72,20 @@ const DashboardSeller = () => {
         const fetchStats = async () => {
             if (!sellerId) return;
             try {
-              const data = await getDashboardStats(sellerId);
-              setStats({
-                dailyRevenue: data.dailyRevenue,
-                weeklyRevenue: data.weeklyRevenue,
-                monthlyRevenue: data.monthlyRevenue,
-                orderCount: data.orderCount,
-                profit: data.profit,
-              });
-              setRevenueData(data.revenueData);
-              setTopProducts(data.topProducts);
+                const data = await getDashboardStats(sellerId);
+                setStats({
+                    dailyRevenue: data.dailyRevenue || 0,
+                    weeklyRevenue: data.weeklyRevenue || 0,
+                    monthlyRevenue: data.monthlyRevenue || 0,
+                    orderCount: data.orderCount || 0,
+                    profit: data.profit || 0,
+                });
+                setRevenueData(data.revenueData || []);
+                setTopProducts(data.topProducts || []);
             } catch (error) {
-              toast.error("Error fetching stats: " + error.message);
+                console.error("Error fetching dashboard stats:", error);
             } finally {
-              setLoading(false);
+                setLoading(false);
             }
           };
           fetchStats();

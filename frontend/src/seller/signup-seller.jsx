@@ -24,16 +24,13 @@ const SignupSeller = () => {
     const [formData, setFormData] = useState({
         fullName: "",
         phoneNumber: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
+        storeEmail: "",
         storeName: "",
         storeDescription: "",
         businessType: "",
         address: "",
         city: "",
-        storeEmail: "",
-        userId: "", 
+        userId: "",
     });
 
     useEffect(() => {
@@ -42,10 +39,13 @@ const SignupSeller = () => {
             setFormData((prev) => ({
                 ...prev,
                 userId: user.uid, 
-                email: user.email || "", 
+                storeEmail: user.email || "", 
             }));
+        } else {
+            toast.error("Please log in to register as a seller.");
+            navigate("/login");
         }
-    }, []);
+    }, [navigate]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -55,17 +55,11 @@ const SignupSeller = () => {
         e.preventDefault();
         setLoading(true);
 
-        if (formData.password !== formData.confirmPassword) {
-            toast.error("Passwords do not match");
-            setLoading(false);
-            return;
-        }
-
         try {
             await registerSeller(formData);
             setLoading(false);
             toast.success("Seller registration submitted successfully! Awaiting admin approval.");
-            navigate("/login");
+            navigate("/home");
         } catch (error) {
             toast.error("Failed to submit registration:" + error.message);
             setLoading(false);
@@ -120,37 +114,23 @@ const SignupSeller = () => {
                                 </FormGroup>
 
                                 <FormGroup className="form__group">
-                                    <Label for="newEmail">Store Email</Label>
+                                    <Label for="storeEmail">Store Email</Label>
                                     <Input
                                         type="email"
                                         name="storeEmail"
                                         id="storeEmail"
                                         value={formData.storeEmail}
-                                        onChange={handleChange}
-                                        required
-                                    />
-                                </FormGroup>
-
-                                <FormGroup className="form__group">
-                                    <Label for="password">Password</Label>
-                                    <Input
-                                        type="password"
-                                        name="password"
-                                        id="password"
-                                        value={formData.password}
-                                        onChange={handleChange}
+                                        disabled
                                         required
                                     />
                                 </FormGroup>
                                 <FormGroup className="form__group">
-                                    <Label for="confirmPassword">
-                                        Confirm Password
-                                    </Label>
+                                    <Label for="city">City</Label>
                                     <Input
-                                        type="password"
-                                        name="confirmPassword"
-                                        id="confirmPassword"
-                                        value={formData.confirmPassword}
+                                        type="text"
+                                        name="city"
+                                        id="city"
+                                        value={formData.city}
                                         onChange={handleChange}
                                         required
                                     />
@@ -213,17 +193,6 @@ const SignupSeller = () => {
                                         name="address"
                                         id="address"
                                         value={formData.address}
-                                        onChange={handleChange}
-                                        required
-                                    />
-                                </FormGroup>
-                                <FormGroup className="form__group">
-                                    <Label for="city">City</Label>
-                                    <Input
-                                        type="text"
-                                        name="city"
-                                        id="city"
-                                        value={formData.city}
                                         onChange={handleChange}
                                         required
                                     />

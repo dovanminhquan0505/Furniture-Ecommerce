@@ -232,7 +232,6 @@ const approvePendingOrder = async (req, res) => {
             sellerId: sellerId,
             fullName: orderData.fullName,
             phoneNumber: orderData.phoneNumber,
-            email: orderData.email,
             storeName: orderData.storeName,
             storeDescription: orderData.storeDescription,
             businessType: orderData.businessType,
@@ -246,6 +245,7 @@ const approvePendingOrder = async (req, res) => {
         });
 
         await db.collection("users").doc(userId).update({
+            role: "seller",
             status: "seller",
             sellerId: sellerId,
         });

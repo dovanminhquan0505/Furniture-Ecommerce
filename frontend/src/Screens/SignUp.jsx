@@ -64,7 +64,7 @@ const Signup = () => {
             dispatch(userActions.setUser(registerResponse.user));
             setLoading(false);
             toast.success("Account created successfully!");
-            navigate("/checkout");
+            navigate("/home");
         } catch (error) {
             setLoading(false);
             toast.error(error.message || "Something went wrong!");

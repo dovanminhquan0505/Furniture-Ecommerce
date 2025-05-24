@@ -2,43 +2,101 @@ import React, { useState } from "react";
 import { Form, FormGroup, Label, Input, Button } from "reactstrap";
 import "./refundForm.css";
 import ConfirmModal from "../UI/ConfirmModal";
+import { toast } from "react-toastify";
 
-const CancelOrderForm = ({ orderId, subOrder, onCancelOrder, onCancel, loading }) => {
+const CancelOrderForm = ({
+    orderId,
+    subOrder,
+    item,
+    selectedQuantity,
+    setSelectedQuantity,
+    onCancelOrder,
+    onCancel,
+    loading,
+}) => {
     const [reason, setReason] = useState("");
+    const [customReason, setCustomReason] = useState("");
     const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (!item) {
+            toast.warning("No item selected for cancellation!");
+            return;
+        }
         setShowConfirmModal(true);
     };
 
     const handleConfirm = () => {
         setShowConfirmModal(false);
-        onCancelOrder({ reason });
+        const finalReason = reason === "Other" ? customReason : reason;
+        if (!finalReason) {
+            toast.error("Please select or enter a reason for cancellation");
+            return;
+        }
+        onCancelOrder({
+            reason: finalReason,
+            itemId: item.id,
+            quantity: parseInt(selectedQuantity),
+            subOrderId: subOrder.id,
+        });
     };
 
     return (
         <>
             <div className="order-details mb-4">
                 <h6 className="fw-bold">Order Detail</h6>
-                <p><strong>Order ID:</strong> {subOrder.id}</p>
-                <p><strong>Seller:</strong> {subOrder.sellerName || "Unknown Store"}</p>
-                <div className="suborder-items">
-                    {subOrder.items.map((item, index) => (
-                        <div key={index} className="suborder-item">
-                            <img src={item.imgUrl} alt={item.productName} className="suborder-item-img" />
+                <p>
+                    <strong>Order ID:</strong> {subOrder.id}
+                </p>
+                <p>
+                    <strong>Seller:</strong>{" "}
+                    {subOrder.sellerName || "Unknown Store"}
+                </p>
+                {item && (
+                    <div className="suborder-items">
+                        <div className="suborder-item">
+                            <img
+                                src={item.imgUrl}
+                                alt={item.productName}
+                                className="suborder-item-img"
+                            />
                             <div className="suborder-item-info">
-                                <p><strong>Product:</strong> {item.productName}</p>
-                                <p><strong>Quantity:</strong> {item.quantity}</p>
-                                <p><strong>Price:</strong> ${item.price}</p>
+                                <p>
+                                    <strong>Product:</strong> {item.productName}
+                                </p>
+                                <p>
+                                    <strong>Quantity:</strong> {item.quantity}
+                                </p>
+                                <p>
+                                    <strong>Price:</strong> ${item.price * item.quantity}
+                                </p>
                             </div>
                         </div>
-                    ))}
-                </div>
+                    </div>
+                )}
             </div>
 
             <Form onSubmit={handleSubmit} className="refund-form">
-                <h6 className="fw-bold">Cancel Order</h6>
+                <h6 className="fw-bold">Cancel Item</h6>
+                {item && (
+                    <FormGroup>
+                        <Label for="quantity">
+                            Quantity to Cancel (Max: {item.quantity}):
+                        </Label>
+                        <Input
+                            type="number"
+                            id="quantity"
+                            min="1"
+                            max={item.quantity}
+                            value={selectedQuantity}
+                            onChange={(e) =>
+                                setSelectedQuantity(e.target.value)
+                            }
+                            required
+                        />
+                    </FormGroup>
+                )}
                 <FormGroup>
                     <Label for="reason">Reason for Cancellation:</Label>
                     <Input
@@ -50,9 +108,13 @@ const CancelOrderForm = ({ orderId, subOrder, onCancelOrder, onCancel, loading }
                     >
                         <option value="">Select a reason</option>
                         <option value="Changed my mind">Changed my mind</option>
-                        <option value="Incorrect product information">Incorrect product information</option>
-                        <option value="Change shipping address">Change shipping address</option>
-                        <option value="Other">Other...</option>
+                        <option value="Incorrect product information">
+                            Incorrect product information
+                        </option>
+                        <option value="Change shipping address">
+                            Change shipping address
+                        </option>
+                        <option value="Other">Other</option>
                     </Input>
                 </FormGroup>
                 {reason === "Other" && (
@@ -61,8 +123,8 @@ const CancelOrderForm = ({ orderId, subOrder, onCancelOrder, onCancel, loading }
                         <Input
                             type="textarea"
                             id="customReason"
-                            value={reason === "Other" ? reason : ""}
-                            onChange={(e) => setReason(e.target.value)}
+                            value={customReason}
+                            onChange={(e) => setCustomReason(e.target.value)}
                             required
                         />
                     </FormGroup>
@@ -79,10 +141,10 @@ const CancelOrderForm = ({ orderId, subOrder, onCancelOrder, onCancel, loading }
                     <Button
                         color="primary"
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || !item}
                         className="form-btn"
                     >
-                        {loading ? "Processing..." : "Submit Request"}
+                        {loading ? "Processing..." : "Submit Cancellation"}
                     </Button>
                 </div>
             </Form>
@@ -91,7 +153,7 @@ const CancelOrderForm = ({ orderId, subOrder, onCancelOrder, onCancel, loading }
                 isOpen={showConfirmModal}
                 onClose={() => setShowConfirmModal(false)}
                 onConfirm={handleConfirm}
-                message="Are you sure you want to cancel this order?"
+                message={`Are you sure you want to cancel ${selectedQuantity} of ${item?.productName}?`}
             />
         </>
     );

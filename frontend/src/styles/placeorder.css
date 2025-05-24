@@ -91,6 +91,10 @@ h6.fw-bold {
     color: #007bff;
 }
 
+.canceled__item .cart__item-info p {
+    font-style: italic;
+}
+
 /* SubOrder Actions (Refund and Buy Again buttons) */
 .seller__store {
     display: flex;

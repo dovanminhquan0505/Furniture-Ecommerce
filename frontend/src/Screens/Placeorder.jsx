@@ -130,8 +130,51 @@ const PlaceOrder = () => {
     const [sellerNames, setSellerNames] = useState({});
     const [showRefundModal, setShowRefundModal] = useState(false);
     const [selectedSubOrderId, setSelectedSubOrderId] = useState(null);
+    const [selectedItemId, setSelectedItemId] = useState(null);
+    const [selectedQuantity, setSelectedQuantity] = useState(1);
     const [showAppealModal, setShowAppealModal] = useState(false);
     const [appealReason, setAppealReason] = useState("");
+
+    // Handle display Date
+    const formatDate = (date) => {
+        if (!date) return "N/A"; 
+        let parsedDate;
+        if (typeof date === "string") {
+            const isoMatch = date.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+            if (isoMatch) {
+                parsedDate = new Date(date);
+                const offsetMinutes = 7 * 60; 
+                parsedDate.setMinutes(
+                    parsedDate.getMinutes() +
+                        parsedDate.getTimezoneOffset() +
+                        offsetMinutes
+                );
+            } else if (date.includes(" at ")) {
+                parsedDate = new Date(
+                    date.replace(" at ", " ").replace(" UTC+7", "+0700")
+                );
+            } else {
+                return "N/A"; 
+            }
+        } else if (date instanceof Date) {
+            parsedDate = date;
+        } else if (date && typeof date.toDate === "function") {
+            parsedDate = date.toDate();
+        } else {
+            return "N/A";
+        }
+
+        if (!parsedDate || isNaN(parsedDate.getTime())) return "N/A";
+
+        return parsedDate.toLocaleString("en-US", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+        });
+    };
 
     useEffect(() => {
         if (!orderId) {
@@ -144,59 +187,13 @@ const PlaceOrder = () => {
                 setIsFetchingOrder(true);
                 const response = await getOrderById(orderId);
 
-                let paidAt = response.totalOrder.paidAt;
-                if (typeof paidAt === "string") {
-                    const isoMatch = paidAt.match(
-                        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
-                    );
-                    if (isoMatch) {
-                        paidAt = new Date(paidAt);
-                        const offsetMinutes = 7 * 60; // UTC+7
-                        paidAt.setMinutes(
-                            paidAt.getMinutes() +
-                                paidAt.getTimezoneOffset() +
-                                offsetMinutes
-                        );
-                    } else if (paidAt.includes(" at ")) {
-                        paidAt = new Date(
-                            paidAt
-                                .replace(" at ", " ")
-                                .replace(" UTC+7", "+0700")
-                        );
-                    }
-                } else if (paidAt && paidAt.toDate) {
-                    paidAt = paidAt.toDate();
-                }
-
-                let deliveredAt = response.totalOrder.deliveredAt;
-                if (typeof deliveredAt === "string") {
-                    const isoMatch = deliveredAt.match(
-                        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
-                    );
-                    if (isoMatch) {
-                        deliveredAt = new Date(deliveredAt);
-                        const offsetMinutes = 7 * 60; // UTC+7
-                        deliveredAt.setMinutes(
-                            deliveredAt.getMinutes() +
-                                deliveredAt.getTimezoneOffset() +
-                                offsetMinutes
-                        );
-                    } else if (deliveredAt.includes(" at ")) {
-                        deliveredAt = new Date(
-                            deliveredAt
-                                .replace(" at ", " ")
-                                .replace(" UTC+7", "+0700")
-                        );
-                    }
-                } else if (deliveredAt && deliveredAt.toDate) {
-                    deliveredAt = deliveredAt.toDate();
-                }
-
                 setOrderDetails({
                     totalOrder: {
                         ...response.totalOrder,
-                        paidAt,
-                        deliveredAt,
+                        paidAt: formatDate(response.totalOrder.paidAt),
+                        deliveredAt: formatDate(
+                            response.totalOrder.deliveredAt
+                        ),
                         refundStatus:
                             response.totalOrder.refundStatus || "None",
                     },
@@ -204,6 +201,10 @@ const PlaceOrder = () => {
                         ...sub,
                         refundStatus: sub.refundStatus || "None",
                         cancelStatus: sub.cancelStatus || "None",
+                        items: sub.items.map((item) => ({
+                            ...item,
+                            canceled: item.canceled || item.quantity === 0,
+                        })),
                     })),
                 });
 
@@ -328,45 +329,110 @@ const PlaceOrder = () => {
         }
     };
 
-    const handleCancelOrder = async ({ reason }, subOrderId) => {
+    const handleCancelOrder = async ({
+        reason,
+        itemId,
+        quantity,
+        subOrderId,
+    }) => {
         try {
-            setLoading(true);
-            const response = await cancelOrder(orderId, subOrderId, { reason });
-
-            if (response.message === "Sub-order cancelled successfully") {
-                setOrderDetails((prev) => {
-                    const updatedSubOrders = prev.subOrders.filter(
-                        (sub) => sub.id !== subOrderId
-                    );
-                    const updatedTotalOrder = {
-                        ...prev.totalOrder,
-                        ...response.updatedTotalOrder,
-                    };
-                    return {
-                        ...prev,
-                        totalOrder: updatedTotalOrder,
-                        subOrders: updatedSubOrders,
-                    };
-                });
-                toast.success("Sub-order cancelled successfully!");
-            } else if (
-                response.message ===
-                "Cancellation request submitted, awaiting seller approval"
-            ) {
-                setOrderDetails((prev) => ({
-                    ...prev,
-                    subOrders: prev.subOrders.map((sub) =>
-                        sub.id === subOrderId
-                            ? { ...sub, cancelStatus: "Requested" }
-                            : sub
-                    ),
-                }));
-                toast.success(
-                    "Cancellation request submitted, awaiting seller approval!"
-                );
+            if (!subOrderId) {
+                toast.error("Invalid sub-order ID");
+                return;
             }
+            setLoading(true);
+            const response = await cancelOrder(orderId, subOrderId, {
+                reason,
+                itemId,
+                quantity,
+            });
+
+            setOrderDetails((prev) => {
+                const updatedSubOrders = prev.subOrders.map((sub) => {
+                    if (sub.id === subOrderId) {
+                        if (
+                            response.message ===
+                            "Order cancelled and refunded successfully"
+                        ) {
+                            const updatedItems = sub.items.map((item) => {
+                                if (item.id === itemId) {
+                                    const newQuantity =
+                                        item.quantity - quantity;
+                                    return {
+                                        ...item,
+                                        quantity: newQuantity,
+                                        canceled: newQuantity === 0,
+                                    };
+                                }
+                                return item;
+                            });
+                            const updatedTotalQuantity = updatedItems.reduce(
+                                (sum, item) => sum + item.quantity,
+                                0
+                            );
+                            const updatedTotalAmount = updatedItems.reduce(
+                                (sum, item) => sum + item.price * item.quantity,
+                                0
+                            );
+                            const updatedSubOrder = {
+                                ...sub,
+                                items: updatedItems,
+                                totalQuantity: updatedTotalQuantity,
+                                totalAmount: updatedTotalAmount,
+                                cancelStatus: "Approved",
+                            };
+                            if (updatedTotalQuantity === 0) {
+                                updatedSubOrder.status = "cancelled";
+                            }
+                            return updatedSubOrder;
+                        } else if (
+                            response.message ===
+                            "Cancellation request submitted, awaiting seller approval"
+                        ) {
+                            return {
+                                ...sub,
+                                cancelStatus: "Requested",
+                                cancelReason: reason,
+                                cancelItemId: itemId,
+                                cancelQuantity: quantity,
+                            };
+                        }
+                    }
+                    return sub;
+                });
+
+                const allSubOrdersCancelled = updatedSubOrders.every(
+                    (sub) => sub.status === "cancelled"
+                );
+                const updatedTotalOrder = {
+                    ...prev.totalOrder,
+                    status: allSubOrdersCancelled
+                        ? "cancelled"
+                        : prev.totalOrder.status,
+                };
+
+                if (response.updatedTotalOrder) {
+                    updatedTotalOrder.totalQuantity =
+                        response.updatedTotalOrder.totalQuantity;
+                    updatedTotalOrder.totalAmount =
+                        response.updatedTotalOrder.totalAmount;
+                    updatedTotalOrder.totalPrice =
+                        response.updatedTotalOrder.totalPrice;
+                    updatedTotalOrder.status =
+                        response.updatedTotalOrder.status;
+                }
+
+                return {
+                    ...prev,
+                    totalOrder: updatedTotalOrder,
+                    subOrders: updatedSubOrders,
+                };
+            });
+
+            toast.success(response.message);
             setShowRefundModal(false);
             setSelectedSubOrderId(null);
+            setSelectedQuantity(1);
         } catch (error) {
             toast.error(error.message || "Error cancelling order");
         } finally {
@@ -374,7 +440,10 @@ const PlaceOrder = () => {
         }
     };
 
-    const handleRequestRefund = async ({ reason, files }, subOrderId) => {
+    const handleRequestRefund = async (
+        { reason, files, itemId, quantity },
+        subOrderId
+    ) => {
         try {
             setLoading(true);
             let evidence = [];
@@ -383,7 +452,12 @@ const PlaceOrder = () => {
                 const uploadResults = await Promise.all(uploadPromises);
                 evidence = uploadResults.map((result) => result.fileURL);
             }
-            await requestRefund(orderId, subOrderId, { reason, evidence });
+            await requestRefund(orderId, subOrderId, {
+                reason,
+                evidence,
+                itemId,
+                quantity,
+            });
             setOrderDetails((prev) => ({
                 ...prev,
                 subOrders: prev.subOrders.map((sub) =>
@@ -394,6 +468,7 @@ const PlaceOrder = () => {
             }));
             setShowRefundModal(false);
             setSelectedSubOrderId(null);
+            setSelectedQuantity(1);
             toast.success("Return & Refund request submitted successfully!");
         } catch (error) {
             toast.error("Error requesting refund: " + error.message);
@@ -421,6 +496,54 @@ const PlaceOrder = () => {
             toast.success(`Refund ${action}ed successfully!`);
         } catch (error) {
             toast.error("Error processing refund: " + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleConfirmReturn = async (subOrderId, itemId, quantity) => {
+        try {
+            setLoading(true);
+            await customerConfirmReturn(orderId, subOrderId, {
+                itemId,
+                quantity,
+            });
+            setOrderDetails((prev) => ({
+                ...prev,
+                subOrders: prev.subOrders.map((sub) =>
+                    sub.id === subOrderId
+                        ? { ...sub, refundStatus: "Return Confirmed" }
+                        : sub
+                ),
+            }));
+            toast.success("Return confirmed successfully!");
+        } catch (error) {
+            toast.error("Error confirming return: " + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSellerConfirmReceipt = async (subOrderId, itemId, quantity) => {
+        try {
+            setLoading(true);
+            await processRefund(orderId, subOrderId, {
+                action: "approve",
+                returnReceived: true,
+                itemId,
+                quantity,
+            });
+            setOrderDetails((prev) => ({
+                ...prev,
+                subOrders: prev.subOrders.map((sub) =>
+                    sub.id === subOrderId
+                        ? { ...sub, refundStatus: "Refunded" }
+                        : sub
+                ),
+            }));
+            toast.success("Return receipt confirmed, refund processed!");
+        } catch (error) {
+            toast.error("Error confirming receipt: " + error.message);
         } finally {
             setLoading(false);
         }
@@ -480,81 +603,6 @@ const PlaceOrder = () => {
         return subOrders.map((subOrder) => {
             const subOrderId = subOrder.id;
 
-            const shouldShowCancelBtn =
-                !isSeller &&
-                totalOrder.isPaid &&
-                (subOrder.status === "pending" ||
-                    subOrder.status === "processing") &&
-                subOrder.cancelStatus !== "Requested" &&
-                subOrder.cancelStatus !== "Rejected" &&
-                subOrder.cancelStatus !== "Approved";
-
-            const shouldShowRefundBtn =
-                !isSeller &&
-                totalOrder.isPaid &&
-                subOrder.status === "success" &&
-                subOrder.refundStatus !== "Requested" &&
-                subOrder.refundStatus !== "Rejected" &&
-                subOrder.refundStatus !== "Refunded" &&
-                subOrder.refundStatus !== "Return Requested" &&
-                subOrder.refundStatus !== "Return Confirmed";
-
-            const shouldShowConfirmReturnBtn =
-                !isSeller && subOrder.refundStatus === "Return Requested";
-
-            const shouldShowSellerConfirmBtn =
-                isSeller && subOrder.refundStatus === "Return Confirmed";
-
-            const shouldShowAppealBtn =
-                !isSeller &&
-                subOrder.refundStatus === "Rejected" &&
-                !subOrder.appealRequested;
-
-            const handleConfirmReturn = async (subOrderId) => {
-                try {
-                    setLoading(true);
-                    await customerConfirmReturn(orderId, subOrderId);
-                    setOrderDetails((prev) => ({
-                        ...prev,
-                        subOrders: prev.subOrders.map((sub) =>
-                            sub.id === subOrderId
-                                ? { ...sub, refundStatus: "Return Confirmed" }
-                                : sub
-                        ),
-                    }));
-                    toast.success("Return confirmed successfully!");
-                } catch (error) {
-                    toast.error("Error confirming return: " + error.message);
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            const handleSellerConfirmReceipt = async () => {
-                try {
-                    setLoading(true);
-                    await processRefund(orderId, subOrder.id, {
-                        action: "approve",
-                        returnReceived: true,
-                    });
-                    setOrderDetails((prev) => ({
-                        ...prev,
-                        subOrders: prev.subOrders.map((sub) =>
-                            sub.id === subOrder.id
-                                ? { ...sub, refundStatus: "Refunded" }
-                                : sub
-                        ),
-                    }));
-                    toast.success(
-                        "Return receipt confirmed, refund processed!"
-                    );
-                } catch (error) {
-                    toast.error("Error confirming receipt: " + error.message);
-                } finally {
-                    setLoading(false);
-                }
-            };
-
             return (
                 <div key={subOrder.id} className="border rounded p-3 mb-3">
                     <h6 className="seller__store">
@@ -563,32 +611,191 @@ const PlaceOrder = () => {
                             {sellerNames[subOrder.sellerId] || "Đang tải..."}
                         </div>
                     </h6>
-                    {subOrder.items.map((item, index) => (
-                        <div key={index} className="cart__item">
-                            <img
-                                src={item.imgUrl}
-                                alt={item.productName}
-                                className="cart__item-img"
-                            />
-                            <div className="cart__item-info">
-                                <h6>{item.productName}</h6>
-                                <p>
-                                    Qty: {item.quantity} | Status:{" "}
-                                    {subOrder.status || "Pending"}
-                                </p>
+                    {subOrder.items.map((item, index) => {
+                        const isCanceled = item.canceled || item.quantity === 0;
+                        const shouldShowCancelBtn =
+                            !isSeller &&
+                            totalOrder.isPaid &&
+                            (subOrder.status === "pending" ||
+                                subOrder.status === "processing") &&
+                            item.quantity > 0 &&
+                            !isCanceled &&
+                            !(
+                                subOrder.cancelStatus === "Requested" &&
+                                subOrder.cancelItemId === item.id
+                            ) &&
+                            !(
+                                subOrder.cancelStatus === "Rejected" &&
+                                subOrder.cancelItemId === item.id
+                            );
+
+                        const shouldShowRefundBtn =
+                            !isSeller &&
+                            totalOrder.isPaid &&
+                            subOrder.status === "success" &&
+                            item.quantity > 0 &&
+                            !isCanceled &&
+                            subOrder.refundStatus !== "Requested" &&
+                            subOrder.refundStatus !== "Rejected" &&
+                            subOrder.refundStatus !== "Refunded" &&
+                            subOrder.refundStatus !== "Return Requested" &&
+                            subOrder.refundStatus !== "Return Confirmed";
+
+                        const shouldShowConfirmReturnBtn =
+                            !isSeller &&
+                            subOrder.refundStatus === "Return Requested" &&
+                            item.quantity > 0 &&
+                            !isCanceled;
+
+                        const shouldShowSellerConfirmBtn =
+                            isSeller &&
+                            subOrder.refundStatus === "Return Confirmed" &&
+                            item.quantity > 0 &&
+                            !isCanceled;
+
+                        const shouldShowAppealBtn =
+                            !isSeller &&
+                            subOrder.refundStatus === "Rejected" &&
+                            !subOrder.appealRequested &&
+                            item.quantity > 0 &&
+                            !isCanceled;
+
+                        return (
+                            <div
+                                key={index}
+                                className={`cart__item ${
+                                    isCanceled ? "canceled__item" : ""
+                                }`}
+                            >
+                                <img
+                                    src={item.imgUrl}
+                                    alt={item.productName}
+                                    className="cart__item-img"
+                                />
+                                <div className="cart__item-info">
+                                    <h6>{item.productName}</h6>
+                                    <p>
+                                        Qty: {item.quantity} | Status:{" "}
+                                        {isCanceled
+                                            ? "Canceled"
+                                            : subOrder.status || "Pending"}
+                                    </p>
+                                    {subOrder.cancelStatus === "Requested" &&
+                                        subOrder.cancelItemId === item.id && (
+                                            <p className="text-warning">
+                                                Cancellation request pending for
+                                                this item
+                                            </p>
+                                        )}
+                                    {subOrder.cancelStatus === "Rejected" &&
+                                        subOrder.cancelItemId === item.id && (
+                                            <p className="text-danger">
+                                                Cancellation request rejected
+                                                for this item
+                                            </p>
+                                        )}
+                                    {isCanceled && (
+                                        <p className="text-success">
+                                            This item has been canceled
+                                            successfully
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="cart__item-price">
+                                    <span className="price__cartItem">
+                                        ${item.price * (item.quantity || 1)}
+                                    </span>
+                                </div>
+                                {(shouldShowCancelBtn ||
+                                    shouldShowRefundBtn ||
+                                    shouldShowConfirmReturnBtn ||
+                                    shouldShowSellerConfirmBtn ||
+                                    shouldShowAppealBtn) && (
+                                    <div className="suborder__actions">
+                                        {(shouldShowCancelBtn ||
+                                            shouldShowRefundBtn) && (
+                                            <motion.button
+                                                whileTap={{ scale: 1.1 }}
+                                                className="refund__btn"
+                                                onClick={() => {
+                                                    setSelectedSubOrderId(
+                                                        subOrderId
+                                                    );
+                                                    setSelectedItemId(item.id);
+                                                    setSelectedQuantity(
+                                                        item.quantity
+                                                    );
+                                                    setShowRefundModal(true);
+                                                }}
+                                            >
+                                                {shouldShowRefundBtn
+                                                    ? "Return/Refund"
+                                                    : "Cancel Order"}
+                                            </motion.button>
+                                        )}
+                                        {shouldShowConfirmReturnBtn && (
+                                            <motion.button
+                                                whileTap={{ scale: 1.1 }}
+                                                className="refund__btn"
+                                                onClick={() =>
+                                                    handleConfirmReturn(
+                                                        subOrder.id,
+                                                        item.id,
+                                                        subOrder.refundQuantity
+                                                    )
+                                                }
+                                            >
+                                                Confirm Return
+                                            </motion.button>
+                                        )}
+                                        {shouldShowSellerConfirmBtn && (
+                                            <motion.button
+                                                whileTap={{ scale: 1.1 }}
+                                                className="refund__btn"
+                                                onClick={() =>
+                                                    handleSellerConfirmReceipt(
+                                                        subOrder.id,
+                                                        item.id,
+                                                        subOrder.refundQuantity
+                                                    )
+                                                }
+                                            >
+                                                Confirm Receipt
+                                            </motion.button>
+                                        )}
+                                        {shouldShowAppealBtn && (
+                                            <motion.button
+                                                whileTap={{ scale: 1.1 }}
+                                                className="appeal__btn"
+                                                onClick={() =>
+                                                    handleAppealRefund(
+                                                        subOrderId
+                                                    )
+                                                }
+                                            >
+                                                Appeal to Admin
+                                            </motion.button>
+                                        )}
+                                        <motion.button
+                                            whileTap={{ scale: 1.1 }}
+                                            className="buy-again__btn"
+                                            onClick={() => handleBuyAgain(item)}
+                                        >
+                                            Buy Again
+                                        </motion.button>
+                                    </div>
+                                )}
                             </div>
-                            <div className="cart__item-price">
-                                <span className="price__cartItem">
-                                    ${item.price * item.quantity}
-                                </span>
-                            </div>
-                        </div>
-                    ))}
-                    {subOrder.cancelStatus === "Requested" && (
-                        <p className="text-warning">
-                            Cancellation request pending approval
-                        </p>
-                    )}
+                        );
+                    })}
+
+                    {/* Hiển thị thông tin tổng quan của subOrder */}
+                    {subOrder.cancelStatus === "Requested" &&
+                        !subOrder.cancelItemId && (
+                            <p className="text-warning">
+                                Cancellation request pending approval
+                            </p>
+                        )}
                     {subOrder.refundStatus === "Requested" && (
                         <p className="text-warning">
                             Refund request pending approval
@@ -612,109 +819,8 @@ const PlaceOrder = () => {
                             Appeal submitted, awaiting admin review
                         </p>
                     )}
-                    {(shouldShowCancelBtn ||
-                        shouldShowRefundBtn ||
-                        shouldShowConfirmReturnBtn ||
-                        shouldShowSellerConfirmBtn ||
-                        shouldShowAppealBtn) && (
-                        <div className="suborder__actions">
-                            {(shouldShowCancelBtn || shouldShowRefundBtn) && (
-                                <motion.button
-                                    whileTap={{ scale: 1.1 }}
-                                    className="refund__btn"
-                                    onClick={() => {
-                                        setSelectedSubOrderId(subOrderId);
-                                        setShowRefundModal(true);
-                                    }}
-                                >
-                                    {shouldShowRefundBtn
-                                        ? "Return/Refund"
-                                        : "Cancel Order"}
-                                </motion.button>
-                            )}
-                            {shouldShowConfirmReturnBtn && (
-                                <motion.button
-                                    whileTap={{ scale: 1.1 }}
-                                    className="refund__btn"
-                                    onClick={() =>
-                                        handleConfirmReturn(subOrder.id)
-                                    } 
-                                >
-                                    Confirm Return
-                                </motion.button>
-                            )}
-                            {shouldShowSellerConfirmBtn && (
-                                <motion.button
-                                    whileTap={{ scale: 1.1 }}
-                                    className="refund__btn"
-                                    onClick={handleSellerConfirmReceipt}
-                                >
-                                    Confirm Receipt
-                                </motion.button>
-                            )}
-                            {shouldShowAppealBtn && (
-                                <motion.button
-                                    whileTap={{ scale: 1.1 }}
-                                    className="appeal__btn"
-                                    onClick={() =>
-                                        handleAppealRefund(subOrderId)
-                                    }
-                                >
-                                    Appeal to Admin
-                                </motion.button>
-                            )}
-                            <motion.button
-                                whileTap={{ scale: 1.1 }}
-                                className="buy-again__btn"
-                                onClick={() =>
-                                    handleBuyAgain(subOrder.items[0])
-                                }
-                            >
-                                Buy Again
-                            </motion.button>
-                        </div>
-                    )}
                 </div>
             );
-        });
-    };
-
-    // Handle display Date
-    const formatDate = (date) => {
-        if (!date) return "N/A";
-
-        let parsedDate;
-        if (typeof date === "string") {
-            const isoMatch = date.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
-            if (isoMatch) {
-                parsedDate = new Date(date);
-                const offsetMinutes = 7 * 60; // UTC+7
-                parsedDate.setMinutes(
-                    parsedDate.getMinutes() +
-                        parsedDate.getTimezoneOffset() +
-                        offsetMinutes
-                );
-            } else if (date.includes(" at ")) {
-                parsedDate = new Date(
-                    date.replace(" at ", " ").replace(" UTC+7", "+0700")
-                );
-            }
-        } else if (date instanceof Date) {
-            parsedDate = date;
-        } else if (date.toDate) {
-            parsedDate = date.toDate();
-        } else {
-            return "N/A";
-        }
-
-        if (isNaN(parsedDate.getTime())) return "N/A";
-        return parsedDate.toLocaleString("en-US", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
         });
     };
 
@@ -830,6 +936,8 @@ const PlaceOrder = () => {
                                 onClose={() => {
                                     setShowRefundModal(false);
                                     setSelectedSubOrderId(null);
+                                    setSelectedItemId(null);
+                                    setSelectedQuantity(1);
                                 }}
                             >
                                 {selectedSubOrderId &&
@@ -838,9 +946,15 @@ const PlaceOrder = () => {
                                             (sub) =>
                                                 sub.id === selectedSubOrderId
                                         );
+
                                         const isSuccess =
                                             selectedSubOrder?.status ===
                                             "success";
+                                        const selectedItem =
+                                            selectedSubOrder?.items.find(
+                                                (item) =>
+                                                    item.id === selectedItemId
+                                            );
 
                                         return (
                                             <>
@@ -855,13 +969,15 @@ const PlaceOrder = () => {
                                                                         .sellerId
                                                                 ],
                                                         }}
-                                                        onRequestRefund={(
-                                                            data
-                                                        ) =>
-                                                            handleRequestRefund(
-                                                                data,
-                                                                selectedSubOrderId
-                                                            )
+                                                        item={selectedItem}
+                                                        selectedQuantity={
+                                                            selectedQuantity
+                                                        }
+                                                        setSelectedQuantity={
+                                                            setSelectedQuantity
+                                                        }
+                                                        onRequestRefund={
+                                                            handleRequestRefund
                                                         }
                                                         onCancel={() => {
                                                             setShowRefundModal(
@@ -869,6 +985,12 @@ const PlaceOrder = () => {
                                                             );
                                                             setSelectedSubOrderId(
                                                                 null
+                                                            );
+                                                            setSelectedItemId(
+                                                                null
+                                                            );
+                                                            setSelectedQuantity(
+                                                                1
                                                             );
                                                         }}
                                                         loading={loading}
@@ -884,11 +1006,15 @@ const PlaceOrder = () => {
                                                                         .sellerId
                                                                 ],
                                                         }}
-                                                        onCancelOrder={(data) =>
-                                                            handleCancelOrder(
-                                                                data,
-                                                                selectedSubOrderId
-                                                            )
+                                                        item={selectedItem}
+                                                        selectedQuantity={
+                                                            selectedQuantity
+                                                        }
+                                                        setSelectedQuantity={
+                                                            setSelectedQuantity
+                                                        }
+                                                        onCancelOrder={
+                                                            handleCancelOrder
                                                         }
                                                         onCancel={() => {
                                                             setShowRefundModal(
@@ -896,6 +1022,12 @@ const PlaceOrder = () => {
                                                             );
                                                             setSelectedSubOrderId(
                                                                 null
+                                                            );
+                                                            setSelectedItemId(
+                                                                null
+                                                            );
+                                                            setSelectedQuantity(
+                                                                1
                                                             );
                                                         }}
                                                         loading={loading}

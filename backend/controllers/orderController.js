@@ -42,7 +42,7 @@ const scheduleStatusUpdate = async (orderId, subOrderId, currentStatus, delay) =
             await subOrderRef.update(updateData);
 
             if (newStatus === "shipping") {
-                scheduleStatusUpdate(orderId, subOrderId, "shipping", 25000); //45s
+                scheduleStatusUpdate(orderId, subOrderId, "shipping", 100000); //45s
             }
 
             const subOrdersSnap = await db.collection("subOrders")
@@ -339,7 +339,7 @@ const updateOrder = async (req, res) => {
             await subOrderRef.update(subUpdateData);
 
             if (status === "processing") {
-                scheduleStatusUpdate(orderId, subOrderId, "processing", 60000); //45s
+                scheduleStatusUpdate(orderId, subOrderId, "processing", 100000); //45s
             } else if (status === "shipping") {
                 scheduleStatusUpdate(orderId, subOrderId, "shipping", 25000);
             }
@@ -409,7 +409,7 @@ const requestRefund = async (req, res) => {
     try {
         const db = getDb();
         const { orderId, subOrderId } = req.params;
-        const { reason, evidence } = req.body;
+        const { reason, evidence, itemId, quantity } = req.body;
 
         const totalOrderRef = db.collection("totalOrders").doc(orderId);
         const totalOrderSnap = await totalOrderRef.get();
@@ -437,8 +437,15 @@ const requestRefund = async (req, res) => {
             return res.status(400).json({ message: "Refund can only be requested for successful orders" });
         }
 
+        const item = subOrderData.items.find((i) => i.id === itemId);
+        if (!item || item.quantity < quantity || quantity <= 0) {
+            return res.status(400).json({ message: "Invalid item or quantity" });
+        }
+
         const refundData = {
             refundStatus: "Requested",
+            refundItemId: itemId,
+            refundQuantity: quantity,
             refundRequest: {
                 reason,
                 evidence: evidence || [],
@@ -449,11 +456,10 @@ const requestRefund = async (req, res) => {
 
         await subOrderRef.update(refundData);
 
-        // Tạo thông báo khi yêu cầu refund
-        await db.collection('sellerNotifications').add({
+        await db.collection("sellerNotifications").add({
             sellerId: subOrderData.sellerId,
-            type: 'refund_request',
-            message: `Customer has requested a refund for sub-order ${subOrderId}. Please review.`,
+            type: "refund_request",
+            message: `Customer has requested a refund for ${quantity} of ${item.productName} in sub-order ${subOrderId}. Please review.`,
             userId: subOrderData.userId,
             totalOrderId: orderId,
             subOrderId: subOrderId,
@@ -487,79 +493,128 @@ const processRefund = async (req, res) => {
         }
         const subOrderData = subOrderSnap.data();
 
-        let updateData = {};
-        let totalOrderUpdateData = null;
+        if (!["Requested", "Return Confirmed"].includes(subOrderData.refundStatus)) {
+            return res.status(400).json({ message: "No valid refund request to process" });
+        }
+
+        const item = subOrderData.items.find((i) => i.id === subOrderData.refundItemId);
+        if (!item || item.quantity < subOrderData.refundQuantity) {
+            return res.status(400).json({ message: "Invalid item or quantity" });
+        }
 
         if (action === "approve") {
             if (subOrderData.refundStatus === "Requested") {
-                updateData = {
+                await subOrderRef.update({
                     refundStatus: "Return Requested",
                     returnRequestedAt: admin.firestore.Timestamp.now(),
-                };
-                await subOrderRef.update(updateData);
+                });
+                await db.collection("sellerNotifications").add({
+                    sellerId: subOrderData.sellerId,
+                    type: "return_requested",
+                    message: `Customer has been requested to return ${subOrderData.refundQuantity} of ${item.productName} for sub-order ${subOrderId}.`,
+                    userId: subOrderData.userId,
+                    totalOrderId: orderId,
+                    subOrderId: subOrderId,
+                    createdAt: admin.firestore.Timestamp.now(),
+                    isRead: false,
+                });
                 return res.status(200).json({ message: "Return requested, awaiting customer confirmation" });
             } else if (subOrderData.refundStatus === "Return Confirmed" && returnReceived) {
-                updateData = {
-                    refundStatus: "Refunded",
-                    refundedAt: admin.firestore.Timestamp.now(),
-                };
-
+                const refundAmount = item.price * subOrderData.refundQuantity;
                 const paymentResult = totalOrderData.paymentResult;
-                const refundAmount = subOrderData.totalAmount;
+
+                let refundResult = null;
                 if (paymentResult && totalOrderData.paymentMethod === "stripe") {
                     const refund = await stripe.refunds.create({
                         payment_intent: paymentResult.id,
                         amount: Math.round(refundAmount * 100),
                     });
-                    updateData.refundResult = { id: refund.id, status: refund.status };
+                    refundResult = { id: refund.id, status: refund.status };
                 } else if (paymentResult && totalOrderData.paymentMethod === "paypal") {
                     const request = new paypal.payments.CapturesRefundRequest(paymentResult.id);
                     request.requestBody({
-                        amount: { value: refundAmount.toString(), currency_code: "USD" },
+                        amount: {
+                            value: refundAmount.toFixed(2),
+                            currency_code: "USD",
+                        },
                     });
                     const refund = await paypalClient.execute(request);
-                    updateData.refundResult = { id: refund.result.id, status: refund.result.status };
+                    refundResult = { id: refund.result.id, status: refund.result.status };
                 }
 
-                const updatedItems = totalOrderData.items.filter(
-                    (item) => !subOrderData.items.some((subItem) => subItem.id === item.id)
+                const updatedItems = subOrderData.items
+                    .map((i) =>
+                        i.id === subOrderData.refundItemId
+                            ? { ...i, quantity: i.quantity - subOrderData.refundQuantity }
+                            : i
+                    )
+                    .filter((i) => i.quantity > 0);
+
+                const updatedTotalQuantity = subOrderData.totalQuantity - subOrderData.refundQuantity;
+                const updatedTotalAmount = updatedItems.reduce(
+                    (sum, i) => sum + i.price * i.quantity,
+                    0
                 );
-                const subOrderAmount = subOrderData.totalAmount;
-                const subOrderQuantity = subOrderData.totalQuantity;
 
-                const newTotalAmount = totalOrderData.totalAmount - subOrderAmount;
-                const newTotalQuantity = totalOrderData.totalQuantity - subOrderQuantity;
-                const newTotalShipping = newTotalAmount > 100 ? 0 : 10;
-                const newTotalTax = Math.round((0.15 * newTotalAmount * 100) / 100);
-                const newTotalPrice = newTotalAmount + newTotalShipping + newTotalTax;
-
-                totalOrderUpdateData = {
+                const updateData = {
                     items: updatedItems,
-                    totalAmount: newTotalAmount,
-                    totalQuantity: newTotalQuantity,
-                    totalShipping: newTotalShipping,
-                    totalTax: newTotalTax,
-                    totalPrice: newTotalPrice,
+                    totalQuantity: updatedTotalQuantity,
+                    totalAmount: updatedTotalAmount,
+                    refundStatus: "Refunded",
+                    refundedAt: admin.firestore.Timestamp.now(),
                 };
+                if (refundResult) updateData.refundResult = refundResult;
 
-                await totalOrderRef.update(totalOrderUpdateData);
+                await subOrderRef.update(updateData);
+
+                const subOrdersSnap = await db
+                    .collection("subOrders")
+                    .where("totalOrderId", "==", orderId)
+                    .get();
+                const allSubOrdersRefunded = subOrdersSnap.docs.every(
+                    (doc) => doc.data().refundStatus === "Refunded" || doc.data().items.length === 0
+                );
+                if (allSubOrdersRefunded) {
+                    await totalOrderRef.update({
+                        refundStatus: "Refunded",
+                        refundedAt: admin.firestore.Timestamp.now(),
+                    });
+                }
+
+                await db.collection("sellerNotifications").add({
+                    sellerId: subOrderData.sellerId,
+                    type: "refund_processed",
+                    message: `Refund for ${subOrderData.refundQuantity} of ${item.productName} in sub-order ${subOrderId} has been processed.`,
+                    userId: subOrderData.userId,
+                    totalOrderId: orderId,
+                    subOrderId: subOrderId,
+                    createdAt: admin.firestore.Timestamp.now(),
+                    isRead: false,
+                });
+
+                res.status(200).json({ message: "Refund processed successfully" });
             } else {
-                return res.status(400).json({ message: "Invalid refund status for approval" });
+                return res.status(400).json({ message: "Invalid refund state for approval" });
             }
         } else if (action === "reject") {
-            updateData = {
+            await subOrderRef.update({
                 refundStatus: "Rejected",
-                rejectedAt: admin.firestore.Timestamp.now(),
-            };
+                refundRejectedAt: admin.firestore.Timestamp.now(),
+            });
+            await db.collection("sellerNotifications").add({
+                sellerId: subOrderData.sellerId,
+                type: "refund_rejected",
+                message: `Refund request for ${subOrderData.refundQuantity} of ${item.productName} in sub-order ${subOrderId} has been rejected.`,
+                userId: subOrderData.userId,
+                totalOrderId: orderId,
+                subOrderId: subOrderId,
+                createdAt: admin.firestore.Timestamp.now(),
+                isRead: false,
+            });
+            res.status(200).json({ message: "Refund request rejected successfully" });
         } else {
             return res.status(400).json({ message: "Invalid action" });
         }
-
-        await subOrderRef.update(updateData);
-        res.status(200).json({ 
-            message: `Refund ${action}ed successfully`,
-            updatedTotalOrder: totalOrderUpdateData
-        });
     } catch (error) {
         res.status(500).json({ message: "Error processing refund", error: error.message });
     }
@@ -569,27 +624,32 @@ const customerConfirmReturn = async (req, res) => {
     try {
         const db = getDb();
         const { orderId, subOrderId } = req.params;
+        const { itemId, quantity } = req.body;
 
         const subOrderRef = db.collection("subOrders").doc(subOrderId);
         const subOrderSnap = await subOrderRef.get();
         if (!subOrderSnap.exists) {
             return res.status(404).json({ message: "Sub-order not found" });
         }
-
         const subOrderData = subOrderSnap.data();
+
         if (subOrderData.refundStatus !== "Return Requested") {
-            return res.status(400).json({ message: "Cannot confirm return at this stage" });
+            return res.status(400).json({ message: "No return request to confirm" });
+        }
+
+        if (subOrderData.refundItemId !== itemId || subOrderData.refundQuantity !== quantity) {
+            return res.status(400).json({ message: "Invalid item or quantity" });
         }
 
         await subOrderRef.update({
             refundStatus: "Return Confirmed",
-            customerConfirmedAt: admin.firestore.Timestamp.now(),
+            returnConfirmedAt: admin.firestore.Timestamp.now(),
         });
 
-        await db.collection('sellerNotifications').add({
+        await db.collection("sellerNotifications").add({
             sellerId: subOrderData.sellerId,
-            type: 'confirm_request',
-            message: `Customer has confirmed to return product for order ${subOrderId}. Please review.`,
+            type: "return_confirmed",
+            message: `Customer has confirmed return of ${quantity} of ${subOrderData.items.find(i => i.id === itemId).productName} for sub-order ${subOrderId}. Please confirm receipt.`,
             userId: subOrderData.userId,
             totalOrderId: orderId,
             subOrderId: subOrderId,
@@ -597,7 +657,7 @@ const customerConfirmReturn = async (req, res) => {
             isRead: false,
         });
 
-        res.status(200).json({ message: "Return confirmed by customer, awaiting seller confirmation" });
+        res.status(200).json({ message: "Return confirmed successfully" });
     } catch (error) {
         res.status(500).json({ message: "Error confirming return", error: error.message });
     }
@@ -607,132 +667,141 @@ const cancelOrder = async (req, res) => {
     try {
         const db = getDb();
         const { orderId, subOrderId } = req.params;
-        const { reason } = req.body;
-
-        if (!reason) {
-            return res.status(400).json({ message: "Reason for cancellation is required" });
-        }
+        const { reason, itemId, quantity } = req.body;
 
         const totalOrderRef = db.collection("totalOrders").doc(orderId);
         const totalOrderSnap = await totalOrderRef.get();
-
         if (!totalOrderSnap.exists) {
             return res.status(404).json({ message: "Order not found" });
         }
-
         const totalOrderData = totalOrderSnap.data();
 
         const subOrderRef = db.collection("subOrders").doc(subOrderId);
         const subOrderSnap = await subOrderRef.get();
-
         if (!subOrderSnap.exists) {
             return res.status(404).json({ message: "Sub-order not found" });
         }
-
         const subOrderData = subOrderSnap.data();
 
-        if (subOrderData.status === "success" || subOrderData.isDelivered) {
-            return res.status(400).json({ message: "Cannot cancel order after it has been delivered. Please request a refund instead." });
+        const item = subOrderData.items.find((i) => i.id === itemId);
+        if (!item || item.quantity < quantity || quantity <= 0) {
+            return res.status(400).json({ message: "Invalid item or quantity" });
         }
 
-        if (subOrderData.cancelStatus === "Approved" || subOrderData.status === "cancelled") {
-            return res.status(400).json({ message: "Order has already been cancelled" });
+        if (subOrderData.status === "shipping" || subOrderData.status === "success") {
+            return res.status(400).json({ message: "Cannot cancel order in this status" });
         }
 
-        let updateData;
-
-        // Nếu trạng thái là "pending", hủy ngay lập tức
+        // Handle cancellation for pending orders
         if (subOrderData.status === "pending") {
-            updateData = {
-                status: "cancelled",
-                cancelReason: reason,
-                cancelStatus: "Approved",
-                cancelledAt: admin.firestore.Timestamp.now(),
-            };
-
+            let refundResult = null;
             if (totalOrderData.isPaid) {
-                const refundAmount = subOrderData.totalAmount;
+                const refundAmount = item.price * quantity;
                 const paymentResult = totalOrderData.paymentResult;
+
                 if (paymentResult && totalOrderData.paymentMethod === "stripe") {
                     const refund = await stripe.refunds.create({
                         payment_intent: paymentResult.id,
                         amount: Math.round(refundAmount * 100),
                     });
-                    updateData.refundResult = { id: refund.id, status: refund.status };
-                    updateData.refundedAt = admin.firestore.Timestamp.now();
+                    refundResult = { id: refund.id, status: refund.status };
                 } else if (paymentResult && totalOrderData.paymentMethod === "paypal") {
-                    if (!paymentResult.id) {
-                        throw new Error("Capture ID not found in paymentResult");
-                    }
                     const request = new paypal.payments.CapturesRefundRequest(paymentResult.id);
                     request.requestBody({
-                        amount: { value: refundAmount.toString(), currency_code: "USD" },
+                        amount: {
+                            value: refundAmount.toFixed(2),
+                            currency_code: "USD",
+                        },
                     });
                     const refund = await paypalClient.execute(request);
-                    updateData.refundResult = { id: refund.result.id, status: refund.result.status };
-                    updateData.refundedAt = admin.firestore.Timestamp.now();
+                    refundResult = { id: refund.result.id, status: refund.result.status };
                 }
-                updateData.refundStatus = "Refunded";
             }
+
+            // Update items in the sub-order
+            const updatedItems = subOrderData.items
+                .map((i) =>
+                    i.id === itemId
+                        ? { ...i, quantity: i.quantity - quantity }
+                        : i
+                )
+                .filter((i) => i.quantity > 0);
+
+            const updatedTotalQuantity = subOrderData.totalQuantity - quantity;
+            const updatedTotalAmount = updatedItems.reduce(
+                (sum, i) => sum + i.price * i.quantity,
+                0
+            );
+
+            const updateData = {
+                items: updatedItems,
+                totalQuantity: updatedTotalQuantity,
+                totalAmount: updatedTotalAmount,
+                cancelledAt: admin.firestore.Timestamp.now(),
+            };
+            
+            // **THAY ĐỔI QUAN TRỌNG: Chỉ set cancelStatus = "Approved" khi tất cả items đã bị hủy**
+            if (updatedItems.length === 0) {
+                updateData.status = "cancelled";
+                updateData.cancelStatus = "Approved";
+            } else {
+                // Nếu còn items, không set cancelStatus để các items khác vẫn có thể hủy
+                // Hoặc có thể tạo một field riêng để track các items đã hủy
+                updateData.cancelledItems = subOrderData.cancelledItems || [];
+                updateData.cancelledItems.push({
+                    itemId: itemId,
+                    quantity: quantity,
+                    reason: reason,
+                    cancelledAt: admin.firestore.Timestamp.now()
+                });
+            }
+            
+            if (refundResult) updateData.refundResult = refundResult;
 
             await subOrderRef.update(updateData);
 
-            // Cập nhật totalOrder: Loại bỏ items của sub-order và tính lại giá
-            const updatedItems = totalOrderData.items.filter(
-                (item) => !subOrderData.items.some((subItem) => subItem.id === item.id)
-            );
-            const subOrderAmount = subOrderData.totalAmount;
-            const subOrderQuantity = subOrderData.totalQuantity;
-
-            const newTotalAmount = totalOrderData.totalAmount - subOrderAmount;
-            const newTotalQuantity = totalOrderData.totalQuantity - subOrderQuantity;
-            const newTotalShipping = newTotalAmount > 100 ? 0 : 10;
-            const newTotalTax = Math.round((0.15 * newTotalAmount * 100) / 100);
-            const newTotalPrice = newTotalAmount + newTotalShipping + newTotalTax;
-
-            const totalOrderUpdateData = {
-                items: updatedItems,
-                totalAmount: newTotalAmount,
-                totalQuantity: newTotalQuantity,
-                totalShipping: newTotalShipping,
-                totalTax: newTotalTax,
-                totalPrice: newTotalPrice,
-            };
-
-            // Kiểm tra nếu tất cả subOrders đều cancelled thì cập nhật status
-            const subOrdersSnap = await db.collection("subOrders")
+            // Update total order totals
+            const subOrdersSnap = await db
+                .collection("subOrders")
                 .where("totalOrderId", "==", orderId)
                 .get();
-            const allSubOrdersCancelled = subOrdersSnap.docs.every(doc => 
-                doc.data().status === "cancelled" || doc.data().cancelStatus === "Approved"
+
+            const totalOrderUpdate = {};
+            const allSubOrdersCancelled = subOrdersSnap.docs.every(
+                (doc) => doc.data().status === "cancelled"
             );
+
             if (allSubOrdersCancelled) {
-                totalOrderUpdateData.status = "cancelled";
-                totalOrderUpdateData.cancelledAt = admin.firestore.Timestamp.now();
+                totalOrderUpdate.status = "cancelled";
+                totalOrderUpdate.cancelledAt = admin.firestore.Timestamp.now();
+                totalOrderUpdate.totalQuantity = 0;
+                totalOrderUpdate.totalAmount = 0;
+                totalOrderUpdate.totalPrice = 0;
+            } else {
+                // Recalculate totals from all sub-orders
+                let newTotalQuantity = 0;
+                let newTotalAmount = 0;
+                subOrdersSnap.docs.forEach((doc) => {
+                    const subOrder = doc.data();
+                    if (subOrder.status !== "cancelled") {
+                        newTotalQuantity += subOrder.totalQuantity;
+                        newTotalAmount += subOrder.totalAmount;
+                    }
+                });
+
+                totalOrderUpdate.totalQuantity = newTotalQuantity;
+                totalOrderUpdate.totalAmount = newTotalAmount;
+                totalOrderUpdate.totalPrice =
+                    newTotalAmount + totalOrderData.totalShipping + totalOrderData.totalTax;
             }
 
-            await totalOrderRef.update(totalOrderUpdateData);
+            await totalOrderRef.update(totalOrderUpdate);
 
-            res.status(200).json({ 
-                message: "Sub-order cancelled successfully",
-                updatedTotalOrder: totalOrderUpdateData 
-            });
-        } 
-        // Nếu trạng thái là "processing", yêu cầu phê duyệt từ seller
-        else if (subOrderData.status === "processing") {
-            updateData = {
-                cancelStatus: "Requested",
-                cancelReason: reason,
-                cancelRequestedAt: admin.firestore.Timestamp.now(),
-            };
-
-            await subOrderRef.update(updateData);
-
-            // Tạo thông báo khi yêu cầu hủy
-            await db.collection('sellerNotifications').add({
+            // Notify seller
+            await db.collection("sellerNotifications").add({
                 sellerId: subOrderData.sellerId,
-                type: 'cancel_request',
-                message: `Customer has requested to cancel order ${subOrderId}. Please review.`,
+                type: "cancel_processed",
+                message: `Customer has cancelled ${quantity} of ${item.productName} in sub-order ${subOrderId}.`,
                 userId: subOrderData.userId,
                 totalOrderId: orderId,
                 subOrderId: subOrderId,
@@ -740,9 +809,64 @@ const cancelOrder = async (req, res) => {
                 isRead: false,
             });
 
-            res.status(200).json({ message: "Cancellation request submitted, awaiting seller approval" });
-        } else {
-            return res.status(400).json({ message: "Cancellation not allowed for this order status" });
+            res.status(200).json({
+                message: "Order cancelled and refunded successfully",
+                updatedTotalOrder: {
+                    totalQuantity: totalOrderUpdate.totalQuantity || totalOrderData.totalQuantity,
+                    totalAmount: totalOrderUpdate.totalAmount || totalOrderData.totalAmount,
+                    totalPrice: totalOrderUpdate.totalPrice || totalOrderData.totalPrice,
+                    status: totalOrderUpdate.status || totalOrderData.status,
+                },
+            });
+        } else if (subOrderData.status === "processing") {
+            if (!totalOrderData.isPaid) {
+                return res.status(400).json({ message: "Order has not been paid yet" });
+            }
+
+            // **THAY ĐỔI: Lưu thông tin hủy theo từng item thay vì theo subOrder**
+            const updateData = {
+                cancelStatus: "Requested",
+                cancelReason: reason,
+                cancelItemId: itemId,
+                cancelQuantity: quantity,
+                cancelRequestedAt: admin.firestore.Timestamp.now(),
+            };
+
+            // Nếu đã có cancellation requests trước đó, lưu vào array
+            if (subOrderData.cancelRequests) {
+                updateData.cancelRequests = [...subOrderData.cancelRequests, {
+                    itemId: itemId,
+                    quantity: quantity,
+                    reason: reason,
+                    status: "Requested",
+                    requestedAt: admin.firestore.Timestamp.now()
+                }];
+            } else {
+                updateData.cancelRequests = [{
+                    itemId: itemId,
+                    quantity: quantity,
+                    reason: reason,
+                    status: "Requested",
+                    requestedAt: admin.firestore.Timestamp.now()
+                }];
+            }
+
+            await subOrderRef.update(updateData);
+
+            await db.collection("sellerNotifications").add({
+                sellerId: subOrderData.sellerId,
+                type: "cancel_request",
+                message: `Customer has requested to cancel ${quantity} of ${item.productName} in sub-order ${subOrderId}. Please review.`,
+                userId: subOrderData.userId,
+                totalOrderId: orderId,
+                subOrderId: subOrderId,
+                createdAt: admin.firestore.Timestamp.now(),
+                isRead: false,
+            });
+
+            res.status(200).json({
+                message: "Cancellation request submitted, awaiting seller approval",
+            });
         }
     } catch (error) {
         res.status(500).json({ message: "Error cancelling order", error: error.message });
@@ -757,121 +881,123 @@ const processCancelRequest = async (req, res) => {
 
         const totalOrderRef = db.collection("totalOrders").doc(orderId);
         const totalOrderSnap = await totalOrderRef.get();
-
         if (!totalOrderSnap.exists) {
             return res.status(404).json({ message: "Order not found" });
         }
-
         const totalOrderData = totalOrderSnap.data();
 
         const subOrderRef = db.collection("subOrders").doc(subOrderId);
         const subOrderSnap = await subOrderRef.get();
-
         if (!subOrderSnap.exists) {
             return res.status(404).json({ message: "Sub-order not found" });
         }
-
         const subOrderData = subOrderSnap.data();
 
         if (subOrderData.cancelStatus !== "Requested") {
-            return res.status(400).json({ message: "No cancellation request pending" });
+            return res.status(400).json({ message: "No pending cancellation request" });
         }
 
-        let updateData = {};
-        if (action === "approve") {
-            updateData = {
-                status: "cancelled",
-                cancelStatus: "Approved",
-                cancelledAt: admin.firestore.Timestamp.now(),
-            };
+        const item = subOrderData.items.find((i) => i.id === subOrderData.cancelItemId);
+        if (!item || item.quantity < subOrderData.cancelQuantity) {
+            return res.status(400).json({ message: "Invalid item or quantity" });
+        }
 
+        if (action === "approve") {
+            let refundResult = null;
             if (totalOrderData.isPaid) {
-                const refundAmount = subOrderData.totalAmount;
+                const refundAmount = item.price * subOrderData.cancelQuantity;
                 const paymentResult = totalOrderData.paymentResult;
 
                 if (paymentResult && totalOrderData.paymentMethod === "stripe") {
-                    // Kiểm tra xem payment_intent có tồn tại và hợp lệ không
-                    const paymentIntentId = paymentResult.id;
-                    if (!paymentIntentId || !paymentIntentId.startsWith("pi_")) {
-                        throw new Error("Invalid Stripe Payment Intent ID");
-                    }
-
-                    // Lấy thông tin payment_intent để kiểm tra trạng thái
-                    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-                    if (paymentIntent.status !== "succeeded") {
-                        throw new Error("Payment Intent has not been successfully captured");
-                    }
-
-                    // Thực hiện refund
                     const refund = await stripe.refunds.create({
-                        payment_intent: paymentIntentId,
-                        amount: Math.round(refundAmount * 100), 
+                        payment_intent: paymentResult.id,
+                        amount: Math.round(refundAmount * 100),
                     });
-                    updateData.refundResult = { id: refund.id, status: refund.status };
-                    updateData.refundedAt = admin.firestore.Timestamp.now();
+                    refundResult = { id: refund.id, status: refund.status };
                 } else if (paymentResult && totalOrderData.paymentMethod === "paypal") {
                     const request = new paypal.payments.CapturesRefundRequest(paymentResult.id);
                     request.requestBody({
-                        amount: { value: refundAmount.toString(), currency_code: "USD" },
+                        amount: {
+                            value: refundAmount.toFixed(2),
+                            currency_code: "USD",
+                        },
                     });
                     const refund = await paypalClient.execute(request);
-                    updateData.refundResult = { id: refund.result.id, status: refund.result.status };
-                    updateData.refundedAt = admin.firestore.Timestamp.now();
+                    refundResult = { id: refund.result.id, status: refund.result.status };
                 }
-                updateData.refundStatus = "Refunded";
+            }
+
+            const updatedItems = subOrderData.items
+                .map((i) =>
+                    i.id === subOrderData.cancelItemId
+                        ? { ...i, quantity: i.quantity - subOrderData.cancelQuantity }
+                        : i
+                )
+                .filter((i) => i.quantity > 0);
+
+            const updatedTotalQuantity = subOrderData.totalQuantity - subOrderData.cancelQuantity;
+            const updatedTotalAmount = updatedItems.reduce(
+                (sum, i) => sum + i.price * i.quantity,
+                0
+            );
+
+            const updateData = {
+                items: updatedItems,
+                totalQuantity: updatedTotalQuantity,
+                totalAmount: updatedTotalAmount,
+                cancelStatus: "Approved",
+                cancelledAt: admin.firestore.Timestamp.now(),
+            };
+            if (refundResult) updateData.refundResult = refundResult;
+
+            if (updatedItems.length === 0) {
+                updateData.status = "cancelled";
             }
 
             await subOrderRef.update(updateData);
 
-            // Cập nhật totalOrder: Loại bỏ items của sub-order và tính lại giá
-            const updatedItems = totalOrderData.items.filter(
-                (item) => !subOrderData.items.some((subItem) => subItem.id === item.id)
-            );
-            const subOrderAmount = subOrderData.totalAmount;
-            const subOrderQuantity = subOrderData.totalQuantity;
-
-            const newTotalAmount = totalOrderData.totalAmount - subOrderAmount;
-            const newTotalQuantity = totalOrderData.totalQuantity - subOrderQuantity;
-            const newTotalShipping = newTotalAmount > 100 ? 0 : 10;
-            const newTotalTax = Math.round((0.15 * newTotalAmount * 100) / 100);
-            const newTotalPrice = newTotalAmount + newTotalShipping + newTotalTax;
-
-            const totalOrderUpdateData = {
-                items: updatedItems,
-                totalAmount: newTotalAmount,
-                totalQuantity: newTotalQuantity,
-                totalShipping: newTotalShipping,
-                totalTax: newTotalTax,
-                totalPrice: newTotalPrice,
-            };
-
-            // Kiểm tra nếu tất cả subOrders đều cancelled thì cập nhật status
-            const subOrdersSnap = await db.collection("subOrders")
+            const subOrdersSnap = await db
+                .collection("subOrders")
                 .where("totalOrderId", "==", orderId)
                 .get();
-            const allSubOrdersCancelled = subOrdersSnap.docs.every(doc => 
-                doc.data().status === "cancelled" || doc.data().cancelStatus === "Approved"
+            const allSubOrdersCancelled = subOrdersSnap.docs.every(
+                (doc) => doc.data().status === "cancelled"
             );
             if (allSubOrdersCancelled) {
-                totalOrderUpdateData.status = "cancelled";
-                totalOrderUpdateData.cancelledAt = admin.firestore.Timestamp.now();
+                await totalOrderRef.update({
+                    status: "cancelled",
+                    cancelledAt: admin.firestore.Timestamp.now(),
+                });
             }
 
-            await totalOrderRef.update(totalOrderUpdateData);
-
-            res.status(200).json({ 
-                message: "Cancellation request approved",
-                updatedTotalOrder: totalOrderUpdateData 
+            await db.collection("sellerNotifications").add({
+                sellerId: subOrderData.sellerId,
+                type: "cancel_processed",
+                message: `Cancellation of ${subOrderData.cancelQuantity} of ${item.productName} in sub-order ${subOrderId} has been approved.`,
+                userId: subOrderData.userId,
+                totalOrderId: orderId,
+                subOrderId: subOrderId,
+                createdAt: admin.firestore.Timestamp.now(),
+                isRead: false,
             });
+
+            res.status(200).json({ message: "Cancellation request approved successfully" });
         } else if (action === "reject") {
-            updateData = {
+            await subOrderRef.update({
                 cancelStatus: "Rejected",
                 cancelRejectedAt: admin.firestore.Timestamp.now(),
-            };
-
-            await subOrderRef.update(updateData);
-
-            res.status(200).json({ message: "Cancellation request rejected" });
+            });
+            await db.collection("sellerNotifications").add({
+                sellerId: subOrderData.sellerId,
+                type: "cancel_rejected",
+                message: `Cancellation request for ${subOrderData.cancelQuantity} of ${item.productName} in sub-order ${subOrderId} has been rejected.`,
+                userId: subOrderData.userId,
+                totalOrderId: orderId,
+                subOrderId: subOrderId,
+                createdAt: admin.firestore.Timestamp.now(),
+                isRead: false,
+            });
+            res.status(200).json({ message: "Cancellation request rejected successfully" });
         } else {
             return res.status(400).json({ message: "Invalid action" });
         }

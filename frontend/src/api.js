@@ -542,7 +542,7 @@ export const cancelOrder = async (orderId, subOrderId, data) => {
     }
 };
 
-export const processCancelRequest = async (orderId, subOrderId, action) => {
+export const processCancelRequest = async (orderId, subOrderId, {action}) => {
     try {
         const response = await fetch(`${BASE_URL}/orders/${orderId}/cancel/process/${subOrderId}`, {
             method: "PUT",

@@ -3,7 +3,7 @@ import { Form, FormGroup, Label, Input, Button } from "reactstrap";
 import "./refundForm.css";
 import ConfirmModal from "../UI/ConfirmModal";
 
-const RefundRequestForm = ({ orderId, subOrder, onRequestRefund, onCancel, loading }) => {
+const RefundRequestForm = ({ orderId, subOrder, item, selectedQuantity, setSelectedQuantity, onRequestRefund, onCancel, loading }) => {
     const [reason, setReason] = useState("");
     const [files, setFiles] = useState([]);
     const [customReason, setCustomReason] = useState("");
@@ -17,7 +17,7 @@ const RefundRequestForm = ({ orderId, subOrder, onRequestRefund, onCancel, loadi
     const handleConfirm = () => {
         setShowConfirmModal(false);
         const finalReason = reason === "Other" ? customReason : reason;
-        onRequestRefund({ reason: finalReason, files });
+        onRequestRefund({ reason: finalReason, files, itemId: item.id, quantity: parseInt(selectedQuantity) });
     };
 
     const handleFileChange = (e) => {
@@ -33,21 +33,31 @@ const RefundRequestForm = ({ orderId, subOrder, onRequestRefund, onCancel, loadi
                 <p><strong>Order ID:</strong> {subOrder.id}</p>
                 <p><strong>Seller:</strong> {subOrder.sellerName || "Unknown Store"}</p>
                 <div className="suborder-items">
-                    {subOrder.items.map((item, index) => (
-                        <div key={index} className="suborder-item">
-                            <img src={item.imgUrl} alt={item.productName} className="suborder-item-img" />
-                            <div className="suborder-item-info">
-                                <p><strong>Product:</strong> {item.productName}</p>
-                                <p><strong>Quantity:</strong> {item.quantity}</p>
-                                <p><strong>Price:</strong> ${item.price}</p>
-                            </div>
+                    <div className="suborder-item">
+                        <img src={item.imgUrl} alt={item.productName} className="suborder-item-img" />
+                        <div className="suborder-item-info">
+                            <p><strong>Product:</strong> {item.productName}</p>
+                            <p><strong>Quantity:</strong> {item.quantity}</p>
+                            <p><strong>Price:</strong> ${item.price * item.quantity}</p>
                         </div>
-                    ))}
+                    </div>
                 </div>
             </div>
 
             <Form onSubmit={handleSubmit} className="refund-form">
                 <h6 className="fw-bold">Request Return & Refund</h6>
+                <FormGroup>
+                    <Label for="quantity">Quantity to Return (Max: {item.quantity}):</Label>
+                    <Input
+                        type="number"
+                        id="quantity"
+                        min="1"
+                        max={item.quantity}
+                        value={selectedQuantity}
+                        onChange={(e) => setSelectedQuantity(e.target.value)}
+                        required
+                    />
+                </FormGroup>
                 <FormGroup>
                     <Label for="reason">Reason for Return/Refund:</Label>
                     <Input
@@ -114,7 +124,7 @@ const RefundRequestForm = ({ orderId, subOrder, onRequestRefund, onCancel, loadi
                 isOpen={showConfirmModal}
                 onClose={() => setShowConfirmModal(false)}
                 onConfirm={handleConfirm}
-                message="Are you sure you want to request a return and refund for this order?"
+                message={`Are you sure you want to request a return and refund for ${selectedQuantity} of ${item.productName}?`}
             />
         </>
     );

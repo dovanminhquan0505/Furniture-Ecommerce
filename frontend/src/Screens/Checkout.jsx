@@ -8,13 +8,25 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import useAuth from "../custom-hooks/useAuth";
 import { toast } from "react-toastify";
-import { createOrder } from "../api";
+import { createOrder, getUserProfileById } from "../api";
 
 const Checkout = () => {
     const { currentUser } = useAuth();
     const cart = useSelector((state) => state.cart);
     const [orderData, setOrderData] = useState(null);
     const navigate = useNavigate();
+
+    
+    // Create state of billing information
+    const [billingInfo, setBillingInfo] = useState({
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+        city: "",
+        postalCode: "",
+        country: "",
+    });
 
     useEffect(() => {
         if (cart) {
@@ -27,18 +39,29 @@ const Checkout = () => {
                 cartItems: cart.cartItems || [],
             });
         }
-    }, [cart]);
 
-    // Create state of billing information
-    const [billingInfo, setBillingInfo] = useState({
-        name: "",
-        email: "",
-        phone: "",
-        address: "",
-        city: "",
-        postalCode: "",
-        country: "",
-    });
+        const fetchUserProfile = async () => {
+            if (currentUser) {
+                try {
+                    const userData = await getUserProfileById(currentUser.uid);
+                    setBillingInfo({
+                        name: userData.displayName || "",
+                        email: userData.email || "",
+                        phone: userData.phone || "",
+                        address: userData.address || "",
+                        city: "", 
+                        postalCode: "",
+                        country: "", 
+                    });
+                } catch (error) {
+                    console.error("Error fetching user profile:", error);
+                    toast.error("Failed to load user profile: " + error.message);
+                }
+            }
+        };
+
+        fetchUserProfile();
+    }, [cart, currentUser]);
 
     // Handle when user get values into input fields
     const handleInputChange = (e) => {

@@ -53,8 +53,14 @@ h6.fw-bold {
 
 .cart__item {
     display: flex;
-    align-items: center;
+    flex-direction: column; /* Stack item details and actions vertically */
     padding: 1rem 0;
+}
+
+.cart__item-details {
+    display: flex;
+    align-items: center;
+    width: 100%;
 }
 
 .cart__item-img {
@@ -103,8 +109,9 @@ h6.fw-bold {
 
 .suborder__actions {
     display: flex;
-    justify-content: flex-end;
+    justify-content: flex-end; /* Align buttons to the right */
     gap: 10px;
+    margin-top: 0.5rem; /* Add spacing between item details and actions */
 }
 
 .refund__btn {

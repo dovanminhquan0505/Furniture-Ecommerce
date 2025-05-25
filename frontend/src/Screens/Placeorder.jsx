@@ -663,48 +663,45 @@ const PlaceOrder = () => {
                         return (
                             <div
                                 key={index}
-                                className={`cart__item ${
-                                    isCanceled ? "canceled__item" : ""
-                                }`}
+                                className={`cart__item ${isCanceled ? "canceled__item" : ""}`}
                             >
-                                <img
-                                    src={item.imgUrl}
-                                    alt={item.productName}
-                                    className="cart__item-img"
-                                />
-                                <div className="cart__item-info">
-                                    <h6>{item.productName}</h6>
-                                    <p>
-                                        Qty: {item.quantity} | Status:{" "}
-                                        {isCanceled
-                                            ? "Canceled"
-                                            : subOrder.status || "Pending"}
-                                    </p>
-                                    {subOrder.cancelStatus === "Requested" &&
-                                        subOrder.cancelItemId === item.id && (
-                                            <p className="text-warning">
-                                                Cancellation request pending for
-                                                this item
-                                            </p>
-                                        )}
-                                    {subOrder.cancelStatus === "Rejected" &&
-                                        subOrder.cancelItemId === item.id && (
-                                            <p className="text-danger">
-                                                Cancellation request rejected
-                                                for this item
-                                            </p>
-                                        )}
-                                    {isCanceled && (
-                                        <p className="text-success">
-                                            This item has been canceled
-                                            successfully
+                                <div className="cart__item-details">
+                                    <img
+                                        src={item.imgUrl}
+                                        alt={item.productName}
+                                        className="cart__item-img"
+                                    />
+                                    <div className="cart__item-info">
+                                        <h6>{item.productName}</h6>
+                                        <p>
+                                            Qty: {item.quantity} | Status:{" "}
+                                            {isCanceled
+                                                ? "Canceled"
+                                                : subOrder.status || "Pending"}
                                         </p>
-                                    )}
-                                </div>
-                                <div className="cart__item-price">
-                                    <span className="price__cartItem">
-                                        ${item.price * (item.quantity || 1)}
-                                    </span>
+                                        {subOrder.cancelStatus === "Requested" &&
+                                            subOrder.cancelItemId === item.id && (
+                                                <p className="text-warning">
+                                                    Cancellation request pending for this item
+                                                </p>
+                                            )}
+                                        {subOrder.cancelStatus === "Rejected" &&
+                                            subOrder.cancelItemId === item.id && (
+                                                <p className="text-danger">
+                                                    Cancellation request rejected for this item
+                                                </p>
+                                            )}
+                                        {isCanceled && (
+                                            <p className="text-success">
+                                                This item has been canceled successfully
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div className="cart__item-price">
+                                        <span className="price__cartItem">
+                                            ${item.price * (item.quantity || 1)}
+                                        </span>
+                                    </div>
                                 </div>
                                 {(shouldShowCancelBtn ||
                                     shouldShowRefundBtn ||
@@ -718,13 +715,9 @@ const PlaceOrder = () => {
                                                 whileTap={{ scale: 1.1 }}
                                                 className="refund__btn"
                                                 onClick={() => {
-                                                    setSelectedSubOrderId(
-                                                        subOrderId
-                                                    );
+                                                    setSelectedSubOrderId(subOrderId);
                                                     setSelectedItemId(item.id);
-                                                    setSelectedQuantity(
-                                                        item.quantity
-                                                    );
+                                                    setSelectedQuantity(item.quantity);
                                                     setShowRefundModal(true);
                                                 }}
                                             >
@@ -767,11 +760,7 @@ const PlaceOrder = () => {
                                             <motion.button
                                                 whileTap={{ scale: 1.1 }}
                                                 className="appeal__btn"
-                                                onClick={() =>
-                                                    handleAppealRefund(
-                                                        subOrderId
-                                                    )
-                                                }
+                                                onClick={() => handleAppealRefund(subOrderId)}
                                             >
                                                 Appeal to Admin
                                             </motion.button>

@@ -12,82 +12,78 @@ const initialState = {
     totalPrice: 0, // Total price
 };
 
+const calculateTotals = (state) => {
+  state.totalAmount = state.cartItems.reduce(
+    (total, item) => total + Number(item.price) * Number(item.quantity),
+    0
+  );
+  state.totalQuantity = state.cartItems.reduce(
+    (total, item) => total + Number(item.quantity),
+    0
+  );
+
+  state.totalShipping = state.totalAmount > 100 ? 0 : 10;
+  state.totalTax = Math.round(0.15 * state.totalAmount * 100) / 100;
+  state.totalPrice = state.totalAmount + state.totalShipping + state.totalTax;
+
+  state.totalAmount = Math.round(state.totalAmount * 100) / 100;
+  state.totalPrice = Math.round(state.totalPrice * 100) / 100;
+};
+
 const cartSlice = createSlice({
-    name: "cart",
-    initialState,
-    reducers: {
-        addItemToCart: (state, action) => {
-            const newItem = action.payload;
+  name: "cart",
+  initialState,
+  reducers: {
+    addItemToCart: (state, action) => {
+      const newItem = action.payload;
+      const existingItem = state.cartItems.find((item) => item.id === newItem.id);
 
-            // Search for products in the cart that have the same id as the new product.
-            // If found, increase the quantity and total price of the product.
-            const existingItem = state.cartItems.find(
-                (item) => item.id === newItem.id
-            );
-            state.totalQuantity++;
+      if (!existingItem) {
+        state.cartItems.push({
+          id: newItem.id,
+          productName: newItem.productName,
+          imgUrl: newItem.imgUrl,
+          price: Number(newItem.price),
+          quantity: newItem.quantity || 1,
+          totalPrice: Number(newItem.price) * (newItem.quantity || 1),
+          category: newItem.category || "Uncategorized",
+          sellerId: newItem.sellerId || "Unknown",
+        });
+      } else {
+        existingItem.quantity += newItem.quantity || 1;
+        existingItem.totalPrice = Number(existingItem.price) * existingItem.quantity;
+      }
 
-            if (!existingItem) {
-                state.cartItems.push({
-                    id: newItem.id,
-                    productName: newItem.productName,
-                    imgUrl: newItem.imgUrl,
-                    price: newItem.price,
-                    quantity: 1,
-                    totalPrice: newItem.price,
-                    category: newItem.category || "Uncategorized",
-                    sellerId: newItem.sellerId || "Unknown",
-                });
-            } else {
-                existingItem.quantity++;
-                existingItem.totalPrice =
-                    Number(existingItem.totalPrice) + Number(newItem.price);
-            }
-
-            state.totalAmount = state.cartItems.reduce(
-                (total, item) => total + Number(item.totalPrice),
-                0
-            );
-
-            // Calculate totalShipping, totalTax, and totalPrice
-            state.totalShipping = state.totalAmount > 100 ? 0 : 10;
-            state.totalTax = Math.round((0.15 * state.totalAmount * 100) / 100);
-            state.totalPrice = state.totalShipping + state.totalTax + state.totalAmount;
-        },
-
-        deleteItemFromCart: (state, action) => {
-            const id = action.payload;
-            const existingItem = state.cartItems.find((item) => item.id === id);
-
-            if (existingItem) {
-                state.cartItems = state.cartItems.filter(
-                    (item) => item.id !== id
-                );
-
-                state.totalQuantity =
-                    state.totalQuantity - existingItem.quantity;
-            }
-
-            state.totalAmount = state.cartItems.reduce(
-                (total, item) =>
-                    total + Number(item.price) * Number(item.quantity),
-                0
-            );
-
-            // Recalculate totalShipping, totalTax, and totalPrice
-            state.totalShipping = state.totalAmount > 100 ? 0 : 10;
-            state.totalTax = Math.round((0.15 * state.totalAmount * 100) / 100);
-            state.totalPrice = state.totalShipping + state.totalTax + state.totalAmount;
-        },
-
-        clearCart: (state) => {
-            state.cartItems = [];
-            state.totalAmount = 0;
-            state.totalQuantity = 0;
-            state.totalShipping = 0;
-            state.totalTax = 0;
-            state.totalPrice = 0;
-        },
+      calculateTotals(state);
     },
+
+    decreaseItemQuantity: (state, action) => {
+      const { id, quantity } = action.payload;
+      const existingItem = state.cartItems.find((item) => item.id === id);
+
+      if (existingItem && existingItem.quantity > 1) {
+        existingItem.quantity -= quantity;
+        existingItem.totalPrice = Number(existingItem.price) * existingItem.quantity;
+      }
+
+      calculateTotals(state);
+    },
+
+    deleteItemFromCart: (state, action) => {
+      const id = action.payload;
+      state.cartItems = state.cartItems.filter((item) => item.id !== id);
+      calculateTotals(state);
+    },
+
+    clearCart: (state) => {
+      state.cartItems = [];
+      state.totalAmount = 0;
+      state.totalQuantity = 0;
+      state.totalShipping = 0;
+      state.totalTax = 0;
+      state.totalPrice = 0;
+    },
+  },
 });
 
 //These actions will be used in components to trigger changes in state.

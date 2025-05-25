@@ -9,6 +9,42 @@ td i {
     cursor: pointer;
 }
 
-td, th {
+td,
+th {
     color: var(--primary-color);
+}
+
+.quantity__control {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+.quantity__btn {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #007bff;
+    background-color: #ffffff;
+    color: #007bff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+.quantity__btn:hover {
+    background-color: #007bff;
+    color: #ffffff;
+}
+.quantity__btn:disabled {
+    border-color: #ccc;
+    color: #ccc;
+    cursor: not-allowed;
+}
+.quantity__value {
+    font-size: 1rem;
+    min-width: 30px;
+    text-align: center;
 }

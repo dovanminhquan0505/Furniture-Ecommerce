@@ -95,6 +95,33 @@ const Tr = ({ item }) => {
     const deleteProduct = () => {
         dispatch(cartActions.deleteItemFromCart(item.id));
     };
+
+    const increaseQuantity = () => {
+        dispatch(
+            cartActions.addItemToCart({
+                id: item.id,
+                productName: item.productName,
+                price: item.price,
+                imgUrl: item.imgUrl,
+                category: item.category,
+                quantity: 1,
+            })
+        );
+    };
+
+    const decreaseQuantity = () => {
+        if (item.quantity > 1) {
+            dispatch(
+                cartActions.decreaseItemQuantity({
+                    id: item.id,
+                    quantity: 1,
+                })
+            );
+        } else {
+            toast.warn("Quantity cannot be less than 1. Use delete to remove item.");
+        }
+    };
+
     return (
         <tr>
             <td>
@@ -102,13 +129,28 @@ const Tr = ({ item }) => {
             </td>
             <td>{item.productName}</td>
             <td>{item.category}</td>
-            <td>${item.price}</td>
-            <td>{item.quantity}</td>
+            <td>${(item.price * item.quantity)}</td>
+            <td>
+                <div className="quantity__control">
+                    <button
+                        className="quantity__btn"
+                        onClick={decreaseQuantity}
+                        disabled={item.quantity <= 1}
+                    >
+                        -
+                    </button>
+                    <span className="quantity__value">{item.quantity}</span>
+                    <button
+                        className="quantity__btn"
+                        onClick={increaseQuantity}
+                    >
+                        +
+                    </button>
+                </div>
+            </td>
             <td>
                 <motion.i
-                    whileTap={{
-                        scale: 1.2,
-                    }}
+                    whileTap={{ scale: 1.2 }}
                     onClick={deleteProduct}
                     className="ri-delete-bin-line"
                 ></motion.i>

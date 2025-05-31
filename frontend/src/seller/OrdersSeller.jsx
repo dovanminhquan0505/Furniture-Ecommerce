@@ -19,6 +19,7 @@ const Orders = () => {
     const [showProductModal, setShowProductModal] = useState(false);
     const [selectedSubOrder, setSelectedSubOrder] = useState(null);
     const [modalAction, setModalAction] = useState(null);
+    const [selectedRefundItem, setSelectedRefundItem] = useState(null);
 
     useEffect(() => {
         const fetchSellerData = async () => {
@@ -99,43 +100,69 @@ const Orders = () => {
         }
     };
 
-    const handleProcessRefund = async (totalOrderId, subOrderId, action, returnReceived = false) => {
+    const handleProcessRefund = async (totalOrderId, subOrderId, action, returnReceived = false, itemId, quantity, refundId) => {
         try {
+            if (!refundId && (action === 'approve' || action === 'reject')) {
+                console.error("Missing refundId in handleProcessRefund:", { totalOrderId, subOrderId, action, itemId, quantity, refundId });
+                toast.error("Invalid refund request. Missing refund ID.");
+                return;
+            }
+
             setLoading(true);
-            await processRefund(totalOrderId, subOrderId, { action, returnReceived });
+            await processRefund(totalOrderId, subOrderId, { 
+                action, 
+                returnReceived, 
+                itemId, 
+                quantity, 
+                refundId 
+            });
+            
             const updatedOrders = await fetchSellerOrders(sellerId);
             setOrders(updatedOrders);
             toast.success(`Refund request ${action}ed successfully!`);
-            setShowProductModal(false);
-            setSelectedSubOrder(null);
-            setModalAction(null);
         } catch (error) {
             toast.error("Error processing refund request: " + error.message);
         } finally {
             setLoading(false);
+            setShowProductModal(false);
+            setSelectedSubOrder(null);
+            setModalAction(null);
+            setSelectedRefundItem(null);
         }
     };
 
     const handleSellerConfirmReceipt = async () => {
-        if (selectedSubOrder.refundStatus !== "Return Confirmed") {
-            toast.error("Cannot confirm receipt: Invalid refund status");
+        if (!selectedSubOrder || !selectedSubOrder?.refundItems || !selectedRefundItem) {
+            toast.error("No refund items selected");
+            return;
+        }
+        if (!selectedRefundItem.refundId) {
+            console.error("Missing refundId in handleSellerConfirmReceipt:", selectedRefundItem);
+            toast.error("Invalid refund request");
             return;
         }
         try {
             setLoading(true);
-            await processRefund(selectedSubOrder.totalOrderId, selectedSubOrder.id, {
-                action: "approve",
-                returnReceived: true,
-                itemId: selectedSubOrder.refundItemId,
-                quantity: selectedSubOrder.refundQuantity,
-            });
+            await processRefund(
+                selectedSubOrder.totalOrderId,
+                selectedSubOrder.id,
+                {
+                    action: "approve",
+                    returnReceived: true,
+                    itemId: selectedRefundItem.itemId,
+                    quantity: selectedRefundItem.quantity,
+                    refundId: selectedRefundItem.refundId,
+                }
+            );
             const updatedOrders = await fetchSellerOrders(sellerId);
             setOrders(updatedOrders);
             toast.success("Return receipt confirmed, refund processed!");
             setShowProductModal(false);
             setSelectedSubOrder(null);
             setModalAction(null);
+            setSelectedRefundItem(null);
         } catch (error) {
+            console.error("Error confirming receipt:", error);
             toast.error("Error confirming receipt: " + error.message);
         } finally {
             setLoading(false);
@@ -161,8 +188,24 @@ const Orders = () => {
         }
     };
 
-    const openActionModal = (subOrder, actionType) => {
+    const openActionModal = (subOrder, actionType, refundItem = null) => {
+        console.log("Opening modal with refundItem:", refundItem); 
+        if (actionType === "refund" || actionType === "confirmReceipt") {
+            if (!refundItem) {
+                toast.error("No refund item selected");
+                return;
+            }
+            if (actionType === "refund" && refundItem.status !== "Requested") {
+                toast.error("Invalid refund item status");
+                return;
+            }
+            if (actionType === "confirmReceipt" && refundItem.status !== "Return Confirmed") {
+                toast.error("Invalid refund item status for receipt confirmation");
+                return;
+            }
+        }
         setSelectedSubOrder(subOrder);
+        setSelectedRefundItem(refundItem);
         setModalAction(actionType);
         setShowProductModal(true);
     };
@@ -229,18 +272,22 @@ const Orders = () => {
                                                                         Confirm Order
                                                                     </motion.button>
                                                                 )}
-                                                                {order.refundStatus === "Return Confirmed" && (
-                                                                    <motion.button
-                                                                        whileTap={{ scale: 0.9 }}
-                                                                        className="btn__seller btn__seller-success"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleSellerConfirmReceipt(order);
-                                                                        }}
-                                                                    >
-                                                                        Confirm Receipt
-                                                                    </motion.button>
-                                                                )}
+                                                                {(order.refundItems || []).map((refundItem, index) => (
+                                                                    refundItem.status === "Return Confirmed" && (
+                                                                        <div key={`${refundItem.refundId}-${index}`} className="mb-2">
+                                                                            <motion.button
+                                                                                whileTap={{ scale: 0.9 }}
+                                                                                className="btn__seller btn__seller-success"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    openActionModal(order, "confirmReceipt", refundItem);
+                                                                                }}
+                                                                            >
+                                                                                Confirm Receipt
+                                                                            </motion.button>
+                                                                        </div>
+                                                                    )
+                                                                ))}
                                                             </td>
                                                             <td>
                                                                 {order.cancelStatus === "Requested" && (
@@ -267,43 +314,95 @@ const Orders = () => {
                                                                         </motion.button>
                                                                     </div>
                                                                 )}
-                                                                {order.refundStatus === "Requested" && (
-                                                                    <div>
-                                                                        <motion.button
-                                                                            whileTap={{ scale: 0.9 }}
-                                                                            className="btn__seller btn__seller-success"
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                openActionModal(order, "refund");
-                                                                            }}
-                                                                        >
-                                                                            Approve Refund
-                                                                        </motion.button>
-                                                                        <motion.button
-                                                                            whileTap={{ scale: 0.9 }}
-                                                                            className="btn__seller btn__seller-danger"
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleProcessRefund(order.totalOrderId, order.id, "reject");
-                                                                            }}
-                                                                        >
-                                                                            Reject Refund
-                                                                        </motion.button>
-                                                                    </div>
-                                                                )}
-                                                                {(order.cancelStatus === "Approved" || order.refundStatus === "Refunded") && (
-                                                                    <p>
+                                                                {(order.refundItems || []).map((refundItem, index) => {
+                                                                    const item = order.items.find(i => i.id === refundItem.itemId);
+                                                                    const itemName = item ? item.productName : 'Unknown Item';
+                                                                    
+                                                                    return (
+                                                                        <div key={`${refundItem.refundId}-${index}`} className="mb-2">
+                                                                            {refundItem.status === "Requested" && (
+                                                                                <div className="refund-item-actions border-top">
+                                                                                    <small className="text-muted d-block mb-1 mt-1">
+                                                                                        {itemName} (Qty: {refundItem.quantity})
+                                                                                    </small>
+                                                                                    <motion.button
+                                                                                        whileTap={{ scale: 0.9 }}
+                                                                                        className="btn__seller btn__seller-success me-2"
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            openActionModal(order, "refund", refundItem);
+                                                                                        }}
+                                                                                    >
+                                                                                        Approve Refund
+                                                                                    </motion.button>
+                                                                                    <motion.button
+                                                                                        whileTap={{ scale: 0.9 }}
+                                                                                        className="btn__seller btn__seller-danger"
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            if (!refundItem.refundId) {
+                                                                                                toast.error("Invalid refund item");
+                                                                                                return;
+                                                                                            }
+                                                                                            handleProcessRefund(
+                                                                                                order.totalOrderId,
+                                                                                                order.id,
+                                                                                                "reject",
+                                                                                                false,
+                                                                                                refundItem.itemId,
+                                                                                                refundItem.quantity,
+                                                                                                refundItem.refundId
+                                                                                            );
+                                                                                        }}
+                                                                                    >
+                                                                                        Reject Refund
+                                                                                    </motion.button>
+                                                                                </div>
+                                                                            )}
+                                                                            {refundItem.status === "Return Requested" && (
+                                                                                <div className="refund-item-status">
+                                                                                    <small className="text-info d-block">
+                                                                                        {itemName} (Qty: {refundItem.quantity}) - Awaiting customer return
+                                                                                    </small>
+                                                                                </div>
+                                                                            )}
+                                                                            {refundItem.status === "Return Confirmed" && (
+                                                                                <div className="refund-item-actions">
+                                                                                    <small className="text-warning d-block mb-1">
+                                                                                        {itemName} (Qty: {refundItem.quantity}) - Return confirmed by customer
+                                                                                    </small>
+                                                                                </div>
+                                                                            )}
+                                                                            {refundItem.status === "Refunded" && (
+                                                                                <div className="refund-item-status">
+                                                                                    <small className="text-success d-block">
+                                                                                        {itemName} (Qty: {refundItem.quantity}) - Refunded
+                                                                                    </small>
+                                                                                </div>
+                                                                            )}
+                                                                            {refundItem.status === "Rejected" && (
+                                                                                <div className="refund-item-status">
+                                                                                    <small className="text-danger d-block">
+                                                                                        {itemName} (Qty: {refundItem.quantity}) - Refund Rejected
+                                                                                    </small>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                                {(order.cancelStatus === "Approved" || (order.refundItems || []).some(r => r.status === "Refunded")) && (
+                                                                    <div className="mt-2 pt-2 border-top">
                                                                         {order.cancelStatus === "Approved" && (
-                                                                            <>
+                                                                            <small className="text-info d-block">
                                                                                 Cancelled: {order.cancelQuantity} item(s)
-                                                                            </>
+                                                                            </small>
                                                                         )}
-                                                                        {order.refundStatus === "Refunded" && (
-                                                                            <>
-                                                                                Refunded: {order.refundQuantity} item(s)
-                                                                            </>
+                                                                        {(order.refundItems || []).filter(r => r.status === "Refunded").length > 0 && (
+                                                                            <small className="text-success d-block">
+                                                                                Total Refunded: {order.refundItems.filter(r => r.status === "Refunded").reduce((sum, r) => sum + r.quantity, 0)} item(s)
+                                                                            </small>
                                                                         )}
-                                                                    </p>
+                                                                    </div>
                                                                 )}
                                                             </td>
                                                             <td>
@@ -336,6 +435,7 @@ const Orders = () => {
                     setShowProductModal(false);
                     setSelectedSubOrder(null);
                     setModalAction(null);
+                    setSelectedRefundItem(null);
                 }}
             >
                 {selectedSubOrder && (
@@ -347,44 +447,69 @@ const Orders = () => {
                                 ? "Refund Request Details"
                                 : "Confirm Return Receipt"}
                         </h5>
-                        {selectedSubOrder.items
-                            .filter((item) => item.id === (selectedSubOrder.cancelItemId || selectedSubOrder.refundItemId))
-                            .map((item, index) => (
-                                <div key={index} className="cart__item">
-                                    <img
-                                        src={item.imgUrl}
-                                        alt={item.productName}
-                                        className="cart__item-img"
-                                    />
-                                    <div className="cart__item-info">
-                                        <h6>{item.productName}</h6>
-                                        <p>Requested Qty: {selectedSubOrder.cancelQuantity || selectedSubOrder.refundQuantity}</p>
-                                        <p>Price per unit: ${item.price}</p>
-                                        <p>Total: ${(item.price * (selectedSubOrder.cancelQuantity || selectedSubOrder.refundQuantity)).toFixed(2)}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        <h6 className="mb-1">
-                            {modalAction === "cancel" ? "Cancel Reason" : "Refund Reason"}:
-                        </h6>
-                        <p>
-                            {(modalAction === "cancel"
-                                ? selectedSubOrder.cancelReason
-                                : selectedSubOrder.refundRequest?.reason) || "No reason provided"}
-                        </p>
-                        {modalAction === "refund" && (
-                            <>
-                                <h6 className="mb-2 mt-1">Evidence:</h6>
-                                {selectedSubOrder.refundRequest?.evidence?.length > 0 ? (
-                                    selectedSubOrder.refundRequest.evidence.map((url, index) => (
-                                        <div key={index}>
-                                            <img src={url} alt={`Evidence ${index + 1}`} className="evidence-img" />
+                        {(modalAction === "cancel" || modalAction === "refund" || modalAction === "confirmReceipt") && selectedRefundItem && (
+                            (() => {
+                                const item = selectedSubOrder.items.find(i => i.id === selectedRefundItem.itemId);
+                                if (!item) return <p>Item not found</p>;
+                                return (
+                                    <div className="cart__item">
+                                        <img
+                                            src={item.imgUrl}
+                                            alt={item.productName}
+                                            className="cart__item-img"
+                                        />
+                                        <div className="cart__item-info">
+                                            <h6>{item.productName}</h6>
+                                            <p>Requested Qty: {selectedRefundItem.quantity}</p>
+                                            <p>Price per unit: ${item.price}</p>
+                                            <p>Total: ${(item.price * selectedRefundItem.quantity).toFixed(2)}</p>
+                                            {modalAction !== "cancel" && (
+                                                <>
+                                                    <h6 className="mb-1">Refund Reason:</h6>
+                                                    <p>{selectedRefundItem.reason || "No reason provided"}</p>
+                                                    <h6 className="mb-2 mt-1">Evidence:</h6>
+                                                    {selectedRefundItem.evidence?.length > 0 ? (
+                                                        selectedRefundItem.evidence.map((url, index) => (
+                                                            <div key={index}>
+                                                                <img src={url} alt={`Evidence ${index + 1}`} className="evidence-img" />
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <p>No evidence provided</p>
+                                                    )}
+                                                </>
+                                            )}
+                                            {modalAction === "cancel" && (
+                                                <>
+                                                    <h6 className="mb-1">Cancel Reason:</h6>
+                                                    <p>{selectedSubOrder.cancelReason || "No reason provided"}</p>
+                                                </>
+                                            )}
                                         </div>
-                                    ))
-                                ) : (
-                                    <p>No evidence provided</p>
-                                )}
-                            </>
+                                    </div>
+                                );
+                            })()
+                        )}
+                        {modalAction === "cancel" && !selectedRefundItem && (
+                            selectedSubOrder.items
+                                .filter((item) => item.id === selectedSubOrder.cancelItemId)
+                                .map((item, index) => (
+                                    <div key={index} className="cart__item">
+                                        <img
+                                            src={item.imgUrl}
+                                            alt={item.productName}
+                                            className="cart__item-img"
+                                        />
+                                        <div className="cart__item-info">
+                                            <h6>{item.productName}</h6>
+                                            <p>Requested Qty: {selectedSubOrder.cancelQuantity}</p>
+                                            <p>Price per unit: ${item.price}</p>
+                                            <p>Total: ${(item.price * selectedSubOrder.cancelQuantity).toFixed(2)}</p>
+                                            <h6 className="mb-1">Cancel Reason:</h6>
+                                            <p>{selectedSubOrder.cancelReason || "No reason provided"}</p>
+                                        </div>
+                                    </div>
+                                ))
                         )}
                         <div className="mt-3">
                             <motion.button
@@ -394,6 +519,7 @@ const Orders = () => {
                                     setShowProductModal(false);
                                     setSelectedSubOrder(null);
                                     setModalAction(null);
+                                    setSelectedRefundItem(null);
                                 }}
                             >
                                 Cancel
@@ -402,8 +528,6 @@ const Orders = () => {
                                 whileTap={{ scale: 0.9 }}
                                 className="btn__seller btn__seller-success"
                                 onClick={() => {
-                                    console.log("Modal Action:", modalAction); // Debug log
-        console.log("Selected SubOrder:", selectedSubOrder);
                                     if (modalAction === "cancel") {
                                         handleProcessCancel(
                                             selectedSubOrder.totalOrderId,
@@ -411,10 +535,19 @@ const Orders = () => {
                                             "approve"
                                         );
                                     } else if (modalAction === "refund") {
+                                        if (!selectedRefundItem?.refundId) {
+                                            console.error("Missing refundId in selectedRefundItem:", selectedRefundItem);
+                                            toast.error("Invalid refund request. Missing refund ID.");
+                                            return;
+                                        }
                                         handleProcessRefund(
                                             selectedSubOrder.totalOrderId,
                                             selectedSubOrder.id,
-                                            "approve"
+                                            "approve",
+                                            false,
+                                            selectedRefundItem.itemId,
+                                            selectedRefundItem.quantity,
+                                            selectedRefundItem.refundId 
                                         );
                                     } else if (modalAction === "confirmReceipt") {
                                         handleSellerConfirmReceipt();

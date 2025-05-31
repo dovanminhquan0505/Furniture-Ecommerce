@@ -409,7 +409,11 @@ const requestRefund = async (req, res) => {
     try {
         const db = getDb();
         const { orderId, subOrderId } = req.params;
-        const { reason, evidence, itemId, quantity } = req.body;
+        const { reason, evidence, itemId, quantity, refundId } = req.body;
+
+        if (!refundId) {
+            return res.status(400).json({ message: "Missing refundId in request" });
+        }
 
         const totalOrderRef = db.collection("totalOrders").doc(orderId);
         const totalOrderSnap = await totalOrderRef.get();
@@ -429,40 +433,73 @@ const requestRefund = async (req, res) => {
             return res.status(400).json({ message: "Order has not been paid yet" });
         }
 
-        if (subOrderData.refundStatus === "Refunded") {
-            return res.status(400).json({ message: "Sub-order has already been refunded" });
-        }
-
         if (subOrderData.status !== "success") {
             return res.status(400).json({ message: "Refund can only be requested for successful orders" });
         }
 
         const item = subOrderData.items.find((i) => i.id === itemId);
-        if (!item || item.quantity < quantity || quantity <= 0) {
+        if (!item || quantity <= 0) {
             return res.status(400).json({ message: "Invalid item or quantity" });
         }
 
-        const refundData = {
-            refundStatus: "Requested",
-            refundItemId: itemId,
-            refundQuantity: quantity,
-            refundRequest: {
-                reason,
-                evidence: evidence || [],
-                requestedAt: admin.firestore.Timestamp.now(),
-                isReturnRequired: true,
-            },
+        if (!item.originalQuantity) {
+            await subOrderRef.update({
+                items: subOrderData.items.map((i) =>
+                    i.id === itemId ? { ...i, originalQuantity: i.quantity } : i
+                ),
+            });
+        }
+
+        const originalQuantity = item.originalQuantity || item.quantity;
+        const alreadyRefundedQty = (subOrderData.refundItems || [])
+            .filter(r => r.itemId === itemId && r.status === "Refunded")
+            .reduce((sum, r) => sum + r.quantity, 0);
+        const pendingRefundQty = (subOrderData.refundItems || [])
+            .filter(r => r.itemId === itemId && ["Requested", "Return Requested", "Return Confirmed"].includes(r.status))
+            .reduce((sum, r) => sum + r.quantity, 0);
+        const canceledQuantity = (subOrderData.cancelledItems || [])
+            .filter(c => c.itemId === itemId)
+            .reduce((sum, c) => sum + c.quantity, 0);
+        const availableForRefund = originalQuantity - alreadyRefundedQty - pendingRefundQty - canceledQuantity;
+
+        if (quantity > availableForRefund) {
+            return res.status(400).json({ 
+                message: `Only ${availableForRefund} items available for refund for item ${itemId}.`
+            });
+        }
+
+        const refundRequest = {
+            itemId,
+            quantity,
+            reason,
+            evidence: evidence || [],
+            status: "Requested",
+            requestedAt: admin.firestore.Timestamp.now(),
+            isReturnRequired: true,
+            refundId,
         };
 
-        await subOrderRef.update(refundData);
+        const updatedRefundItems = [
+            ...(subOrderData.refundItems || []),
+            refundRequest,
+        ];
+
+        const hasActiveRefunds = updatedRefundItems.some(r => 
+            ["Requested", "Return Requested", "Return Confirmed"].includes(r.status)
+        );
+
+        await subOrderRef.update({
+            refundItems: updatedRefundItems,
+            refundStatus: hasActiveRefunds ? "Requested" : "None",
+        });
 
         await db.collection("sellerNotifications").add({
             sellerId: subOrderData.sellerId,
             type: "refund_request",
-            message: `Customer has requested a refund for ${quantity} of ${item.productName} in sub-order ${subOrderId}. Please review.`,
+            message: `Customer has requested a refund for ${quantity} of ${item.productName} in sub-order ${subOrderId}.`,
             userId: subOrderData.userId,
             totalOrderId: orderId,
-            subOrderId: subOrderId,
+            subOrderId,
             createdAt: admin.firestore.Timestamp.now(),
             isRead: false,
         });
@@ -477,7 +514,7 @@ const processRefund = async (req, res) => {
     try {
         const db = getDb();
         const { orderId, subOrderId } = req.params;
-        const { action, returnReceived } = req.body;
+        const { action, returnReceived, itemId, quantity, refundId } = req.body;
 
         const totalOrderRef = db.collection("totalOrders").doc(orderId);
         const totalOrderSnap = await totalOrderRef.get();
@@ -489,38 +526,70 @@ const processRefund = async (req, res) => {
         const subOrderRef = db.collection("subOrders").doc(subOrderId);
         const subOrderSnap = await subOrderRef.get();
         if (!subOrderSnap.exists) {
-            return res.status(404).json({ message: "Sub-order not found" });
+            return res.status(400).json({ message: "Sub-order not found" });
         }
         const subOrderData = subOrderSnap.data();
 
-        if (!["Requested", "Return Confirmed"].includes(subOrderData.refundStatus)) {
-            return res.status(400).json({ message: "No valid refund request to process" });
+        const refundItem = (subOrderData.refundItems || []).find(
+            (r) => r.itemId === itemId &&
+                   r.quantity === quantity &&
+                   r.refundId === refundId &&
+                   (r.status === (returnReceived ? "Return Confirmed" : "Requested"))
+        );
+        if (!refundItem) {
+            return res.status(400).json({ message: "No valid refund request for this item" });
         }
 
-        const item = subOrderData.items.find((i) => i.id === subOrderData.refundItemId);
-        if (!item || item.quantity < subOrderData.refundQuantity) {
-            return res.status(400).json({ message: "Invalid item or quantity" });
+        const item = subOrderData.items.find((i) => i.id === refundItem.itemId);
+        if (!item) {
+            return res.status(400).json({ message: "Item not found" });
+        }
+
+        const originalQuantity = item.originalQuantity || item.quantity;
+        const alreadyRefundedQty = (subOrderData.refundItems || [])
+            .filter(r => r.itemId === itemId && r.status === "Refunded")
+            .reduce((sum, r) => sum + r.quantity, 0);
+        const canceledQuantity = (subOrderData.cancelledItems || [])
+            .filter(c => c.itemId === itemId)
+            .reduce((sum, c) => sum + c.quantity, 0);
+        const availableQtyForRefund = originalQuantity - alreadyRefundedQty - canceledQuantity;
+
+        if (availableQtyForRefund < refundItem.quantity) {
+            return res.status(400).json({ message: `Insufficient quantity available for refund.` });
         }
 
         if (action === "approve") {
-            if (subOrderData.refundStatus === "Requested") {
+            if (refundItem.status === "Requested") {
+                const updatedRefundItems = subOrderData.refundItems.map((r) =>
+                    r.itemId === itemId && r.quantity === quantity && r.refundId === refundId && r.status === "Requested"
+                        ? { ...r, status: "Return Requested", returnRequestedAt: admin.firestore.Timestamp.now() }
+                        : r
+                );
+
+                const hasActiveRefunds = updatedRefundItems.some(r => 
+                    ["Requested", "Return Requested", "Return Confirmed"].includes(r.status)
+                );
+
                 await subOrderRef.update({
-                    refundStatus: "Return Requested",
-                    returnRequestedAt: admin.firestore.Timestamp.now(),
+                    refundItems: updatedRefundItems,
+                    refundStatus: hasActiveRefunds ? "Requested" : "None",
                 });
+
                 await db.collection("sellerNotifications").add({
                     sellerId: subOrderData.sellerId,
                     type: "return_requested",
-                    message: `Customer has been requested to return ${subOrderData.refundQuantity} of ${item.productName} for sub-order ${subOrderId}.`,
+                    message: `Customer has been requested to return ${refundItem.quantity} of ${item.productName} for sub-order ${subOrderId}.`,
                     userId: subOrderData.userId,
                     totalOrderId: orderId,
                     subOrderId: subOrderId,
                     createdAt: admin.firestore.Timestamp.now(),
                     isRead: false,
                 });
+
                 return res.status(200).json({ message: "Return requested, awaiting customer confirmation" });
-            } else if (subOrderData.refundStatus === "Return Confirmed" && returnReceived) {
-                const refundAmount = item.price * subOrderData.refundQuantity;
+                
+            } else if (refundItem.status === "Return Confirmed" && returnReceived) {
+                const refundAmount = item.price * refundItem.quantity;
                 const paymentResult = totalOrderData.paymentResult;
 
                 let refundResult = null;
@@ -542,26 +611,37 @@ const processRefund = async (req, res) => {
                     refundResult = { id: refund.result.id, status: refund.result.status };
                 }
 
-                const updatedItems = subOrderData.items
-                    .map((i) =>
-                        i.id === subOrderData.refundItemId
-                            ? { ...i, quantity: i.quantity - subOrderData.refundQuantity }
-                            : i
-                    )
-                    .filter((i) => i.quantity > 0);
+                const updatedItems = subOrderData.items.map((i) => {
+                    if (i.id === refundItem.itemId) {
+                        const newQuantity = i.quantity - refundItem.quantity;
+                        return { 
+                            ...i, 
+                            quantity: Math.max(0, newQuantity),
+                            originalQuantity: i.originalQuantity || i.quantity
+                        };
+                    }
+                    return i;
+                });
 
-                const updatedTotalQuantity = subOrderData.totalQuantity - subOrderData.refundQuantity;
-                const updatedTotalAmount = updatedItems.reduce(
-                    (sum, i) => sum + i.price * i.quantity,
-                    0
+                const updatedRefundItems = subOrderData.refundItems.map((r) =>
+                    r.itemId === itemId && r.quantity === quantity && r.refundId === refundId && r.status === "Return Confirmed"
+                        ? { ...r, status: "Refunded", refundedAt: admin.firestore.Timestamp.now() }
+                        : r
+                );
+
+                const updatedTotalQuantity = updatedItems.reduce((sum, i) => sum + i.quantity, 0);
+                const updatedTotalAmount = updatedItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+
+                const hasActiveRefunds = updatedRefundItems.some(r => 
+                    ["Requested", "Return Requested", "Return Confirmed"].includes(r.status)
                 );
 
                 const updateData = {
                     items: updatedItems,
+                    refundItems: updatedRefundItems,
                     totalQuantity: updatedTotalQuantity,
                     totalAmount: updatedTotalAmount,
-                    refundStatus: "Refunded",
-                    refundedAt: admin.firestore.Timestamp.now(),
+                    refundStatus: hasActiveRefunds ? "Requested" : "None",
                 };
                 if (refundResult) updateData.refundResult = refundResult;
 
@@ -571,20 +651,25 @@ const processRefund = async (req, res) => {
                     .collection("subOrders")
                     .where("totalOrderId", "==", orderId)
                     .get();
-                const allSubOrdersRefunded = subOrdersSnap.docs.every(
-                    (doc) => doc.data().refundStatus === "Refunded" || doc.data().items.length === 0
-                );
-                if (allSubOrdersRefunded) {
-                    await totalOrderRef.update({
-                        refundStatus: "Refunded",
-                        refundedAt: admin.firestore.Timestamp.now(),
-                    });
-                }
+
+                let newTotalQuantity = 0;
+                let newTotalAmount = 0;
+                subOrdersSnap.docs.forEach((doc) => {
+                    const subOrder = doc.data();
+                    newTotalQuantity += subOrder.totalQuantity;
+                    newTotalAmount += subOrder.totalAmount;
+                });
+
+                await totalOrderRef.update({
+                    totalQuantity: newTotalQuantity,
+                    totalAmount: newTotalAmount,
+                    totalPrice: newTotalAmount + totalOrderData.totalShipping + totalOrderData.totalTax,
+                });
 
                 await db.collection("sellerNotifications").add({
                     sellerId: subOrderData.sellerId,
                     type: "refund_processed",
-                    message: `Refund for ${subOrderData.refundQuantity} of ${item.productName} in sub-order ${subOrderId} has been processed.`,
+                    message: `Refund for ${refundItem.quantity} of ${item.productName} in sub-order ${subOrderId} has been processed.`,
                     userId: subOrderData.userId,
                     totalOrderId: orderId,
                     subOrderId: subOrderId,
@@ -597,20 +682,32 @@ const processRefund = async (req, res) => {
                 return res.status(400).json({ message: "Invalid refund state for approval" });
             }
         } else if (action === "reject") {
+            const updatedRefundItems = subOrderData.refundItems.map((r) =>
+                r.itemId === itemId && r.quantity === quantity && r.refundId === refundId && ["Requested", "Return Confirmed"].includes(r.status)
+                    ? { ...r, status: "Rejected", refundRejectedAt: admin.firestore.Timestamp.now() }
+                    : r
+            );
+
+            const hasActiveRefunds = updatedRefundItems.some(r => 
+                ["Requested", "Return Requested", "Return Confirmed"].includes(r.status)
+            );
+
             await subOrderRef.update({
-                refundStatus: "Rejected",
-                refundRejectedAt: admin.firestore.Timestamp.now(),
+                refundItems: updatedRefundItems,
+                refundStatus: hasActiveRefunds ? "Requested" : "None",
             });
+
             await db.collection("sellerNotifications").add({
                 sellerId: subOrderData.sellerId,
                 type: "refund_rejected",
-                message: `Refund request for ${subOrderData.refundQuantity} of ${item.productName} in sub-order ${subOrderId} has been rejected.`,
+                message: `Refund request for ${refundItem.quantity} of ${item.productName} in sub-order ${subOrderId} has been rejected.`,
                 userId: subOrderData.userId,
                 totalOrderId: orderId,
                 subOrderId: subOrderId,
                 createdAt: admin.firestore.Timestamp.now(),
                 isRead: false,
             });
+
             res.status(200).json({ message: "Refund request rejected successfully" });
         } else {
             return res.status(400).json({ message: "Invalid action" });
@@ -624,7 +721,15 @@ const customerConfirmReturn = async (req, res) => {
     try {
         const db = getDb();
         const { orderId, subOrderId } = req.params;
-        const { itemId, quantity } = req.body;
+        const { itemId, quantity, refundId } = req.body;
+
+        if (!itemId || typeof itemId !== "string") {
+            return res.status(400).json({ message: `Invalid or missing itemId: ${itemId}` });
+        }
+        const parsedQuantity = Number(quantity);
+        if (isNaN(parsedQuantity) || parsedQuantity <= 0) {
+            return res.status(400).json({ message: `Invalid quantity: ${quantity}` });
+        }
 
         const subOrderRef = db.collection("subOrders").doc(subOrderId);
         const subOrderSnap = await subOrderRef.get();
@@ -633,23 +738,36 @@ const customerConfirmReturn = async (req, res) => {
         }
         const subOrderData = subOrderSnap.data();
 
-        if (subOrderData.refundStatus !== "Return Requested") {
-            return res.status(400).json({ message: "No return request to confirm" });
+        const refundItem = (subOrderData.refundItems || []).find(
+            (r) => String(r.itemId) === String(itemId) &&
+                   r.status === "Return Requested" &&
+                   Number(r.quantity) === parsedQuantity &&
+                   r.refundId === refundId
+        );
+        if (!refundItem) {
+            return res.status(400).json({
+                message: `No return request found for itemId: ${itemId}, quantity: ${parsedQuantity}, refundId: ${refundId}, status: Return Requested`
+            });
         }
 
-        if (subOrderData.refundItemId !== itemId || subOrderData.refundQuantity !== quantity) {
-            return res.status(400).json({ message: "Invalid item or quantity" });
-        }
+        const updatedRefundItems = subOrderData.refundItems.map((r) =>
+            String(r.itemId) === String(itemId) &&
+            r.status === "Return Requested" &&
+            Number(r.quantity) === parsedQuantity &&
+            r.refundId === refundId
+                ? { ...r, status: "Return Confirmed", returnConfirmedAt: admin.firestore.Timestamp.now() }
+                : r
+        );
 
         await subOrderRef.update({
-            refundStatus: "Return Confirmed",
-            returnConfirmedAt: admin.firestore.Timestamp.now(),
+            refundItems: updatedRefundItems,
+            refundStatus: updatedRefundItems.some(r => ["Requested", "Return Requested", "Return Confirmed"].includes(r.status)) ? "Requested" : "None",
         });
 
         await db.collection("sellerNotifications").add({
             sellerId: subOrderData.sellerId,
             type: "return_confirmed",
-            message: `Customer has confirmed return of ${quantity} of ${subOrderData.items.find(i => i.id === itemId).productName} for sub-order ${subOrderId}. Please confirm receipt.`,
+            message: `Customer has confirmed return of ${parsedQuantity} of ${subOrderData.items.find(i => String(i.id) === String(itemId))?.productName || 'Unknown Item'} for sub-order ${subOrderId}. Please confirm receipt.`,
             userId: subOrderData.userId,
             totalOrderId: orderId,
             subOrderId: subOrderId,
@@ -659,6 +777,7 @@ const customerConfirmReturn = async (req, res) => {
 
         res.status(200).json({ message: "Return confirmed successfully" });
     } catch (error) {
+        console.error(`Error in customerConfirmReturn:`, error);
         res.status(500).json({ message: "Error confirming return", error: error.message });
     }
 };

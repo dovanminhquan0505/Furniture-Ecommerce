@@ -58,3 +58,22 @@
     padding: 8px 20px;
     font-size: 0.9rem;
 }
+
+.evidence-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.preview-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.preview-item img, .preview-item video {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+.preview-item p {
+    margin: 5px 0 0;
+    font-size: 0.9em;
+}

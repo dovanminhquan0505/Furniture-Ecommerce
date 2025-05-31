@@ -135,26 +135,52 @@ const PlaceOrder = () => {
     const [showAppealModal, setShowAppealModal] = useState(false);
     const [appealReason, setAppealReason] = useState("");
 
-    // Handle display Date
     const formatDate = (date) => {
-        if (!date) return "N/A"; 
+        if (!date) return "N/A";
+
         let parsedDate;
+
         if (typeof date === "string") {
-            const isoMatch = date.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
-            if (isoMatch) {
-                parsedDate = new Date(date);
-                const offsetMinutes = 7 * 60; 
-                parsedDate.setMinutes(
-                    parsedDate.getMinutes() +
+            const firebaseDateRegex = /^([A-Za-z]+ \d{1,2}, \d{4} at \d{1,2}:\d{2}:\d{2}\s*(?:AM|PM)\s*UTC[+-]\d+)$/i;
+            
+            if (firebaseDateRegex.test(date)) {
+                try {
+                    const standardFormat = date
+                        .replace(" at ", " ")
+                        .replace("UTC+", "+")
+                        .replace("UTC-", "-")
+                        .replace(/([+-])(\d+)$/, (match, sign, offset) => {
+                            return sign + offset.padStart(2, '0') + '00';
+                        });
+                    
+                    parsedDate = new Date(standardFormat);
+                    
+                    if (isNaN(parsedDate.getTime())) {
+                        const match = date.match(/^([A-Za-z]+ \d{1,2}, \d{4}) at (\d{1,2}:\d{2}:\d{2}\s*(?:AM|PM))\s*UTC([+-])(\d+)$/i);
+                        if (match) {
+                            const [, datePart, timePart, sign, offset] = match;
+                            const standardDate = `${datePart} ${timePart} ${sign}${offset.padStart(2, '0')}00`;
+                            parsedDate = new Date(standardDate);
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error parsing Firebase date:", error, date);
+                    return "N/A";
+                }
+            } else {
+                // Handle ISO format
+                const isoMatch = date.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+                if (isoMatch) {
+                    parsedDate = new Date(date);
+                    const offsetMinutes = 7 * 60; 
+                    parsedDate.setMinutes(
+                        parsedDate.getMinutes() +
                         parsedDate.getTimezoneOffset() +
                         offsetMinutes
-                );
-            } else if (date.includes(" at ")) {
-                parsedDate = new Date(
-                    date.replace(" at ", " ").replace(" UTC+7", "+0700")
-                );
-            } else {
-                return "N/A"; 
+                    );
+                } else {
+                    parsedDate = new Date(date);
+                }
             }
         } else if (date instanceof Date) {
             parsedDate = date;
@@ -164,7 +190,10 @@ const PlaceOrder = () => {
             return "N/A";
         }
 
-        if (!parsedDate || isNaN(parsedDate.getTime())) return "N/A";
+        if (!parsedDate || isNaN(parsedDate.getTime())) {
+            console.error("Invalid date after parsing:", date);
+            return "N/A";
+        }
 
         return parsedDate.toLocaleString("en-US", {
             year: "numeric",
@@ -440,36 +469,71 @@ const PlaceOrder = () => {
         }
     };
 
-    const handleRequestRefund = async (
-        { reason, files, itemId, quantity },
-        subOrderId
-    ) => {
+    const handleRequestRefund = async ({ reason, files, itemId, quantity, subOrderId }) => {
         try {
+            if (!subOrderId) {
+                toast.error("Invalid sub-order ID");
+                return;
+            }
             setLoading(true);
+            const subOrder = orderDetails.subOrders.find((sub) => sub.id === subOrderId);
+            const item = subOrder.items.find((i) => i.id === itemId);
+            
+            const originalQuantity = item.originalQuantity || item.quantity;
+            const canceledQuantity = (subOrder.cancelledItems || [])
+                .filter((c) => c.itemId === itemId)
+                .reduce((sum, c) => sum + c.quantity, 0);
+            const refundedQuantity = (subOrder.refundItems || [])
+                .filter((r) => r.itemId === itemId && r.status !== "Rejected")
+                .reduce((sum, r) => sum + r.quantity, 0);
+            const availableQuantity = originalQuantity - canceledQuantity - refundedQuantity;
+            
+            if (quantity > availableQuantity) {
+                toast.error(`Cannot refund ${quantity} items. Only ${availableQuantity} available.`);
+                return;
+            }
+
             let evidence = [];
             if (files.length > 0) {
                 const uploadPromises = files.map((file) => uploadFile(file));
                 const uploadResults = await Promise.all(uploadPromises);
                 evidence = uploadResults.map((result) => result.fileURL);
             }
+
+            const generatedRefundId = `${subOrderId}-${itemId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
             await requestRefund(orderId, subOrderId, {
                 reason,
                 evidence,
                 itemId,
                 quantity,
+                refundId: generatedRefundId,
             });
-            setOrderDetails((prev) => ({
-                ...prev,
-                subOrders: prev.subOrders.map((sub) =>
-                    sub.id === subOrderId
-                        ? { ...sub, refundStatus: "Requested" }
-                        : sub
-                ),
-            }));
+
+            const response = await getOrderById(orderId);
+            setOrderDetails({
+                totalOrder: {
+                    ...response.totalOrder,
+                    paidAt: formatDate(response.totalOrder.paidAt),
+                    deliveredAt: formatDate(response.totalOrder.deliveredAt),
+                    refundStatus: response.totalOrder.refundStatus || "None",
+                },
+                subOrders: response.subOrders.map((sub) => ({
+                    ...sub,
+                    refundStatus: sub.refundStatus || "None",
+                    cancelStatus: sub.cancelStatus || "None",
+                    items: sub.items.map((item) => ({
+                        ...item,
+                        canceled: item.canceled || item.quantity === 0,
+                    })),
+                })),
+            });
+
+            toast.success("Return & Refund request submitted successfully!");
             setShowRefundModal(false);
             setSelectedSubOrderId(null);
+            setSelectedItemId(null);
             setSelectedQuantity(1);
-            toast.success("Return & Refund request submitted successfully!");
         } catch (error) {
             toast.error("Error requesting refund: " + error.message);
         } finally {
@@ -501,43 +565,95 @@ const PlaceOrder = () => {
         }
     };
 
-    const handleConfirmReturn = async (subOrderId, itemId, quantity) => {
+    const handleConfirmReturn = async (subOrderId, itemId, quantity, refundId) => {
         try {
+            if (!refundId) {
+                console.error("Missing refundId in handleConfirmReturn:", { subOrderId, itemId, quantity, refundId });
+                toast.error("Invalid refund request. Missing refund ID.");
+                return;
+            }
+
             setLoading(true);
             await customerConfirmReturn(orderId, subOrderId, {
-                itemId,
-                quantity,
+                itemId: String(itemId),
+                quantity: Number(quantity),
+                refundId,
             });
-            setOrderDetails((prev) => ({
-                ...prev,
-                subOrders: prev.subOrders.map((sub) =>
-                    sub.id === subOrderId
-                        ? { ...sub, refundStatus: "Return Confirmed" }
-                        : sub
-                ),
-            }));
+            
+            // Refetch order details
+            const response = await getOrderById(orderId);
+            setOrderDetails({
+                totalOrder: {
+                    ...response.totalOrder,
+                    paidAt: formatDate(response.totalOrder.paidAt),
+                    deliveredAt: formatDate(response.totalOrder.deliveredAt),
+                    refundStatus: response.totalOrder.refundStatus || "None",
+                },
+                subOrders: response.subOrders.map((sub) => ({
+                    ...sub,
+                    refundStatus: sub.refundStatus || "None",
+                    cancelStatus: sub.cancelStatus || "None",
+                    items: sub.items.map((item) => ({
+                        ...item,
+                        canceled: item.canceled || item.quantity === 0,
+                    })),
+                })),
+            });
+
             toast.success("Return confirmed successfully!");
         } catch (error) {
+            console.error(`Error in handleConfirmReturn:`, error);
             toast.error("Error confirming return: " + error.message);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSellerConfirmReceipt = async (subOrderId, itemId, quantity) => {
+    const handleSellerConfirmReceipt = async (subOrderId, itemId, quantity, refundId) => {
         try {
+            // Add validation for required parameters
+            if (!refundId) {
+                console.error("Missing refundId in handleSellerConfirmReceipt:", { subOrderId, itemId, quantity, refundId });
+                toast.error("Invalid refund request. Missing refund ID.");
+                return;
+            }
+
             setLoading(true);
             await processRefund(orderId, subOrderId, {
                 action: "approve",
                 returnReceived: true,
                 itemId,
                 quantity,
+                refundId,
             });
+            
             setOrderDetails((prev) => ({
                 ...prev,
                 subOrders: prev.subOrders.map((sub) =>
                     sub.id === subOrderId
-                        ? { ...sub, refundStatus: "Refunded" }
+                        ? {
+                            ...sub,
+                            items: sub.items
+                                .map((i) =>
+                                    i.id === itemId
+                                        ? { ...i, quantity: i.quantity - quantity }
+                                        : i
+                                )
+                                .filter((i) => i.quantity > 0),
+                            refundItems: sub.refundItems.map((r) =>
+                                r.itemId === itemId &&
+                                r.quantity === quantity &&
+                                r.refundId === refundId &&
+                                r.status === "Return Confirmed"
+                                    ? { ...r, status: "Refunded" }
+                                    : r
+                            ),
+                            totalQuantity: sub.totalQuantity - quantity,
+                            totalAmount: sub.items.reduce(
+                                (sum, i) => sum + i.price * (i.quantity - (i.id === itemId ? quantity : 0)),
+                                0
+                            ),
+                        }
                         : sub
                 ),
             }));
@@ -613,12 +729,24 @@ const PlaceOrder = () => {
                     </h6>
                     {subOrder.items.map((item, index) => {
                         const isCanceled = item.canceled || item.quantity === 0;
+                        const refundItems = (subOrder.refundItems || []).filter(
+                            (r) => r.itemId === item.id
+                        );
+                        const originalQuantity = item.originalQuantity || item.quantity;
+                        const canceledQuantity = (subOrder.cancelledItems || [])
+                            .filter((c) => c.itemId === item.id)
+                            .reduce((sum, c) => sum + c.quantity, 0);
+                        const refundedQuantity = refundItems
+                            .filter((r) => r.status !== "Rejected")
+                            .reduce((sum, r) => sum + r.quantity, 0);
+                        const availableQuantity = originalQuantity - canceledQuantity - refundedQuantity;
+
                         const shouldShowCancelBtn =
                             !isSeller &&
                             totalOrder.isPaid &&
                             (subOrder.status === "pending" ||
                                 subOrder.status === "processing") &&
-                            item.quantity > 0 &&
+                            availableQuantity > 0 &&
                             !isCanceled &&
                             !(
                                 subOrder.cancelStatus === "Requested" &&
@@ -633,32 +761,30 @@ const PlaceOrder = () => {
                             !isSeller &&
                             totalOrder.isPaid &&
                             subOrder.status === "success" &&
-                            item.quantity > 0 &&
-                            !isCanceled &&
-                            subOrder.refundStatus !== "Requested" &&
-                            subOrder.refundStatus !== "Rejected" &&
-                            subOrder.refundStatus !== "Refunded" &&
-                            subOrder.refundStatus !== "Return Requested" &&
-                            subOrder.refundStatus !== "Return Confirmed";
+                            availableQuantity > 0 &&
+                            !isCanceled;
 
                         const shouldShowConfirmReturnBtn =
                             !isSeller &&
-                            subOrder.refundStatus === "Return Requested" &&
-                            item.quantity > 0 &&
-                            !isCanceled;
+                            refundItems.some(
+                                (r) =>
+                                    r.status === "Return Requested" &&
+                                    r.itemId === item.id
+                            );
 
                         const shouldShowSellerConfirmBtn =
                             isSeller &&
-                            subOrder.refundStatus === "Return Confirmed" &&
-                            item.quantity > 0 &&
-                            !isCanceled;
+                            refundItems.some(
+                                (r) =>
+                                    r.status === "Return Confirmed" &&
+                                    r.quantity <= 20
+                            );
 
                         const shouldShowAppealBtn =
                             !isSeller &&
-                            subOrder.refundStatus === "Rejected" &&
+                            refundItems.some((r) => r.status === "Rejected") &&
                             !subOrder.appealRequested &&
-                            item.quantity > 0 &&
-                            !isCanceled;
+                            availableQuantity > 0;
 
                         return (
                             <div
@@ -688,12 +814,36 @@ const PlaceOrder = () => {
                                         {subOrder.cancelStatus === "Rejected" &&
                                             subOrder.cancelItemId === item.id && (
                                                 <p className="text-danger">
-                                                    Cancellation request rejected for this item
+                                                    Cancellation request rejected
                                                 </p>
                                             )}
+                                        {refundItems.map((r, idx) => (
+                                            <div key={`${r.refundId}-${idx}`}>
+                                                {r.status === "Return Requested" && (
+                                                    <p className="text-info">
+                                                        Awaiting return confirmation (Qty: {r.quantity})
+                                                    </p>
+                                                )}
+                                                {r.status === "Return Confirmed" && (
+                                                    <p className="text-info">
+                                                        Awaiting refund confirmation (Qty: {r.quantity})
+                                                    </p>
+                                                )}
+                                                {r.status === "Refunded" && (
+                                                    <p className="text-success">
+                                                        Refunded successfully (Qty: {r.quantity})
+                                                    </p>
+                                                )}
+                                                {r.status === "Rejected" && (
+                                                    <p className="text-danger">
+                                                        Refund rejected (Qty: {r.quantity})
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ))}
                                         {isCanceled && (
                                             <p className="text-success">
-                                                This item has been canceled successfully
+                                                This item has been canceled
                                             </p>
                                         )}
                                     </div>
@@ -717,45 +867,59 @@ const PlaceOrder = () => {
                                                 onClick={() => {
                                                     setSelectedSubOrderId(subOrderId);
                                                     setSelectedItemId(item.id);
-                                                    setSelectedQuantity(item.quantity);
+                                                    setSelectedQuantity(Math.min(availableQuantity, item.quantity));
                                                     setShowRefundModal(true);
                                                 }}
                                             >
                                                 {shouldShowRefundBtn
-                                                    ? "Return/Refund"
+                                                    ? "Refund Order"
                                                     : "Cancel Order"}
                                             </motion.button>
                                         )}
-                                        {shouldShowConfirmReturnBtn && (
-                                            <motion.button
-                                                whileTap={{ scale: 1.1 }}
-                                                className="refund__btn"
-                                                onClick={() =>
-                                                    handleConfirmReturn(
-                                                        subOrder.id,
-                                                        item.id,
-                                                        subOrder.refundQuantity
-                                                    )
-                                                }
-                                            >
-                                                Confirm Return
-                                            </motion.button>
-                                        )}
-                                        {shouldShowSellerConfirmBtn && (
-                                            <motion.button
-                                                whileTap={{ scale: 1.1 }}
-                                                className="refund__btn"
-                                                onClick={() =>
-                                                    handleSellerConfirmReceipt(
-                                                        subOrder.id,
-                                                        item.id,
-                                                        subOrder.refundQuantity
-                                                    )
-                                                }
-                                            >
-                                                Confirm Receipt
-                                            </motion.button>
-                                        )}
+                                        {shouldShowConfirmReturnBtn &&
+                                            refundItems
+                                                .filter((r) => r.status === "Return Requested" && r.itemId === item.id && r.refundId)
+                                                .map((r, idx) => (
+                                                    <motion.button
+                                                        key={`${r.refundId}-${idx}`}
+                                                        whileTap={{ scale: 1.1 }}
+                                                        className="refund__btn"
+                                                        onClick={() => {
+                                                            handleConfirmReturn(
+                                                                subOrder.id,
+                                                                String(item.id),
+                                                                Number(r.quantity),
+                                                                r.refundId
+                                                            );
+                                                        }}
+                                                    >
+                                                        Confirm Return (Qty: {r.quantity})
+                                                    </motion.button>
+                                                ))}
+                                        {shouldShowSellerConfirmBtn &&
+                                            refundItems
+                                                .filter((r) => r.status === "Return Confirmed" && r.refundId)
+                                                .map((r, idx) => (
+                                                    <motion.button
+                                                        key={`seller-${r.refundId}-${idx}`}
+                                                        whileTap={{ scale: 1.1 }}
+                                                        className="refund__btn"
+                                                        onClick={() => {
+                                                            if (!r.refundId) {
+                                                                toast.error("Invalid refund request. Please contact support.");
+                                                                return;
+                                                            }
+                                                            handleSellerConfirmReceipt(
+                                                                subOrder.id,
+                                                                item.id,
+                                                                r.quantity,
+                                                                r.refundId
+                                                            );
+                                                        }}
+                                                    >
+                                                        Confirm Receipt (Qty: {r.quantity})
+                                                    </motion.button>
+                                                ))}
                                         {shouldShowAppealBtn && (
                                             <motion.button
                                                 whileTap={{ scale: 1.1 }}
@@ -777,32 +941,12 @@ const PlaceOrder = () => {
                             </div>
                         );
                     })}
-
-                    {/* Hiển thị thông tin tổng quan của subOrder */}
                     {subOrder.cancelStatus === "Requested" &&
                         !subOrder.cancelItemId && (
                             <p className="text-warning">
                                 Cancellation request pending approval
                             </p>
                         )}
-                    {subOrder.refundStatus === "Requested" && (
-                        <p className="text-warning">
-                            Refund request pending approval
-                        </p>
-                    )}
-                    {subOrder.refundStatus === "Return Requested" && (
-                        <p className="text-info">
-                            Awaiting your return confirmation
-                        </p>
-                    )}
-                    {subOrder.refundStatus === "Return Confirmed" && (
-                        <p className="text-info">
-                            Awaiting seller confirmation
-                        </p>
-                    )}
-                    {subOrder.refundStatus === "Refunded" && (
-                        <p className="text-success">Refunded successfully</p>
-                    )}
                     {subOrder.appealRequested && (
                         <p className="text-info">
                             Appeal submitted, awaiting admin review
@@ -932,18 +1076,12 @@ const PlaceOrder = () => {
                                 {selectedSubOrderId &&
                                     (() => {
                                         const selectedSubOrder = subOrders.find(
-                                            (sub) =>
-                                                sub.id === selectedSubOrderId
+                                            (sub) => sub.id === selectedSubOrderId
                                         );
-
-                                        const isSuccess =
-                                            selectedSubOrder?.status ===
-                                            "success";
-                                        const selectedItem =
-                                            selectedSubOrder?.items.find(
-                                                (item) =>
-                                                    item.id === selectedItemId
-                                            );
+                                        const isSuccess = selectedSubOrder?.status === "success";
+                                        const selectedItem = selectedSubOrder?.items.find(
+                                            (item) => item.id === selectedItemId
+                                        );
 
                                         return (
                                             <>
@@ -952,35 +1090,17 @@ const PlaceOrder = () => {
                                                         orderId={orderId}
                                                         subOrder={{
                                                             ...selectedSubOrder,
-                                                            sellerName:
-                                                                sellerNames[
-                                                                    selectedSubOrder
-                                                                        .sellerId
-                                                                ],
+                                                            sellerName: sellerNames[selectedSubOrder.sellerId],
                                                         }}
                                                         item={selectedItem}
-                                                        selectedQuantity={
-                                                            selectedQuantity
-                                                        }
-                                                        setSelectedQuantity={
-                                                            setSelectedQuantity
-                                                        }
-                                                        onRequestRefund={
-                                                            handleRequestRefund
-                                                        }
+                                                        selectedQuantity={selectedQuantity}
+                                                        setSelectedQuantity={setSelectedQuantity}
+                                                        onRequestRefund={handleRequestRefund}
                                                         onCancel={() => {
-                                                            setShowRefundModal(
-                                                                false
-                                                            );
-                                                            setSelectedSubOrderId(
-                                                                null
-                                                            );
-                                                            setSelectedItemId(
-                                                                null
-                                                            );
-                                                            setSelectedQuantity(
-                                                                1
-                                                            );
+                                                            setShowRefundModal(false);
+                                                            setSelectedSubOrderId(null);
+                                                            setSelectedItemId(null);
+                                                            setSelectedQuantity(1);
                                                         }}
                                                         loading={loading}
                                                     />
@@ -989,35 +1109,17 @@ const PlaceOrder = () => {
                                                         orderId={orderId}
                                                         subOrder={{
                                                             ...selectedSubOrder,
-                                                            sellerName:
-                                                                sellerNames[
-                                                                    selectedSubOrder
-                                                                        .sellerId
-                                                                ],
+                                                            sellerName: sellerNames[selectedSubOrder.sellerId],
                                                         }}
                                                         item={selectedItem}
-                                                        selectedQuantity={
-                                                            selectedQuantity
-                                                        }
-                                                        setSelectedQuantity={
-                                                            setSelectedQuantity
-                                                        }
-                                                        onCancelOrder={
-                                                            handleCancelOrder
-                                                        }
+                                                        selectedQuantity={selectedQuantity}
+                                                        setSelectedQuantity={setSelectedQuantity}
+                                                        onCancelOrder={handleCancelOrder}
                                                         onCancel={() => {
-                                                            setShowRefundModal(
-                                                                false
-                                                            );
-                                                            setSelectedSubOrderId(
-                                                                null
-                                                            );
-                                                            setSelectedItemId(
-                                                                null
-                                                            );
-                                                            setSelectedQuantity(
-                                                                1
-                                                            );
+                                                            setShowRefundModal(false);
+                                                            setSelectedSubOrderId(null);
+                                                            setSelectedItemId(null);
+                                                            setSelectedQuantity(1);
                                                         }}
                                                         loading={loading}
                                                     />

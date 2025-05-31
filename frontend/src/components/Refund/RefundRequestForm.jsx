@@ -17,7 +17,13 @@ const RefundRequestForm = ({ orderId, subOrder, item, selectedQuantity, setSelec
     const handleConfirm = () => {
         setShowConfirmModal(false);
         const finalReason = reason === "Other" ? customReason : reason;
-        onRequestRefund({ reason: finalReason, files, itemId: item.id, quantity: parseInt(selectedQuantity) });
+        onRequestRefund({
+            reason: finalReason,
+            files,
+            itemId: item.id,
+            quantity: parseInt(selectedQuantity),
+            subOrderId: subOrder.id
+        });
     };
 
     const handleFileChange = (e) => {
@@ -95,9 +101,33 @@ const RefundRequestForm = ({ orderId, subOrder, item, selectedQuantity, setSelec
                             type="file"
                             id="evidence"
                             multiple
+                            accept="image/*,video/*"
                             onChange={handleFileChange}
                             required={isEvidenceRequired}
                         />
+                        {files.length > 0 && (
+                            <div className="evidence-preview mt-2">
+                                <h6>Uploaded Files:</h6>
+                                {files.map((file, index) => (
+                                    <div key={index} className="preview-item">
+                                        {file.type.startsWith("image/") ? (
+                                            <img
+                                                src={URL.createObjectURL(file)}
+                                                alt={`Preview ${index}`}
+                                                style={{ maxWidth: "100px", maxHeight: "100px" }}
+                                            />
+                                        ) : (
+                                            <video
+                                                src={URL.createObjectURL(file)}
+                                                controls
+                                                style={{ maxWidth: "100px", maxHeight: "100px" }}
+                                            />
+                                        )}
+                                        <p>{file.name}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </FormGroup>
                 )}
                 <div className="d-flex justify-content-end gap-2">

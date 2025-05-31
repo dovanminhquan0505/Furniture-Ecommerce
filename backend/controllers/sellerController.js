@@ -157,8 +157,11 @@ const getSellerOrders = async (req, res) => {
                     createdAt,
                     isPaid: totalOrderData.isPaid || orderData.isPaid || false,
                     status: orderData.status || "pending",
-                    cancelStatus: orderData.cancelStatus || "None", 
-                    refundStatus: orderData.refundStatus || "None", 
+                    cancelStatus: orderData.cancelStatus || "None",
+                    cancelItemId: orderData.cancelItemId || null,
+                    cancelQuantity: orderData.cancelQuantity || null,
+                    refundStatus: orderData.refundStatus || "None",
+                    refundItems: orderData.refundItems || [],
                 };
             })
         );
@@ -388,7 +391,7 @@ const getSellerNotifications = async (req, res) => {
                     createdAt: data.createdAt && data.createdAt.toDate
                         ? data.createdAt.toDate().toISOString()
                         : new Date().toISOString(),
-                    isRead: data.isRead || false, 
+                    isRead: data.isRead || false,
                 };
             })
         );

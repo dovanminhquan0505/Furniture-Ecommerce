@@ -621,20 +621,43 @@ export const appealRefund = async (orderId, subOrderId, appealReason) => {
     }
 };
 
-export const customerConfirmReturn = async (orderId, subOrderId) => {
+export const customerConfirmReturn = async (orderId, subOrderId, { itemId, quantity, refundId }) => {
     try {
+        if (!itemId || typeof itemId !== 'string') {
+            throw new Error(`Invalid itemId: ${itemId}`);
+        }
+        const parsedQuantity = Number(quantity);
+        if (isNaN(parsedQuantity) || parsedQuantity < 1) {
+            throw new Error(`Invalid quantity: ${quantity}`);
+        }
+
+        const payload = {
+            itemId: String(itemId), 
+            quantity: parsedQuantity,
+            refundId 
+        };
+
         const response = await fetch(`${BASE_URL}/orders/${orderId}/refund/confirm-return/${subOrderId}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
+            body: JSON.stringify(payload)
         });
+
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to confirm return");
+            console.error(`Error response from server:`, errorData);
+            throw new Error(errorData.message || `Failed to confirm return (Status: ${response.status})`);
         }
         return await response.json();
     } catch (error) {
-        console.error("Error confirming return:", error);
+        console.error(`Error confirming return:`, {
+            message: error.message,
+            orderId,
+            subOrderId,
+            itemId,
+            quantity
+        });
         throw error;
     }
 };

@@ -56,7 +56,7 @@ const CheckoutForm = ({ orderId, totalPrice, onSuccess, billingInfo }) => {
         try {
             const { clientSecret } = await createStripePaymentIntent(
                 orderId,
-                totalPrice * 100
+                Math.round(totalPrice * 100)
             );
 
             const result = await stripe.confirmCardPayment(clientSecret, {
@@ -134,6 +134,8 @@ const PlaceOrder = () => {
     const [selectedQuantity, setSelectedQuantity] = useState(1);
     const [showAppealModal, setShowAppealModal] = useState(false);
     const [appealReason, setAppealReason] = useState("");
+    const [showConfirmReturnModal, setShowConfirmReturnModal] = useState(false);
+    const [confirmReturnData, setConfirmReturnData] = useState(null);
 
     const formatDate = (date) => {
         if (!date) return "N/A";
@@ -141,52 +143,44 @@ const PlaceOrder = () => {
         let parsedDate;
 
         if (typeof date === "string") {
-            const firebaseDateRegex = /^([A-Za-z]+ \d{1,2}, \d{4} at \d{1,2}:\d{2}:\d{2}\s*(?:AM|PM)\s*UTC[+-]\d+)$/i;
+            // Normalize the input string by replacing non-breaking spaces and trimming
+            const normalizedDate = date.replace(/\u202F/g, " ").trim();
             
-            if (firebaseDateRegex.test(date)) {
+            // Updated regex to be more flexible with spaces and UTC offset
+            const firebaseDateRegex = /^([A-Za-z]+ \d{1,2}, \d{4})\s*at\s*(\d{1,2}:\d{2}:\d{2}\s*(?:AM|PM))\s*UTC([+-])(\d+)$/i;
+            
+            if (firebaseDateRegex.test(normalizedDate)) {
                 try {
-                    const standardFormat = date
-                        .replace(" at ", " ")
-                        .replace("UTC+", "+")
-                        .replace("UTC-", "-")
-                        .replace(/([+-])(\d+)$/, (match, sign, offset) => {
-                            return sign + offset.padStart(2, '0') + '00';
-                        });
-                    
-                    parsedDate = new Date(standardFormat);
-                    
+                    const [, datePart, timePart, sign, offset] = normalizedDate.match(firebaseDateRegex);
+                    const standardDate = `${datePart} ${timePart} ${sign}${offset.padStart(2, '0')}00`;
+                    parsedDate = new Date(standardDate);
+
                     if (isNaN(parsedDate.getTime())) {
-                        const match = date.match(/^([A-Za-z]+ \d{1,2}, \d{4}) at (\d{1,2}:\d{2}:\d{2}\s*(?:AM|PM))\s*UTC([+-])(\d+)$/i);
-                        if (match) {
-                            const [, datePart, timePart, sign, offset] = match;
-                            const standardDate = `${datePart} ${timePart} ${sign}${offset.padStart(2, '0')}00`;
-                            parsedDate = new Date(standardDate);
-                        }
+                        console.error("Invalid parsed Firebase date:", standardDate, normalizedDate);
+                        return "N/A";
                     }
                 } catch (error) {
-                    console.error("Error parsing Firebase date:", error, date);
+                    console.error("Error parsing Firebase date:", error, normalizedDate);
                     return "N/A";
                 }
+            } else if (normalizedDate.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+                parsedDate = new Date(normalizedDate);
+                const offsetMinutes = 7 * 60; // UTC+7 offset
+                parsedDate.setMinutes(
+                    parsedDate.getMinutes() + parsedDate.getTimezoneOffset() + offsetMinutes
+                );
             } else {
-                // Handle ISO format
-                const isoMatch = date.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
-                if (isoMatch) {
-                    parsedDate = new Date(date);
-                    const offsetMinutes = 7 * 60; 
-                    parsedDate.setMinutes(
-                        parsedDate.getMinutes() +
-                        parsedDate.getTimezoneOffset() +
-                        offsetMinutes
-                    );
-                } else {
-                    parsedDate = new Date(date);
-                }
+                parsedDate = new Date(normalizedDate);
             }
         } else if (date instanceof Date) {
             parsedDate = date;
         } else if (date && typeof date.toDate === "function") {
             parsedDate = date.toDate();
+        } else if (date && typeof date === "object" && "_seconds" in date && "_nanoseconds" in date) {
+            const milliseconds = date._seconds * 1000 + Math.floor(date._nanoseconds / 1000000);
+            parsedDate = new Date(milliseconds);
         } else {
+            console.error("Unsupported date format:", date);
             return "N/A";
         }
 
@@ -876,26 +870,24 @@ const PlaceOrder = () => {
                                                     : "Cancel Order"}
                                             </motion.button>
                                         )}
-                                        {shouldShowConfirmReturnBtn &&
-                                            refundItems
-                                                .filter((r) => r.status === "Return Requested" && r.itemId === item.id && r.refundId)
-                                                .map((r, idx) => (
-                                                    <motion.button
-                                                        key={`${r.refundId}-${idx}`}
-                                                        whileTap={{ scale: 1.1 }}
-                                                        className="refund__btn"
-                                                        onClick={() => {
-                                                            handleConfirmReturn(
-                                                                subOrder.id,
-                                                                String(item.id),
-                                                                Number(r.quantity),
-                                                                r.refundId
-                                                            );
-                                                        }}
-                                                    >
-                                                        Confirm Return (Qty: {r.quantity})
-                                                    </motion.button>
-                                                ))}
+                                        {shouldShowConfirmReturnBtn && (
+                                            <motion.button
+                                                whileTap={{ scale: 1.1 }}
+                                                className="refund__btn"
+                                                onClick={() => {
+                                                    setConfirmReturnData({
+                                                        subOrderId: subOrder.id,
+                                                        itemId: item.id,
+                                                        refundItems: refundItems.filter(
+                                                            (r) => r.status === "Return Requested"
+                                                        ),
+                                                    });
+                                                    setShowConfirmReturnModal(true);
+                                                }}
+                                            >
+                                                Confirm Return
+                                            </motion.button>
+                                        )}
                                         {shouldShowSellerConfirmBtn &&
                                             refundItems
                                                 .filter((r) => r.status === "Return Confirmed" && r.refundId)
@@ -1127,6 +1119,60 @@ const PlaceOrder = () => {
                                             </>
                                         );
                                     })()}
+                            </Modal>
+
+                            <Modal
+                                isOpen={showConfirmReturnModal}
+                                onClose={() => {
+                                    setShowConfirmReturnModal(false);
+                                    setConfirmReturnData(null);
+                                }}
+                            >
+                                {confirmReturnData && (
+                                    <div className="p-3">
+                                        <h5>Confirm Return for {subOrders
+                                            .find((sub) => sub.id === confirmReturnData.subOrderId)
+                                            ?.items.find((item) => item.id === confirmReturnData.itemId)
+                                            ?.productName}</h5>
+                                        {confirmReturnData.refundItems.map((refundItem, idx) => {
+                                            console.log("Refund Item:", refundItem); // Add this for debugging
+                                            const item = subOrders
+                                                .find((sub) => sub.id === confirmReturnData.subOrderId)
+                                                ?.items.find((i) => i.id === refundItem.itemId);
+                                            return (
+                                                <div key={`${refundItem.refundId}-${idx}`} className="mb-3 p-2 border rounded">
+                                                    <img
+                                                        src={item?.imgUrl}
+                                                        alt={item?.productName}
+                                                        className="mb-2"
+                                                        style={{ width: "100px", height: "auto" }}
+                                                    />
+                                                    <p><strong>Name:</strong> {item?.productName || "Unknown"}</p>
+                                                    <p><strong>Price:</strong> ${item?.price * refundItem.quantity || 0}</p>
+                                                    <p><strong>Quantity to Refund:</strong> {refundItem.quantity}</p>
+                                                    <p><strong>Requested on:</strong> {formatDate(refundItem?.returnRequestedAt)}</p>
+                                                    <motion.button
+                                                        whileTap={{ scale: 0.95 }}
+                                                        className="refund__btn"
+                                                        onClick={() => {
+                                                            handleConfirmReturn(
+                                                                confirmReturnData.subOrderId,
+                                                                confirmReturnData.itemId,
+                                                                refundItem.quantity,
+                                                                refundItem.refundId
+                                                            );
+                                                            setShowConfirmReturnModal(false);
+                                                            setConfirmReturnData(null);
+                                                        }}
+                                                        disabled={loading}
+                                                    >
+                                                        {loading ? "Processing..." : "Confirm Return"}
+                                                    </motion.button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </Modal>
 
                             <Modal

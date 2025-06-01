@@ -114,7 +114,8 @@ const Orders = () => {
                 returnReceived, 
                 itemId, 
                 quantity, 
-                refundId 
+                refundId,
+                statusUpdatedAt: action === 'approve' ? new Date().toISOString() : undefined,
             });
             
             const updatedOrders = await fetchSellerOrders(sellerId);
@@ -152,6 +153,7 @@ const Orders = () => {
                     itemId: selectedRefundItem.itemId,
                     quantity: selectedRefundItem.quantity,
                     refundId: selectedRefundItem.refundId,
+                    statusUpdatedAt: new Date().toISOString()
                 }
             );
             const updatedOrders = await fetchSellerOrders(sellerId);

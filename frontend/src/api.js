@@ -542,12 +542,12 @@ export const cancelOrder = async (orderId, subOrderId, data) => {
     }
 };
 
-export const processCancelRequest = async (orderId, subOrderId, {action}) => {
+export const processCancelRequest = async (orderId, subOrderId, {action, cancelId}) => {
     try {
         const response = await fetch(`${BASE_URL}/orders/${orderId}/cancel/process/${subOrderId}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action }),
+            body: JSON.stringify({ action, cancelId }),
             credentials: "include",
         });
         if (!response.ok) {
@@ -600,13 +600,13 @@ export const resolveRefundDispute = async (orderId, subOrderId, action) => {
     }
 };
 
-export const appealRefund = async (orderId, subOrderId, appealReason) => {
+export const appealRefund = async (orderId, subOrderId, appealData) => {
     try {
         const response = await fetch(`${BASE_URL}/orders/${orderId}/sub-orders/${subOrderId}/appeal`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({ reason: appealReason }),
+            body: JSON.stringify(appealData),
         });
 
         if (!response.ok) {

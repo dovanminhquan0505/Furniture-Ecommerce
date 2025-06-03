@@ -83,10 +83,10 @@ const Orders = () => {
           }
     };
 
-    const handleProcessCancel = async (totalOrderId, subOrderId, action) => {
+    const handleProcessCancel = async (totalOrderId, subOrderId, action, cancelId) => {
         try {
             setLoading(true);
-            await processCancelRequest(totalOrderId, subOrderId, { action });
+            await processCancelRequest(totalOrderId, subOrderId, { action, cancelId });
             const updatedOrders = await fetchSellerOrders(sellerId);
             setOrders(updatedOrders);
             toast.success(`Cancellation request ${action}ed successfully!`);
@@ -190,8 +190,11 @@ const Orders = () => {
         }
     };
 
-    const openActionModal = (subOrder, actionType, refundItem = null) => {
-        console.log("Opening modal with refundItem:", refundItem); 
+    const openActionModal = (subOrder, actionType, refundItem = null, cancelId = null) => {
+        if (actionType === "cancel" && !cancelId) {
+            toast.error("No cancellation request selected");
+            return;
+        }
         if (actionType === "refund" || actionType === "confirmReceipt") {
             if (!refundItem) {
                 toast.error("No refund item selected");
@@ -206,7 +209,7 @@ const Orders = () => {
                 return;
             }
         }
-        setSelectedSubOrder(subOrder);
+        setSelectedSubOrder({ ...subOrder, cancelId });
         setSelectedRefundItem(refundItem);
         setModalAction(actionType);
         setShowProductModal(true);
@@ -292,14 +295,18 @@ const Orders = () => {
                                                                 ))}
                                                             </td>
                                                             <td>
-                                                                {order.cancelStatus === "Requested" && (
-                                                                    <div>
+                                                                {(order.cancelRequests || []).map((cancelRequest, index) => (
+                                                                    cancelRequest.status === "Requested" && (
+                                                                        <div key={index} className="mb-2">
+                                                                        <small className="text-muted d-block mb-1">
+                                                                            {order.items.find(i => i.id === cancelRequest.itemId)?.productName || 'Unknown Item'} (Qty: {cancelRequest.quantity})
+                                                                        </small>
                                                                         <motion.button
                                                                             whileTap={{ scale: 0.9 }}
-                                                                            className="btn__seller btn__seller-success"
+                                                                            className="btn__seller btn__seller-success me-2"
                                                                             onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                openActionModal(order, "cancel");
+                                                                            e.stopPropagation();
+                                                                            openActionModal(order, "cancel", null, cancelRequest.cancelId);
                                                                             }}
                                                                         >
                                                                             Approve Cancel
@@ -308,14 +315,15 @@ const Orders = () => {
                                                                             whileTap={{ scale: 0.9 }}
                                                                             className="btn__seller btn__seller-danger"
                                                                             onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleProcessCancel(order.totalOrderId, order.id, "reject");
+                                                                            e.stopPropagation();
+                                                                            handleProcessCancel(order.totalOrderId, order.id, "reject", cancelRequest.cancelId);
                                                                             }}
                                                                         >
                                                                             Reject Cancel
                                                                         </motion.button>
-                                                                    </div>
-                                                                )}
+                                                                        </div>
+                                                                    )
+                                                                    ))}
                                                                 {(order.refundItems || []).map((refundItem, index) => {
                                                                     const item = order.items.find(i => i.id === refundItem.itemId);
                                                                     const itemName = item ? item.productName : 'Unknown Item';
@@ -484,7 +492,7 @@ const Orders = () => {
                                             {modalAction === "cancel" && (
                                                 <>
                                                     <h6 className="mb-1">Cancel Reason:</h6>
-                                                    <p>{selectedSubOrder.cancelReason || "No reason provided"}</p>
+                                                    <p>{selectedRefundItem.reason || "No reason provided"}</p>
                                                 </>
                                             )}
                                         </div>
@@ -493,25 +501,29 @@ const Orders = () => {
                             })()
                         )}
                         {modalAction === "cancel" && !selectedRefundItem && (
-                            selectedSubOrder.items
-                                .filter((item) => item.id === selectedSubOrder.cancelItemId)
-                                .map((item, index) => (
-                                    <div key={index} className="cart__item">
-                                        <img
-                                            src={item.imgUrl}
-                                            alt={item.productName}
-                                            className="cart__item-img"
-                                        />
-                                        <div className="cart__item-info">
-                                            <h6>{item.productName}</h6>
-                                            <p>Requested Qty: {selectedSubOrder.cancelQuantity}</p>
-                                            <p>Price per unit: ${item.price}</p>
-                                            <p>Total: ${(item.price * selectedSubOrder.cancelQuantity).toFixed(2)}</p>
-                                            <h6 className="mb-1">Cancel Reason:</h6>
-                                            <p>{selectedSubOrder.cancelReason || "No reason provided"}</p>
+                            (selectedSubOrder.cancelRequests || [])
+                                .filter((c) => c.cancelId === selectedSubOrder.cancelId)
+                                .map((cancelRequest, index) => {
+                                    const item = selectedSubOrder.items.find((i) => i.id === cancelRequest.itemId);
+                                    if (!item) return null;
+                                    return (
+                                        <div key={index} className="cart__item">
+                                            <img
+                                                src={item.imgUrl}
+                                                alt={item.productName}
+                                                className="cart__item-img"
+                                            />
+                                            <div className="cart__item-info">
+                                                <h6>{item.productName}</h6>
+                                                <p>Requested Qty: {cancelRequest.quantity}</p>
+                                                <p>Price per unit: ${item.price}</p>
+                                                <p>Total: ${(item.price * cancelRequest.quantity).toFixed(2)}</p>
+                                                <h6 className="mb-1">Cancel Reason:</h6>
+                                                <p>{cancelRequest.reason || "No reason provided"}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                         )}
                         <div className="mt-3">
                             <motion.button
@@ -534,7 +546,8 @@ const Orders = () => {
                                         handleProcessCancel(
                                             selectedSubOrder.totalOrderId,
                                             selectedSubOrder.id,
-                                            "approve"
+                                            "approve",
+                                            selectedSubOrder.cancelId
                                         );
                                     } else if (modalAction === "refund") {
                                         if (!selectedRefundItem?.refundId) {
@@ -549,7 +562,7 @@ const Orders = () => {
                                             false,
                                             selectedRefundItem.itemId,
                                             selectedRefundItem.quantity,
-                                            selectedRefundItem.refundId 
+                                            selectedRefundItem.refundId
                                         );
                                     } else if (modalAction === "confirmReceipt") {
                                         handleSellerConfirmReceipt();

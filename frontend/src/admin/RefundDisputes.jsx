@@ -52,22 +52,9 @@ const RefundDisputes = () => {
             setLoading(true);
             await resolveRefundDispute(orderId, subOrderId, action);
             
-            if (action === "approve") {
-                setDisputes((prev) =>
-                    prev.map((dispute) =>
-                        dispute.subOrderId === subOrderId
-                            ? {
-                                  ...dispute,
-                                  refundStatus: "Refunded",
-                              }
-                            : dispute
-                    )
-                );
-            } else if (action === "reject") {
-                setDisputes((prev) =>
-                    prev.filter((dispute) => dispute.subOrderId !== subOrderId)
-                );
-            }
+            setDisputes((prev) =>
+                prev.filter((dispute) => dispute.subOrderId !== subOrderId)
+            );
             
             toast.success(`Refund dispute ${action}d successfully!`);
         } catch (error) {
@@ -119,114 +106,101 @@ const RefundDisputes = () => {
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ duration: 0.5 }}
-                                        >
+                                            >
                                             <h3 className="mb-3 text-wrap">
                                                 {dispute.orderId}
+                                                {dispute.appealRequested && (
+                                                <span className="badge bg-warning ms-2">Appeal Requested</span>
+                                                )}
                                             </h3>
                                             <Row>
                                                 <Col xs="6">
-                                                    <p>
-                                                        <strong>
-                                                            Order ID:
-                                                        </strong>{" "}
-                                                        <span className="text-wrap">
-                                                            {dispute.subOrderId}
-                                                        </span>
-                                                    </p>
-                                                    <p>
-                                                        <strong>Seller:</strong>{" "}
-                                                        <span className="text-wrap">
-                                                            {dispute.sellerName}
-                                                        </span>
-                                                    </p>
-                                                    <p>
-                                                        <strong>
-                                                            Customer:
-                                                        </strong>{" "}
-                                                        <span className="text-wrap">
-                                                            {
-                                                                dispute.customerName
-                                                            }
-                                                        </span>
-                                                    </p>
+                                                <p>
+                                                    <strong>Order ID:</strong>{" "}
+                                                    <span className="text-wrap">{dispute.subOrderId}</span>
+                                                </p>
+                                                <p>
+                                                    <strong>Seller:</strong>{" "}
+                                                    <span className="text-wrap">{dispute.sellerName}</span>
+                                                </p>
+                                                <p>
+                                                    <strong>Customer:</strong>{" "}
+                                                    <span className="text-wrap">{dispute.customerName}</span>
+                                                </p>
                                                 </Col>
                                                 <Col xs="6">
-                                                    <p>
-                                                        <strong>Reason:</strong>{" "}
-                                                        <span className="text-wrap">
-                                                            {dispute.reason}
-                                                        </span>
-                                                    </p>
-                                                    <p>
-                                                        <strong>
-                                                            Evidence:
-                                                        </strong>{" "}
-                                                        {dispute.evidence
-                                                            .length > 0 ? (
-                                                            <a
-                                                                href={
-                                                                    dispute
-                                                                        .evidence[0]
-                                                                }
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="evidence-link"
-                                                            >
-                                                                View
-                                                            </a>
-                                                        ) : (
-                                                            "N/A"
-                                                        )}
-                                                    </p>
-                                                    <p className="status-container">
-                                                        <strong>Status:</strong>{" "}
-                                                        {dispute.refundStatus ||
-                                                            "Unknown"}
-                                                    </p>
+                                                <p>
+                                                    <strong>Reason:</strong>{" "}
+                                                    <span className="text-wrap">
+                                                    {dispute.appealRequested ? dispute.appealData?.reason || dispute.reason : dispute.reason}
+                                                    </span>
+                                                </p>
+                                                <p>
+                                                    <strong>Evidence:</strong>{" "}
+                                                    {dispute.appealRequested && dispute.appealData?.evidence?.length > 0
+                                                    ? dispute.appealData.evidence.map((url, idx) => (
+                                                        <a
+                                                            key={idx}
+                                                            href={url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="evidence-link me-2"
+                                                        >
+                                                            View
+                                                        </a>
+                                                        ))
+                                                    : dispute.evidence.length > 0
+                                                    ? dispute.evidence.map((url, idx) => (
+                                                        <a
+                                                            key={idx}
+                                                            href={url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="evidence-link me-2"
+                                                        >
+                                                            View
+                                                        </a>
+                                                        ))
+                                                    : "N/A"}
+                                                </p>
+                                                <p className="status-container">
+                                                    <strong>Status:</strong>{" "}
+                                                    {dispute.appealRequested
+                                                    ? `Appeal ${dispute.appealData?.status || "Pending"}`
+                                                    : dispute.refundStatus || "Unknown"}
+                                                </p>
                                                 </Col>
                                             </Row>
                                             <div className="btn-container">
                                                 <motion.button
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                    className="btn btn-info"
-                                                    onClick={() =>
-                                                        handleShowProductInfo(
-                                                            dispute
-                                                        )
-                                                    }
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
+                                                className="btn btn-info"
+                                                onClick={() => handleShowProductInfo(dispute)}
                                                 >
-                                                    Product Information
+                                                Product Information
                                                 </motion.button>
                                                 <motion.button
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                    className="btn btn-approve"
-                                                    onClick={() =>
-                                                        handleResolveDispute(
-                                                            dispute.orderId,
-                                                            dispute.subOrderId,
-                                                            "approve"
-                                                        )
-                                                    }
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
+                                                className="btn btn-approve"
+                                                onClick={() =>
+                                                    handleResolveDispute(dispute.orderId, dispute.subOrderId, "approve")
+                                                }
                                                 >
-                                                    ✔️ Approve
+                                                ✔️ Approve
                                                 </motion.button>
                                                 <motion.button
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                    className="btn btn-reject"
-                                                    onClick={() =>
-                                                        handleResolveDispute(
-                                                            dispute.orderId,
-                                                            dispute.subOrderId,
-                                                            "reject"
-                                                        )
-                                                    }
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
+                                                className="btn btn-reject"
+                                                onClick={() =>
+                                                    handleResolveDispute(dispute.orderId, dispute.subOrderId, "reject")
+                                                }
                                                 >
-                                                    ❌ Reject
-                                                </motion.button>
-                                            </div>
+                                                ❌ Reject
+                                            </motion.button>
+                                        </div>
                                         </motion.div>
                                     </Col>
                                 );
@@ -240,33 +214,56 @@ const RefundDisputes = () => {
                     {selectedDispute && (
                         <div className="p-4">
                             <h5>Product Information</h5>
-                            {selectedDispute.items.map((item, index) => (
-                                <div key={index} className="mb-3">
+                            {selectedDispute.itemDetails ? (
+                                <div className="mb-3">
                                     <img
-                                        src={item.imgUrl}
-                                        alt={item.productName}
+                                        src={selectedDispute.itemDetails.imgUrl}
+                                        alt={selectedDispute.itemDetails.productName}
                                         style={{
                                             width: "100px",
                                             height: "100px",
                                             objectFit: "cover",
                                         }}
                                     />
-                                    <p>
-                                        <strong>Name:</strong>{" "}
-                                        {item.productName}
-                                    </p>
-                                    <p>
-                                        <strong>Qty:</strong> {item.quantity}
-                                    </p>
-                                    <p>
-                                        <strong>Price:</strong> $
-                                        {item.price * item.quantity}
-                                    </p>
+                                    <p><strong>Name:</strong> {selectedDispute.itemDetails.productName}</p>
+                                    <p><strong>Qty:</strong> {selectedDispute.itemDetails.quantity}</p>
+                                    <p><strong>Price:</strong> ${selectedDispute.itemDetails.price * selectedDispute.itemDetails.quantity}</p>
                                 </div>
-                            ))}
-                            <p>
-                                <strong>Reason for Refund:</strong>{" "}
-                                {selectedDispute.reason}
+                            ) : (
+                                selectedDispute.items.map((item, index) => (
+                                    <div key={index} className="mb-3">
+                                        <img
+                                            src={item.imgUrl}
+                                            alt={item.productName}
+                                            style={{
+                                                width: "100px",
+                                                height: "100px",
+                                                objectFit: "cover",
+                                            }}
+                                        />
+                                        <p><strong>Name:</strong> {item.productName}</p>
+                                        <p><strong>Qty:</strong> {item.quantity}</p>
+                                        <p><strong>Price:</strong> ${item.price * item.quantity}</p>
+                                    </div>
+                                ))
+                            )}
+                            <p><strong>Reason for Refund:</strong> {selectedDispute.reason}</p>
+                            <p><strong>Evidence:</strong>{" "}
+                                {selectedDispute.evidence.length > 0 ? (
+                                    selectedDispute.evidence.map((url, idx) => (
+                                        <a
+                                            key={idx}
+                                            href={url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="evidence-link me-2"
+                                        >
+                                            View
+                                        </a>
+                                    ))
+                                ) : (
+                                    "N/A"
+                                )}
                             </p>
                         </div>
                     )}

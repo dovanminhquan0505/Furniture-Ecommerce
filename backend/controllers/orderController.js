@@ -201,18 +201,28 @@ const createOrder = async (req, res) => {
         }, {});
 
         // Save sub-orders to subOrders collection
-        const subOrdersRef = db.collection("subOrders");
-        await Promise.all(
-            Object.values(subOrders).map((subOrder) =>
+        const subOrdersArray = Object.values(subOrders);
+        console.log("Creating subOrders:", subOrdersArray);
+
+        if (subOrdersArray.length > 0) {
+            const subOrdersRef = db.collection("subOrders");
+            const subOrderPromises = subOrdersArray.map((subOrder) => 
                 subOrdersRef.add(subOrder)
-            )
-        );
+            );
+            
+            await Promise.all(subOrderPromises);
+            console.log(`Created ${subOrdersArray.length} sub-orders successfully`);
+        } else {
+            console.warn("No subOrders to create - all items have unknown seller");
+        }
 
         res.status(201).json({
             id: totalOrderId,
             message: "Order and sub-orders created successfully",
+            subOrdersCount: subOrdersArray.length
         });
     } catch (error) {
+        console.error("Error in createOrder:", error); 
         res.status(500).json({ error: error.message });
     }
 };
@@ -786,7 +796,7 @@ const cancelOrder = async (req, res) => {
     try {
         const db = getDb();
         const { orderId, subOrderId } = req.params;
-        const { reason, itemId, quantity } = req.body;
+        const { reason, itemId, quantity, cancelId } = req.body;
 
         const totalOrderRef = db.collection("totalOrders").doc(orderId);
         const totalOrderSnap = await totalOrderRef.get();
@@ -803,15 +813,31 @@ const cancelOrder = async (req, res) => {
         const subOrderData = subOrderSnap.data();
 
         const item = subOrderData.items.find((i) => i.id === itemId);
-        if (!item || item.quantity < quantity || quantity <= 0) {
+        if (!item || quantity <= 0) {
             return res.status(400).json({ message: "Invalid item or quantity" });
+        }
+
+        // Calculate available quantity for cancellation
+        const originalQuantity = item.originalQuantity || item.quantity;
+        const canceledQuantity = (subOrderData.cancelledItems || [])
+            .filter((c) => c.itemId === itemId)
+            .reduce((sum, c) => sum + c.quantity, 0);
+        const pendingCancelQuantity = (subOrderData.cancelRequests || [])
+            .filter((c) => c.itemId === itemId && c.status === "Requested")
+            .reduce((sum, c) => sum + c.quantity, 0);
+        const availableQuantity = originalQuantity - canceledQuantity - pendingCancelQuantity;
+
+        if (quantity > availableQuantity) {
+            return res.status(400).json({ message: `Only ${availableQuantity} items available for cancellation.` });
         }
 
         if (subOrderData.status === "shipping" || subOrderData.status === "success") {
             return res.status(400).json({ message: "Cannot cancel order in this status" });
         }
 
-        // Handle cancellation for pending orders
+        // Generate unique cancelId if not provided
+        const generatedCancelId = cancelId || `${subOrderId}-${itemId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
         if (subOrderData.status === "pending") {
             let refundResult = null;
             if (totalOrderData.isPaid) {
@@ -841,7 +867,7 @@ const cancelOrder = async (req, res) => {
             const updatedItems = subOrderData.items
                 .map((i) =>
                     i.id === itemId
-                        ? { ...i, quantity: i.quantity - quantity }
+                        ? { ...i, quantity: i.quantity - quantity, originalQuantity: i.originalQuantity || i.quantity }
                         : i
                 )
                 .filter((i) => i.quantity > 0);
@@ -857,24 +883,24 @@ const cancelOrder = async (req, res) => {
                 totalQuantity: updatedTotalQuantity,
                 totalAmount: updatedTotalAmount,
                 cancelledAt: admin.firestore.Timestamp.now(),
+                cancelStatus: "cancelDirectly",
             };
-            
-            // **THAY ĐỔI QUAN TRỌNG: Chỉ set cancelStatus = "Approved" khi tất cả items đã bị hủy**
+
+            // Track canceled items
+            updateData.cancelledItems = subOrderData.cancelledItems || [];
+            updateData.cancelledItems.push({
+                itemId: itemId,
+                quantity: quantity,
+                reason: reason,
+                cancelledAt: admin.firestore.Timestamp.now(),
+                cancelId: generatedCancelId,
+                status: "cancelDirectly",
+            });
+
             if (updatedItems.length === 0) {
-                updateData.status = "cancelled";
-                updateData.cancelStatus = "Approved";
-            } else {
-                // Nếu còn items, không set cancelStatus để các items khác vẫn có thể hủy
-                // Hoặc có thể tạo một field riêng để track các items đã hủy
-                updateData.cancelledItems = subOrderData.cancelledItems || [];
-                updateData.cancelledItems.push({
-                    itemId: itemId,
-                    quantity: quantity,
-                    reason: reason,
-                    cancelledAt: admin.firestore.Timestamp.now()
-                });
+                updateData.status = "cancelDirectly";
             }
-            
+
             if (refundResult) updateData.refundResult = refundResult;
 
             await subOrderRef.update(updateData);
@@ -887,22 +913,21 @@ const cancelOrder = async (req, res) => {
 
             const totalOrderUpdate = {};
             const allSubOrdersCancelled = subOrdersSnap.docs.every(
-                (doc) => doc.data().status === "cancelled"
+                (doc) => doc.data().status === "cancelDirectly" || doc.data().status === "cancelled"
             );
 
             if (allSubOrdersCancelled) {
-                totalOrderUpdate.status = "cancelled";
+                totalOrderUpdate.status = "cancelDirectly";
                 totalOrderUpdate.cancelledAt = admin.firestore.Timestamp.now();
                 totalOrderUpdate.totalQuantity = 0;
                 totalOrderUpdate.totalAmount = 0;
                 totalOrderUpdate.totalPrice = 0;
             } else {
-                // Recalculate totals from all sub-orders
                 let newTotalQuantity = 0;
                 let newTotalAmount = 0;
                 subOrdersSnap.docs.forEach((doc) => {
                     const subOrder = doc.data();
-                    if (subOrder.status !== "cancelled") {
+                    if (subOrder.status !== "cancelDirectly" && subOrder.status !== "cancelled") {
                         newTotalQuantity += subOrder.totalQuantity;
                         newTotalAmount += subOrder.totalAmount;
                     }
@@ -920,7 +945,7 @@ const cancelOrder = async (req, res) => {
             await db.collection("sellerNotifications").add({
                 sellerId: subOrderData.sellerId,
                 type: "cancel_processed",
-                message: `Customer has cancelled ${quantity} of ${item.productName} in sub-order ${subOrderId}.`,
+                message: `Customer has cancelled ${quantity} of ${item.productName} in sub-order ${subOrderId} directly.`,
                 userId: subOrderData.userId,
                 totalOrderId: orderId,
                 subOrderId: subOrderId,
@@ -929,7 +954,7 @@ const cancelOrder = async (req, res) => {
             });
 
             res.status(200).json({
-                message: "Order cancelled and refunded successfully",
+                message: "Order cancelled directly and refunded successfully",
                 updatedTotalOrder: {
                     totalQuantity: totalOrderUpdate.totalQuantity || totalOrderData.totalQuantity,
                     totalAmount: totalOrderUpdate.totalAmount || totalOrderData.totalAmount,
@@ -942,40 +967,29 @@ const cancelOrder = async (req, res) => {
                 return res.status(400).json({ message: "Order has not been paid yet" });
             }
 
-            // **THAY ĐỔI: Lưu thông tin hủy theo từng item thay vì theo subOrder**
-            const updateData = {
-                cancelStatus: "Requested",
-                cancelReason: reason,
-                cancelItemId: itemId,
-                cancelQuantity: quantity,
-                cancelRequestedAt: admin.firestore.Timestamp.now(),
+            // Add new cancellation request
+            const cancelRequest = {
+                cancelId: generatedCancelId,
+                itemId,
+                quantity,
+                reason,
+                status: "Requested",
+                requestedAt: admin.firestore.Timestamp.now(),
             };
 
-            // Nếu đã có cancellation requests trước đó, lưu vào array
-            if (subOrderData.cancelRequests) {
-                updateData.cancelRequests = [...subOrderData.cancelRequests, {
-                    itemId: itemId,
-                    quantity: quantity,
-                    reason: reason,
-                    status: "Requested",
-                    requestedAt: admin.firestore.Timestamp.now()
-                }];
-            } else {
-                updateData.cancelRequests = [{
-                    itemId: itemId,
-                    quantity: quantity,
-                    reason: reason,
-                    status: "Requested",
-                    requestedAt: admin.firestore.Timestamp.now()
-                }];
-            }
+            const updateData = {
+                cancelRequests: subOrderData.cancelRequests
+                    ? [...subOrderData.cancelRequests, cancelRequest]
+                    : [cancelRequest],
+                cancelStatus: "Requested",
+            };
 
             await subOrderRef.update(updateData);
 
             await db.collection("sellerNotifications").add({
                 sellerId: subOrderData.sellerId,
                 type: "cancel_request",
-                message: `Customer has requested to cancel ${quantity} of ${item.productName} in sub-order ${subOrderId}. Please review.`,
+                message: `Customer has requested to cancel ${quantity} of ${item.productName} in sub-order ${subOrderId}.`,
                 userId: subOrderData.userId,
                 totalOrderId: orderId,
                 subOrderId: subOrderId,
@@ -996,7 +1010,7 @@ const processCancelRequest = async (req, res) => {
     try {
         const db = getDb();
         const { orderId, subOrderId } = req.params;
-        const { action } = req.body;
+        const { action, cancelId } = req.body;
 
         const totalOrderRef = db.collection("totalOrders").doc(orderId);
         const totalOrderSnap = await totalOrderRef.get();
@@ -1012,19 +1026,22 @@ const processCancelRequest = async (req, res) => {
         }
         const subOrderData = subOrderSnap.data();
 
-        if (subOrderData.cancelStatus !== "Requested") {
-            return res.status(400).json({ message: "No pending cancellation request" });
+        const cancelRequest = (subOrderData.cancelRequests || []).find(
+            (c) => c.cancelId === cancelId && c.status === "Requested"
+        );
+        if (!cancelRequest) {
+            return res.status(400).json({ message: "No pending cancellation request found for this cancelId" });
         }
 
-        const item = subOrderData.items.find((i) => i.id === subOrderData.cancelItemId);
-        if (!item || item.quantity < subOrderData.cancelQuantity) {
+        const item = subOrderData.items.find((i) => i.id === cancelRequest.itemId);
+        if (!item || item.quantity < cancelRequest.quantity) {
             return res.status(400).json({ message: "Invalid item or quantity" });
         }
 
         if (action === "approve") {
             let refundResult = null;
             if (totalOrderData.isPaid) {
-                const refundAmount = item.price * subOrderData.cancelQuantity;
+                const refundAmount = item.price * cancelRequest.quantity;
                 const paymentResult = totalOrderData.paymentResult;
 
                 if (paymentResult && totalOrderData.paymentMethod === "stripe") {
@@ -1046,53 +1063,95 @@ const processCancelRequest = async (req, res) => {
                 }
             }
 
+            // Update items in the sub-order
             const updatedItems = subOrderData.items
                 .map((i) =>
-                    i.id === subOrderData.cancelItemId
-                        ? { ...i, quantity: i.quantity - subOrderData.cancelQuantity }
+                    i.id === cancelRequest.itemId
+                        ? { ...i, quantity: i.quantity - cancelRequest.quantity, originalQuantity: i.originalQuantity || i.quantity }
                         : i
                 )
                 .filter((i) => i.quantity > 0);
 
-            const updatedTotalQuantity = subOrderData.totalQuantity - subOrderData.cancelQuantity;
+            const updatedTotalQuantity = subOrderData.totalQuantity - cancelRequest.quantity;
             const updatedTotalAmount = updatedItems.reduce(
                 (sum, i) => sum + i.price * i.quantity,
                 0
             );
 
+            // Update cancelRequests status
+            const updatedCancelRequests = subOrderData.cancelRequests.map((c) =>
+                c.cancelId === cancelId
+                    ? { ...c, status: "Approved", approvedAt: admin.firestore.Timestamp.now() }
+                    : c
+            );
+
+            // Track canceled items
+            const updatedCancelledItems = subOrderData.cancelledItems || [];
+            updatedCancelledItems.push({
+                itemId: cancelRequest.itemId,
+                quantity: cancelRequest.quantity,
+                reason: cancelRequest.reason,
+                cancelledAt: admin.firestore.Timestamp.now(),
+                cancelId: cancelId,
+                status: "cancelled",
+            });
+
             const updateData = {
                 items: updatedItems,
                 totalQuantity: updatedTotalQuantity,
                 totalAmount: updatedTotalAmount,
-                cancelStatus: "Approved",
+                cancelRequests: updatedCancelRequests,
+                cancelledItems: updatedCancelledItems,
                 cancelledAt: admin.firestore.Timestamp.now(),
+                cancelStatus: updatedItems.length === 0 ? "cancelled" : "cancelled",
             };
-            if (refundResult) updateData.refundResult = refundResult;
 
             if (updatedItems.length === 0) {
                 updateData.status = "cancelled";
             }
 
+            if (refundResult) updateData.refundResult = refundResult;
+
             await subOrderRef.update(updateData);
 
+            // Update total order totals
             const subOrdersSnap = await db
                 .collection("subOrders")
                 .where("totalOrderId", "==", orderId)
                 .get();
             const allSubOrdersCancelled = subOrdersSnap.docs.every(
-                (doc) => doc.data().status === "cancelled"
+                (doc) => doc.data().status === "cancelled" || doc.data().status === "cancelDirectly"
             );
+            const totalOrderUpdate = {};
             if (allSubOrdersCancelled) {
-                await totalOrderRef.update({
-                    status: "cancelled",
-                    cancelledAt: admin.firestore.Timestamp.now(),
+                totalOrderUpdate.status = "cancelled";
+                totalOrderUpdate.cancelledAt = admin.firestore.Timestamp.now();
+                totalOrderUpdate.totalQuantity = 0;
+                totalOrderUpdate.totalAmount = 0;
+                totalOrderUpdate.totalPrice = 0;
+            } else {
+                let newTotalQuantity = 0;
+                let newTotalAmount = 0;
+                subOrdersSnap.docs.forEach((doc) => {
+                    const subOrder = doc.data();
+                    if (subOrder.status !== "cancelled" && subOrder.status !== "cancelDirectly") {
+                        newTotalQuantity += subOrder.totalQuantity;
+                        newTotalAmount += subOrder.totalAmount;
+                    }
                 });
+
+                totalOrderUpdate.totalQuantity = newTotalQuantity;
+                totalOrderUpdate.totalAmount = newTotalAmount;
+                totalOrderUpdate.totalPrice =
+                    newTotalAmount + totalOrderData.totalShipping + totalOrderData.totalTax;
             }
+
+            await totalOrderRef.update(totalOrderUpdate);
 
             await db.collection("sellerNotifications").add({
                 sellerId: subOrderData.sellerId,
                 type: "cancel_processed",
-                message: `Cancellation of ${subOrderData.cancelQuantity} of ${item.productName} in sub-order ${subOrderId} has been approved.`,
+                message: `Cancellation of ${cancelRequest.quantity} of ${item.productName} in sub-order ${subOrderId} has been approved.`,
                 userId: subOrderData.userId,
                 totalOrderId: orderId,
                 subOrderId: subOrderId,
@@ -1100,22 +1159,38 @@ const processCancelRequest = async (req, res) => {
                 isRead: false,
             });
 
-            res.status(200).json({ message: "Cancellation request approved successfully" });
-        } else if (action === "reject") {
-            await subOrderRef.update({
-                cancelStatus: "Rejected",
-                cancelRejectedAt: admin.firestore.Timestamp.now(),
+            res.status(200).json({ 
+                message: "Cancellation request approved successfully",
+                updatedTotalOrder: {
+                    totalQuantity: totalOrderUpdate.totalQuantity || totalOrderData.totalQuantity,
+                    totalAmount: totalOrderUpdate.totalAmount || totalOrderData.totalAmount,
+                    totalPrice: totalOrderUpdate.totalPrice || totalOrderData.totalPrice,
+                    status: totalOrderUpdate.status || totalOrderData.status,
+                },
             });
+        } else if (action === "reject") {
+            const updatedCancelRequests = subOrderData.cancelRequests.map((c) =>
+                c.cancelId === cancelId
+                    ? { ...c, status: "Rejected", rejectedAt: admin.firestore.Timestamp.now() }
+                    : c
+            );
+
+            await subOrderRef.update({
+                cancelRequests: updatedCancelRequests,
+                cancelStatus: updatedCancelRequests.some(c => c.status === "Requested") ? "Requested" : "None",
+            });
+
             await db.collection("sellerNotifications").add({
                 sellerId: subOrderData.sellerId,
                 type: "cancel_rejected",
-                message: `Cancellation request for ${subOrderData.cancelQuantity} of ${item.productName} in sub-order ${subOrderId} has been rejected.`,
+                message: `Cancellation request for ${cancelRequest.quantity} of ${item.productName} in sub-order ${subOrderId} has been rejected.`,
                 userId: subOrderData.userId,
                 totalOrderId: orderId,
                 subOrderId: subOrderId,
                 createdAt: admin.firestore.Timestamp.now(),
                 isRead: false,
             });
+
             res.status(200).json({ message: "Cancellation request rejected successfully" });
         } else {
             return res.status(400).json({ message: "Invalid action" });
@@ -1129,7 +1204,11 @@ const requestAppeal = async (req, res) => {
     try {
         const db = getDb();
         const { orderId, subOrderId } = req.params;
-        const { reason } = req.body;
+        const { reason, evidence, itemId, quantity, refundId, itemDetails } = req.body;
+
+        if (!reason || !itemId || !quantity || !refundId) {
+            return res.status(400).json({ message: "Missing required fields: reason, itemId, quantity, or refundId" });
+        }
 
         const subOrderRef = db.collection("subOrders").doc(subOrderId);
         const subOrderSnap = await subOrderRef.get();
@@ -1138,14 +1217,40 @@ const requestAppeal = async (req, res) => {
         }
         const subOrderData = subOrderSnap.data();
 
-        if (subOrderData.refundStatus !== "Rejected") {
-            return res.status(400).json({ message: "Can only appeal a rejected refund" });
+        const refundItem = (subOrderData.refundItems || []).find(
+            r => r.itemId === itemId && r.quantity === quantity && r.refundId === refundId && r.status === "Rejected"
+        );
+        if (!refundItem) {
+            return res.status(400).json({ message: "Can only appeal a rejected refund with matching item and quantity" });
         }
+
+        const appealData = {
+            reason,
+            evidence: evidence || [],
+            itemId,
+            quantity,
+            refundId,
+            itemDetails,
+            requestedAt: admin.firestore.Timestamp.now(),
+            status: "Pending"
+        };
 
         await subOrderRef.update({
             appealRequested: true,
             appealReason: reason,
+            appealData,
             appealRequestedAt: admin.firestore.Timestamp.now(),
+        });
+
+        // Create admin notification
+        await db.collection("adminNotifications").add({
+            type: "appeal_request",
+            message: `New appeal request for refund in sub-order ${subOrderId}`,
+            orderId,
+            subOrderId,
+            sellerId: subOrderData.sellerId,
+            createdAt: admin.firestore.Timestamp.now(),
+            isRead: false,
         });
 
         res.status(200).json({ message: "Appeal submitted successfully" });

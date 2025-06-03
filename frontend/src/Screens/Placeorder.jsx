@@ -136,6 +136,8 @@ const PlaceOrder = () => {
     const [appealReason, setAppealReason] = useState("");
     const [showConfirmReturnModal, setShowConfirmReturnModal] = useState(false);
     const [confirmReturnData, setConfirmReturnData] = useState(null);
+    const [appealFiles, setAppealFiles] = useState([]);
+    const [selectedAppealItem, setSelectedAppealItem] = useState(null);
 
     const formatDate = (date) => {
         if (!date) return "N/A";
@@ -364,27 +366,29 @@ const PlaceOrder = () => {
                 return;
             }
             setLoading(true);
+            const cancelId = `${subOrderId}-${itemId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             const response = await cancelOrder(orderId, subOrderId, {
                 reason,
                 itemId,
                 quantity,
+                cancelId,
             });
 
             setOrderDetails((prev) => {
                 const updatedSubOrders = prev.subOrders.map((sub) => {
                     if (sub.id === subOrderId) {
                         if (
-                            response.message ===
-                            "Order cancelled and refunded successfully"
+                            response.message === "Order cancelled directly and refunded successfully" ||
+                            response.message === "Order cancelled and refunded successfully"
                         ) {
                             const updatedItems = sub.items.map((item) => {
                                 if (item.id === itemId) {
-                                    const newQuantity =
-                                        item.quantity - quantity;
+                                    const newQuantity = item.quantity - quantity;
                                     return {
                                         ...item,
                                         quantity: newQuantity,
                                         canceled: newQuantity === 0,
+                                        originalQuantity: item.originalQuantity || item.quantity,
                                     };
                                 }
                                 return item;
@@ -402,22 +406,40 @@ const PlaceOrder = () => {
                                 items: updatedItems,
                                 totalQuantity: updatedTotalQuantity,
                                 totalAmount: updatedTotalAmount,
-                                cancelStatus: "Approved",
+                                cancelledItems: [
+                                    ...(sub.cancelledItems || []),
+                                    {
+                                        itemId,
+                                        quantity,
+                                        reason,
+                                        cancelledAt: new Date().toISOString(),
+                                        cancelId,
+                                        status: sub.status === "pending" ? "cancelDirectly" : "cancelled",
+                                    },
+                                ],
+                                cancelStatus: sub.status === "pending" ? "cancelDirectly" : "cancelled",
                             };
                             if (updatedTotalQuantity === 0) {
-                                updatedSubOrder.status = "cancelled";
+                                updatedSubOrder.status = sub.status === "pending" ? "cancelDirectly" : "cancelled";
                             }
                             return updatedSubOrder;
                         } else if (
-                            response.message ===
-                            "Cancellation request submitted, awaiting seller approval"
+                            response.message === "Cancellation request submitted, awaiting seller approval"
                         ) {
                             return {
                                 ...sub,
+                                cancelRequests: [
+                                    ...(sub.cancelRequests || []),
+                                    {
+                                        cancelId,
+                                        itemId,
+                                        quantity,
+                                        reason,
+                                        status: "Requested",
+                                        requestedAt: new Date().toISOString(),
+                                    },
+                                ],
                                 cancelStatus: "Requested",
-                                cancelReason: reason,
-                                cancelItemId: itemId,
-                                cancelQuantity: quantity,
                             };
                         }
                     }
@@ -425,24 +447,18 @@ const PlaceOrder = () => {
                 });
 
                 const allSubOrdersCancelled = updatedSubOrders.every(
-                    (sub) => sub.status === "cancelled"
+                    (sub) => sub.status === "cancelled" || sub.status === "cancelDirectly"
                 );
                 const updatedTotalOrder = {
                     ...prev.totalOrder,
-                    status: allSubOrdersCancelled
-                        ? "cancelled"
-                        : prev.totalOrder.status,
+                    status: allSubOrdersCancelled ? "cancelDirectly" : prev.totalOrder.status,
                 };
 
                 if (response.updatedTotalOrder) {
-                    updatedTotalOrder.totalQuantity =
-                        response.updatedTotalOrder.totalQuantity;
-                    updatedTotalOrder.totalAmount =
-                        response.updatedTotalOrder.totalAmount;
-                    updatedTotalOrder.totalPrice =
-                        response.updatedTotalOrder.totalPrice;
-                    updatedTotalOrder.status =
-                        response.updatedTotalOrder.status;
+                    updatedTotalOrder.totalQuantity = response.updatedTotalOrder.totalQuantity;
+                    updatedTotalOrder.totalAmount = response.updatedTotalOrder.totalAmount;
+                    updatedTotalOrder.totalPrice = response.updatedTotalOrder.totalPrice;
+                    updatedTotalOrder.status = response.updatedTotalOrder.status;
                 }
 
                 return {
@@ -675,8 +691,24 @@ const PlaceOrder = () => {
         navigate("/cart");
     };
 
-    const handleAppealRefund = (subOrderId) => {
+    const handleAppealRefund = (subOrderId, itemId) => {
+        const subOrder = orderDetails.subOrders.find((sub) => sub.id === subOrderId);
+        const item = subOrder.items.find((i) => i.id === itemId);
+        const rejectedRefund = (subOrder.refundItems || []).find(
+            (r) => r.itemId === itemId && r.status === "Rejected"
+        );
+        
+        if (!rejectedRefund) {
+            toast.error("Cannot appeal: No rejected refund found for this item");
+            return;
+        }
+
         setSelectedSubOrderId(subOrderId);
+        setSelectedAppealItem({ 
+            ...item, 
+            rejectedQuantity: rejectedRefund?.quantity || item.quantity,
+            refundId: rejectedRefund.refundId
+        });
         setShowAppealModal(true);
     };
 
@@ -685,9 +717,35 @@ const PlaceOrder = () => {
             toast.error("Please provide a reason for your appeal");
             return;
         }
+        if (!selectedAppealItem?.refundId) {
+            toast.error("Invalid refund request");
+            return;
+        }
         try {
             setLoading(true);
-            await appealRefund(orderId, selectedSubOrderId, appealReason);
+            let evidence = [];
+            if (appealFiles.length > 0) {
+                const uploadPromises = appealFiles.map((file) => uploadFile(file));
+                const uploadResults = await Promise.all(uploadPromises);
+                evidence = uploadResults.map((result) => result.fileURL);
+            }
+
+            const appealData = {
+                reason: appealReason,
+                evidence,
+                itemId: selectedAppealItem.id,
+                quantity: selectedAppealItem.rejectedQuantity,
+                refundId: selectedAppealItem.refundId,
+                itemDetails: {
+                    id: selectedAppealItem.id,
+                    productName: selectedAppealItem.productName,
+                    quantity: selectedAppealItem.rejectedQuantity,
+                    price: selectedAppealItem.price,
+                    imgUrl: selectedAppealItem.imgUrl,
+                }
+            };
+
+            await appealRefund(orderId, selectedSubOrderId, appealData);
             setOrderDetails((prev) => ({
                 ...prev,
                 subOrders: prev.subOrders.map((sub) =>
@@ -696,12 +754,12 @@ const PlaceOrder = () => {
                         : sub
                 ),
             }));
-            toast.success(
-                "Appeal submitted successfully, awaiting admin review"
-            );
+            toast.success("Appeal submitted successfully, awaiting admin review");
             setShowAppealModal(false);
             setAppealReason("");
+            setAppealFiles([]);
             setSelectedSubOrderId(null);
+            setSelectedAppealItem(null);
         } catch (error) {
             toast.error("Error submitting appeal: " + error.message);
         } finally {
@@ -733,7 +791,10 @@ const PlaceOrder = () => {
                         const refundedQuantity = refundItems
                             .filter((r) => r.status !== "Rejected")
                             .reduce((sum, r) => sum + r.quantity, 0);
-                        const availableQuantity = originalQuantity - canceledQuantity - refundedQuantity;
+                        const pendingCancelQuantity = (subOrder.cancelRequests || [])
+                            .filter((c) => c.itemId === item.id && c.status === "Requested")
+                            .reduce((sum, c) => sum + c.quantity, 0);
+                        const availableQuantity = originalQuantity - canceledQuantity - refundedQuantity - pendingCancelQuantity;
 
                         const shouldShowCancelBtn =
                             !isSeller &&
@@ -741,22 +802,15 @@ const PlaceOrder = () => {
                             (subOrder.status === "pending" ||
                                 subOrder.status === "processing") &&
                             availableQuantity > 0 &&
-                            !isCanceled &&
-                            !(
-                                subOrder.cancelStatus === "Requested" &&
-                                subOrder.cancelItemId === item.id
-                            ) &&
-                            !(
-                                subOrder.cancelStatus === "Rejected" &&
-                                subOrder.cancelItemId === item.id
-                            );
+                            !isCanceled;
 
                         const shouldShowRefundBtn =
                             !isSeller &&
                             totalOrder.isPaid &&
                             subOrder.status === "success" &&
                             availableQuantity > 0 &&
-                            !isCanceled;
+                            !isCanceled &&
+                            !refundItems.some((r) => r.status === "Return Requested" || r.status === "Return Confirmed" || r.status === "Refunded");
 
                         const shouldShowConfirmReturnBtn =
                             !isSeller &&
@@ -776,7 +830,7 @@ const PlaceOrder = () => {
 
                         const shouldShowAppealBtn =
                             !isSeller &&
-                            refundItems.some((r) => r.status === "Rejected") &&
+                            refundItems.some((r) => r.status === "Rejected" && r.itemId === item.id) &&
                             !subOrder.appealRequested &&
                             availableQuantity > 0;
 
@@ -797,41 +851,67 @@ const PlaceOrder = () => {
                                             Qty: {item.quantity} | Status:{" "}
                                             {isCanceled
                                                 ? "Canceled"
+                                                : subOrder.status === "cancelDirectly"
+                                                ? "Cancelled Directly"
                                                 : subOrder.status || "Pending"}
                                         </p>
-                                        {subOrder.cancelStatus === "Requested" &&
-                                            subOrder.cancelItemId === item.id && (
-                                                <p className="text-warning">
-                                                    Cancellation request pending for this item
+                                        {(subOrder.cancelRequests || []).map((c, idx) => (
+                                            c.itemId === item.id && (
+                                                <p
+                                                    key={idx}
+                                                    className={
+                                                        c.status === "Requested"
+                                                            ? "text-warning"
+                                                            : "text-danger"
+                                                    }
+                                                >
+                                                    {c.status === "Requested"
+                                                        ? `Cancellation request pending for ${c.quantity} item(s)`
+                                                        : `Cancellation request rejected for ${c.quantity} item(s)`}
                                                 </p>
-                                            )}
-                                        {subOrder.cancelStatus === "Rejected" &&
-                                            subOrder.cancelItemId === item.id && (
-                                                <p className="text-danger">
-                                                    Cancellation request rejected
+                                            )
+                                        ))}
+                                        {(subOrder.cancelledItems || []).map((c, idx) => (
+                                            c.itemId === item.id && (
+                                                <p
+                                                    key={idx}
+                                                    className="text-success"
+                                                >
+                                                    {c.status === "cancelDirectly"
+                                                        ? `Cancelled Directly: ${c.quantity} item(s)`
+                                                        : `Cancelled: ${c.quantity} item(s)`}
                                                 </p>
-                                            )}
+                                            )
+                                        ))}
                                         {refundItems.map((r, idx) => (
                                             <div key={`${r.refundId}-${idx}`}>
-                                                {r.status === "Return Requested" && (
+                                                {subOrder.appealRequested && r.status === "Rejected" ? (
                                                     <p className="text-info">
-                                                        Awaiting return confirmation (Qty: {r.quantity})
+                                                        Appeal submitted, awaiting admin review
                                                     </p>
-                                                )}
-                                                {r.status === "Return Confirmed" && (
-                                                    <p className="text-info">
-                                                        Awaiting refund confirmation (Qty: {r.quantity})
-                                                    </p>
-                                                )}
-                                                {r.status === "Refunded" && (
-                                                    <p className="text-success">
-                                                        Refunded successfully (Qty: {r.quantity})
-                                                    </p>
-                                                )}
-                                                {r.status === "Rejected" && (
-                                                    <p className="text-danger">
-                                                        Refund rejected (Qty: {r.quantity})
-                                                    </p>
+                                                ) : (
+                                                    <>
+                                                        {r.status === "Return Requested" && (
+                                                            <p className="text-info">
+                                                                Awaiting return confirmation (Qty: {r.quantity})
+                                                            </p>
+                                                        )}
+                                                        {r.status === "Return Confirmed" && (
+                                                            <p className="text-info">
+                                                                Awaiting refund confirmation (Qty: {r.quantity})
+                                                            </p>
+                                                        )}
+                                                        {r.status === "Refunded" && (
+                                                            <p className="text-success">
+                                                                Refunded successfully (Qty: {r.quantity})
+                                                            </p>
+                                                        )}
+                                                        {r.status === "Rejected" && (
+                                                            <p className="text-danger">
+                                                                Refund rejected (Qty: {r.quantity})
+                                                            </p>
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
                                         ))}
@@ -916,9 +996,9 @@ const PlaceOrder = () => {
                                             <motion.button
                                                 whileTap={{ scale: 1.1 }}
                                                 className="appeal__btn"
-                                                onClick={() => handleAppealRefund(subOrderId)}
+                                                onClick={() => handleAppealRefund(subOrderId, item.id)}
                                             >
-                                                Appeal to Admin
+                                                Appeal Request
                                             </motion.button>
                                         )}
                                         <motion.button
@@ -933,17 +1013,6 @@ const PlaceOrder = () => {
                             </div>
                         );
                     })}
-                    {subOrder.cancelStatus === "Requested" &&
-                        !subOrder.cancelItemId && (
-                            <p className="text-warning">
-                                Cancellation request pending approval
-                            </p>
-                        )}
-                    {subOrder.appealRequested && (
-                        <p className="text-info">
-                            Appeal submitted, awaiting admin review
-                        </p>
-                    )}
                 </div>
             );
         });
@@ -1135,7 +1204,6 @@ const PlaceOrder = () => {
                                             ?.items.find((item) => item.id === confirmReturnData.itemId)
                                             ?.productName}</h5>
                                         {confirmReturnData.refundItems.map((refundItem, idx) => {
-                                            console.log("Refund Item:", refundItem); // Add this for debugging
                                             const item = subOrders
                                                 .find((sub) => sub.id === confirmReturnData.subOrderId)
                                                 ?.items.find((i) => i.id === refundItem.itemId);
@@ -1180,33 +1248,48 @@ const PlaceOrder = () => {
                                 onClose={() => {
                                     setShowAppealModal(false);
                                     setAppealReason("");
+                                    setAppealFiles([]);
                                     setSelectedSubOrderId(null);
+                                    setSelectedAppealItem(null);
                                 }}
                             >
                                 <div className="p-3">
-                                    <h5>Submit Appeal</h5>
+                                    <h5>Appeal Order</h5>
+                                    {selectedAppealItem && (
+                                        <div className="mb-3">
+                                            <img
+                                                src={selectedAppealItem.imgUrl}
+                                                alt={selectedAppealItem.productName}
+                                                style={{ width: "100px", height: "100px", objectFit: "cover" }}
+                                            />
+                                            <p><strong>Name:</strong> {selectedAppealItem.productName}</p>
+                                            <p><strong>Quantity:</strong> {selectedAppealItem.rejectedQuantity}</p>
+                                            <p><strong>Price:</strong> ${selectedAppealItem.price * selectedAppealItem.rejectedQuantity}</p>
+                                        </div>
+                                    )}
                                     <Form>
                                         <textarea
                                             placeholder="Enter your reason for appeal..."
                                             value={appealReason}
-                                            onChange={(e) =>
-                                                setAppealReason(e.target.value)
-                                            }
+                                            onChange={(e) => setAppealReason(e.target.value)}
                                             rows="4"
+                                            className="mb-3 w-100"
+                                        />
+                                        <input
+                                            type="file"
+                                            multiple
+                                            accept="image/*,video/*"
+                                            onChange={(e) => setAppealFiles(Array.from(e.target.files))}
                                             className="mb-3"
                                         />
                                         <motion.button
                                             color="primary"
                                             whileTap={{ scale: 0.95 }}
                                             onClick={submitAppeal}
-                                            disabled={
-                                                loading || !appealReason.trim()
-                                            }
+                                            disabled={loading || !appealReason.trim()}
                                             className="form-btn"
                                         >
-                                            {loading
-                                                ? "Submitting..."
-                                                : "Submit Appeal"}
+                                            {loading ? "Submitting..." : "Submit Appeal"}
                                         </motion.button>
                                     </Form>
                                 </div>

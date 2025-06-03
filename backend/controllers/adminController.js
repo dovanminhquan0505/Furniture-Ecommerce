@@ -42,10 +42,10 @@ const shouldAdminIntervene = async (subOrderData) => {
         }
     }
 
-    // Trường hợp 4: Khách xác nhận trả hàng nhưng seller chưa confirm trong 5 phút
+    // Trường hợp 4: Khách xác nhận trả hàng nhưng seller chưa confirm trong 1 ngày
     if (subOrderData.refundStatus === "Return Confirmed" && customerConfirmedAt) {
-        const timeSinceConfirmed = now - customerConfirmedAt;
-        if (timeSinceConfirmed > FIVE_MINUTES) {
+        const daysSinceReturnRequested = (now - returnRequestedAt) / (1000 * 60 * 60 * 24);
+        if (daysSinceReturnRequested > 1) {
             return true;
         }
     }
@@ -373,8 +373,23 @@ const getRefundDisputes = async (req, res) => {
         const subOrdersSnap = await db.collection("subOrders")
             .where("refundStatus", "in", ["Requested", "Return Requested", "Rejected"])
             .get();
+        const appealSubOrdersSnap = await db.collection("subOrders")
+            .where("appealRequested", "==", true)
+            .get();
 
-        const disputes = await Promise.all(subOrdersSnap.docs.map(async (doc) => {
+        // Combine and deduplicate sub-orders
+        const subOrders = [];
+        const subOrderIds = new Set();
+        for (const snap of [subOrdersSnap, appealSubOrdersSnap]) {
+            snap.forEach(doc => {
+                if (!subOrderIds.has(doc.id)) {
+                    subOrders.push(doc);
+                    subOrderIds.add(doc.id);
+                }
+            });
+        }
+
+        const disputes = await Promise.all(subOrders.map(async (doc) => {
             const subOrderData = doc.data();
             const totalOrderSnap = await db.collection("totalOrders").doc(subOrderData.totalOrderId).get();
             const totalOrderData = totalOrderSnap.data();
@@ -384,22 +399,26 @@ const getRefundDisputes = async (req, res) => {
 
             const needsAdmin = await shouldAdminIntervene(subOrderData);
 
+            if (!needsAdmin && !subOrderData.appealRequested) return null;
+
+            // Skip resolved disputes without appeal
             if (subOrderData.resolvedByAdmin && !subOrderData.appealRequested) {
                 return null;
             }
-
-            if (!needsAdmin) return null;
 
             return {
                 orderId: subOrderData.totalOrderId,
                 subOrderId: doc.id,
                 sellerName,
                 customerName: totalOrderData.billingInfo?.name || "Unknown",
-                reason: subOrderData.refundRequest?.reason || "N/A",
-                evidence: subOrderData.refundRequest?.evidence || [],
-                refundStatus: subOrderData.refundStatus,
+                reason: subOrderData.appealRequested ? subOrderData.appealData?.reason || subOrderData.refundRequest?.reason || "N/A" : subOrderData.refundRequest?.reason || "N/A",
+                evidence: subOrderData.appealRequested ? subOrderData.appealData?.evidence || subOrderData.refundRequest?.evidence || [] : subOrderData.refundRequest?.evidence || [],
+                refundStatus: subOrderData.refundStatus || "None",
                 appealRequested: subOrderData.appealRequested || false,
+                appealData: subOrderData.appealData || null,
+                appealReason: subOrderData.appealReason || null,
                 items: subOrderData.items,
+                itemDetails: subOrderData.appealData?.itemDetails || subOrderData.refundRequest?.itemDetails || null,
             };
         }));
 
@@ -429,14 +448,6 @@ const resolveRefundDispute = async (req, res) => {
             return res.status(404).json({ message: "Sub-order not found" });
         }
         const subOrderData = subOrderSnap.data();
-
-        const validStatuses = ["Requested", "Return Requested", "Rejected"];
-        if (!validStatuses.includes(subOrderData.refundStatus)) {
-            return res.status(400).json({ 
-                message: "Refund dispute cannot be resolved in current status",
-                currentStatus: subOrderData.refundStatus 
-            });
-        }
 
         let updateData = {};
         if (action === "approve") {

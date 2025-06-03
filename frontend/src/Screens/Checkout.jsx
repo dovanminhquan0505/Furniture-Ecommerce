@@ -145,6 +145,9 @@ const Checkout = () => {
             ],
         };
 
+        console.log("Sending totalOrdersData:", totalOrdersData); 
+        console.log("Cart items:", orderData.cartItems);
+
         try {
             const response = await createOrder(totalOrdersData);
             const orderId = response.id;

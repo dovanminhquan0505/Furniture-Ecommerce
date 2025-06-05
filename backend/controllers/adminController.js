@@ -475,11 +475,13 @@ const resolveRefundDispute = async (req, res) => {
                 updateData.refundResult = { id: refund.result.id, status: refund.result.status };
             }
 
-            const updatedItems = totalOrderData.items.filter(
-                (item) => !subOrderData.items.some((subItem) => subItem.id === item.id)
-            );
+            const updatedSubOrderItems = subOrderData.items.filter(item => item.quantity > 0);
             const subOrderAmount = subOrderData.totalAmount;
             const subOrderQuantity = subOrderData.totalQuantity;
+
+            const updatedTotalOrderItems = totalOrderData.items.filter(
+                (item) => !subOrderData.items.some((subItem) => subItem.id === item.id && item.quantity <= 0)
+            );
 
             const newTotalAmount = totalOrderData.totalAmount - subOrderAmount;
             const newTotalQuantity = totalOrderData.totalQuantity - subOrderQuantity;
@@ -488,7 +490,7 @@ const resolveRefundDispute = async (req, res) => {
             const newTotalPrice = newTotalAmount + newTotalShipping + newTotalTax;
 
             const totalOrderUpdateData = {
-                items: updatedItems,
+                items: updatedTotalOrderItems,
                 totalAmount: newTotalAmount,
                 totalQuantity: newTotalQuantity,
                 totalShipping: newTotalShipping,
@@ -496,8 +498,15 @@ const resolveRefundDispute = async (req, res) => {
                 totalPrice: newTotalPrice,
             };
 
+            // Update subOrder with filtered items
+            await subOrderRef.update({
+                ...updateData,
+                items: updatedSubOrderItems,
+                totalAmount: updatedSubOrderItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
+                totalQuantity: updatedSubOrderItems.reduce((sum, item) => sum + item.quantity, 0),
+            });
+
             await totalOrderRef.update(totalOrderUpdateData);
-            await subOrderRef.update(updateData);
 
             res.status(200).json({ 
                 message: "Refund dispute approved by admin", 

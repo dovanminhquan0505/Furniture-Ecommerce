@@ -12,7 +12,8 @@ const {
     requestAppeal,
     customerConfirmReturn,
     getSubOrders,
-    getPendingOrders
+    getPendingOrders,
+    confirmDelivery
 } = require("../controllers/orderController");
 const { authenticateUser } = require("../controllers/authController");
 const router = express.Router();
@@ -30,5 +31,6 @@ router.post("/:orderId/cancel/:subOrderId", cancelOrder);
 router.put("/:orderId/cancel/process/:subOrderId", processCancelRequest);
 router.post("/:orderId/sub-orders/:subOrderId/appeal", requestAppeal);
 router.post("/:orderId/refund/confirm-return/:subOrderId", customerConfirmReturn);
+router.post("/:orderId/subOrders/:subOrderId/confirm-delivery", confirmDelivery);
 
 module.exports = router;

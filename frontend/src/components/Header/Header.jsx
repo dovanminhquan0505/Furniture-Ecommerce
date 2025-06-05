@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import "./header.css";
 import { motion } from "framer-motion";
@@ -12,7 +12,7 @@ import { useDispatch } from "react-redux";
 import { userActions } from "../../redux/slices/userSlice";
 import { cartActions } from "../../redux/slices/cartSlice";
 import { wishListActions } from "../../redux/slices/wishListSlice";
-import { logoutUser } from "../../api";
+import { getUserNotifications, logoutUser, markUserNotificationAsRead } from "../../api";
 import { signOut } from "firebase/auth";
 import { auth } from "../../firebase.config";
 
@@ -40,11 +40,14 @@ const Header = () => {
         (state) => state.wishlist?.totalQuantity || 0
     );
     const profileActionRef = useRef(null);
+    const notificationRef = useRef(null);
     const { currentUser } = useSelector((state) => state.user);
     const menuRef = useRef(null);
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { isAdmin } = useAdmin();
+    const [notifications, setNotifications] = useState([]);
+    const [showNotifications, setShowNotifications] = useState(false);
 
     const stickyHeaderFunc = () => {
         window.addEventListener("scroll", () => {
@@ -106,6 +109,34 @@ const Header = () => {
         }
     };
 
+    const timeAgo = (date) => {
+        const now = new Date();
+        const diff = Math.floor((now - new Date(date)) / 1000);
+        if (diff < 60) return `${diff} seconds ago`;
+        if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+        return `${Math.floor(diff / 86400)} days ago`;
+    };
+
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            if (!currentUser) {
+                setNotifications([]); 
+                return;
+            }
+            try {
+                const data = await getUserNotifications(currentUser.uid);
+                setNotifications(data || []);
+            } catch (error) {
+                setNotifications([]); 
+                console.error("Error fetching notifications:", error.message);
+            }
+        };
+        fetchNotifications();
+        const interval = setInterval(fetchNotifications, 30000); // Update every 60 seconds
+        return () => clearInterval(interval);
+    }, [currentUser]);
+
     // Handle auto turn off profile actions when user clicks on outside.
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -113,19 +144,36 @@ const Header = () => {
                 profileActionRef.current &&
                 !profileActionRef.current.contains(event.target)
             ) {
-                profileActionRef.current.classList.remove(
-                    "active__profileActions"
-                );
+                profileActionRef.current.classList.remove("active__profileActions");
+            }
+            if (
+                notificationRef.current &&
+                !notificationRef.current.contains(event.target)
+            ) {
+                setShowNotifications(false);
             }
         };
-
-        // Add event listener
         document.addEventListener("mousedown", handleClickOutside);
-
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    const toggleNotifications = () => {
+        setShowNotifications(!showNotifications);
+    };
+
+    const markAsRead = async (notificationId, orderId) => {
+        try {
+            await markUserNotificationAsRead(currentUser.uid, notificationId);
+            setNotifications((prev) =>
+                prev.map((notif) =>
+                    notif.id === notificationId ? { ...notif, isRead: true } : notif
+                )
+            );
+            navigate(`/placeorder/${orderId}`);
+        } catch (error) {
+            toast.error("Error marking notification as read: " + error.message);
+        }
+    };
 
     return (
         <header className="header" ref={headerRef}>
@@ -203,6 +251,45 @@ const Header = () => {
                                         {totalQuantity}
                                     </span>
                                 </span>
+
+                                <div className="header__notification-wrapper" ref={notificationRef}>
+                                    <span className="header__notification-icon" onClick={toggleNotifications}>
+                                        <i className="ri-notification-3-line"></i>
+                                        {notifications.length > 0 && (
+                                            <span className="badge">
+                                                {notifications.filter((n) => !n.isRead).length}
+                                            </span>
+                                        )}
+                                    </span>
+                                    <div className={`header__notifications-list ${showNotifications ? "active__notifications" : ""}`}>
+                                        {notifications.length === 0 ? (
+                                            <span className="header__no-notifications">No notifications</span>
+                                        ) : (
+                                            notifications.map((notif) => (
+                                                <div
+                                                    key={notif.id}
+                                                    className={`header__notification-item ${notif.isRead ? "read" : ""}`}
+                                                    onClick={() => markAsRead(notif.id, notif.totalOrderId)}
+                                                >
+                                                    {notif.type === "order_cancelled" && notif.imgUrl && (
+                                                        <img
+                                                            src={notif.imgUrl}
+                                                            alt="Product"
+                                                            className="header__notification-product-img"
+                                                        />
+                                                    )}
+                                                    <div className="header__notification-content">
+                                                        <p>{notif.message}</p>
+                                                        <span className="header__notification-time">
+                                                            {timeAgo(notif.createdAt)}
+                                                        </span>
+                                                    </div>
+                                                    {!notif.isRead && <span className="header__notification-dot"></span>}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
 
                                 <div className="profile">
                                     <motion.img

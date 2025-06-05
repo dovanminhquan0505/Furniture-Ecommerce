@@ -524,6 +524,23 @@ export const deleteOrder = async (sellerId, orderId) => {
     }
 };
 
+export const confirmDelivery = async (orderId, subOrderId) => {
+    try {
+        const response = await fetch(`${BASE_URL}/orders/${orderId}/subOrders/${subOrderId}/confirm-delivery`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to confirm delivery");
+        }
+        return response.json();
+    } catch (error) {
+        throw new Error(error.message);
+    }
+};
+
 export const cancelOrder = async (orderId, subOrderId, data) => {
     try {
         const response = await fetch(`${BASE_URL}/orders/${orderId}/cancel/${subOrderId}`, {
@@ -681,6 +698,42 @@ export const getDashboardStats = async (sellerId) => {
         return await response.json();
     } catch (error) {
         console.error("Error fetching dashboard stats:", error);
+        throw error;
+    }
+};
+
+export const getUserNotifications = async (userId) => {
+    try {
+        const response = await fetch(`${BASE_URL}/users/${userId}/notifications`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch notifications");
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching notifications:", error);
+        throw error;
+    }
+};
+
+export const markUserNotificationAsRead = async (userId, notificationId) => {
+    try {
+        const response = await fetch(`${BASE_URL}/users/${userId}/notifications/${notificationId}/read`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to mark notification as read");
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error marking notification as read:", error);
         throw error;
     }
 };

@@ -26,8 +26,7 @@ const scheduleStatusUpdate = async (orderId, subOrderId, currentStatus, delay) =
         if (subOrderData.status !== currentStatus) return;
 
         let newStatus;
-        if (currentStatus === "processing") newStatus = "shipping";
-        else if (currentStatus === "shipping") newStatus = "success";
+        if (currentStatus === "shipping") newStatus = "success";
 
         if (newStatus) {
             const updateData = {
@@ -40,10 +39,6 @@ const scheduleStatusUpdate = async (orderId, subOrderId, currentStatus, delay) =
             }
 
             await subOrderRef.update(updateData);
-
-            if (newStatus === "shipping") {
-                scheduleStatusUpdate(orderId, subOrderId, "shipping", 100000); //45s
-            }
 
             const subOrdersSnap = await db.collection("subOrders")
                 .where("totalOrderId", "==", orderId)
@@ -58,6 +53,37 @@ const scheduleStatusUpdate = async (orderId, subOrderId, currentStatus, delay) =
             }
         }
     }, delay);
+};
+
+const confirmDelivery = async (req, res) => {
+    try {
+        const db = getDb();
+        const { orderId, subOrderId } = req.params;
+
+        const subOrderRef = db.collection("subOrders").doc(subOrderId);
+        const subOrderSnap = await subOrderRef.get();
+
+        if (!subOrderSnap.exists) {
+            return res.status(404).json({ message: "Sub-order not found" });
+        }
+
+        const subOrderData = subOrderSnap.data();
+        if (subOrderData.status !== "processing") {
+            return res.status(400).json({ message: "Order must be in processing status to confirm delivery" });
+        }
+
+        await subOrderRef.update({
+            status: "shipping",
+            statusUpdatedAt: admin.firestore.Timestamp.now(),
+        });
+
+        // Schedule shipping to success transition after 10 seconds
+        scheduleStatusUpdate(orderId, subOrderId, "shipping", 10000);
+
+        res.status(200).json({ message: "Delivery confirmed successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Error confirming delivery", error: error.message });
+    }
 };
 
 const getOrders = async (req, res) => {
@@ -311,7 +337,6 @@ const updateOrder = async (req, res) => {
         if (Object.keys(updateData).length > 0) {
             await totalOrderRef.update(updateData);
 
-            // Tạo thông báo khi isPaid = true
             if (isPaid === true) {
                 const subOrdersSnap = await db.collection('subOrders')
                     .where('totalOrderId', '==', orderId)
@@ -349,9 +374,7 @@ const updateOrder = async (req, res) => {
             await subOrderRef.update(subUpdateData);
 
             if (status === "processing") {
-                scheduleStatusUpdate(orderId, subOrderId, "processing", 100000); //45s
-            } else if (status === "shipping") {
-                scheduleStatusUpdate(orderId, subOrderId, "shipping", 25000);
+                // No automatic scheduling for processing to shipping
             }
 
             const subOrdersSnap = await db.collection("subOrders")
@@ -953,6 +976,18 @@ const cancelOrder = async (req, res) => {
                 isRead: false,
             });
 
+            // Notify user
+            await db.collection("userNotifications").add({
+                userId: subOrderData.userId,
+                imgUrl: item.imgUrl || "",
+                type: "order_cancelled",
+                message: `You have successfully canceled ${quantity} of ${item.productName} in order ${orderId}.`,
+                totalOrderId: orderId,
+                subOrderId: subOrderId,
+                createdAt: admin.firestore.Timestamp.now(),
+                isRead: false,
+            });
+
             res.status(200).json({
                 message: "Order cancelled directly and refunded successfully",
                 updatedTotalOrder: {
@@ -1273,5 +1308,6 @@ module.exports = {
     requestAppeal,
     customerConfirmReturn,
     getSubOrders,
-    getPendingOrders
+    getPendingOrders,
+    confirmDelivery
 };

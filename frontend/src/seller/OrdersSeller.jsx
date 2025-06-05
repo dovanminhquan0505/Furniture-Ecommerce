@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import "../seller/styles/orders-seller.css";
 import { useTheme } from "../components/UI/ThemeContext";
 import Helmet from "../components/Helmet/Helmet";
-import { deleteOrder, fetchSellerOrders, getUserById, processCancelRequest, processRefund, updateOrder } from "../api";
+import { confirmDelivery, deleteOrder, fetchSellerOrders, getUserById, processCancelRequest, processRefund, updateOrder } from "../api";
 import Modal from "../components/Modal/Modal";
 
 const Orders = () => {
@@ -69,6 +69,23 @@ const Orders = () => {
             toast.success("Order confirmed successfully! Processing started.");
         } catch (error) {
             toast.error("Failed to confirm order: " + error.message);
+        }
+    };
+
+    // Handle confirm delivery
+    const handleConfirmDelivery = async (subOrderId, totalOrderId) => {
+        try {
+            await confirmDelivery(totalOrderId, subOrderId);
+            setOrders(prevOrders =>
+                prevOrders.map(order =>
+                    order.id === subOrderId
+                        ? { ...order, status: "shipping", statusUpdatedAt: new Date() }
+                        : order
+                )
+            );
+            toast.success("Delivery confirmed successfully!");
+        } catch (error) {
+            toast.error("Failed to confirm delivery: " + error.message);
         }
     };
     
@@ -275,6 +292,18 @@ const Orders = () => {
                                                                         }}
                                                                     >
                                                                         Confirm Order
+                                                                    </motion.button>
+                                                                )}
+                                                                {order.status === "processing" && (
+                                                                    <motion.button
+                                                                        whileTap={{ scale: 0.9 }}
+                                                                        className="btn__seller btn__seller-success"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleConfirmDelivery(order.id, order.totalOrderId);
+                                                                        }}
+                                                                    >
+                                                                        Confirm Delivery
                                                                     </motion.button>
                                                                 )}
                                                                 {(order.refundItems || []).map((refundItem, index) => (

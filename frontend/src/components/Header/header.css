@@ -308,7 +308,7 @@
 
 .header__notifications-list {
     position: absolute;
-    top: 100%;
+    top: 80%;
     right: 0;
     width: 420px;
     max-height: 450px;

@@ -40,6 +40,20 @@ const scheduleStatusUpdate = async (orderId, subOrderId, currentStatus, delay) =
 
             await subOrderRef.update(updateData);
 
+            // Notify user about successful delivery
+            if (newStatus === "success") {
+                await db.collection("userNotifications").add({
+                    userId: subOrderData.userId,
+                    imgUrl: subOrderData.items[0]?.imgUrl || "",
+                    type: "order_delivered",
+                    message: `Your order ${orderId} has been successfully delivered.`,
+                    totalOrderId: orderId,
+                    subOrderId: subOrderId,
+                    createdAt: admin.firestore.Timestamp.now(),
+                    isRead: false,
+                });
+            }
+
             const subOrdersSnap = await db.collection("subOrders")
                 .where("totalOrderId", "==", orderId)
                 .get();
@@ -75,6 +89,18 @@ const confirmDelivery = async (req, res) => {
         await subOrderRef.update({
             status: "shipping",
             statusUpdatedAt: admin.firestore.Timestamp.now(),
+        });
+
+        // Notify user about shipping status
+        await db.collection("userNotifications").add({
+            userId: subOrderData.userId,
+            imgUrl: subOrderData.items[0]?.imgUrl || "",
+            type: "order_shipping",
+            message: `Your order ${orderId} is now being shipped.`,
+            totalOrderId: orderId,
+            subOrderId: subOrderId,
+            createdAt: admin.firestore.Timestamp.now(),
+            isRead: false,
         });
 
         // Schedule shipping to success transition after 10 seconds
@@ -608,6 +634,18 @@ const processRefund = async (req, res) => {
                     refundStatus: hasActiveRefunds ? "Requested" : "None",
                 });
 
+                // Notify user about refund approval and return request
+                await db.collection("userNotifications").add({
+                    userId: subOrderData.userId,
+                    imgUrl: item.imgUrl || "",
+                    type: "refund_approved",
+                    message: `Your refund request for ${refundItem.quantity} of ${item.productName} in order ${orderId} has been approved. Please confirm return.`,
+                    totalOrderId: orderId,
+                    subOrderId: subOrderId,
+                    createdAt: admin.firestore.Timestamp.now(),
+                    isRead: false,
+                });
+
                 await db.collection("sellerNotifications").add({
                     sellerId: subOrderData.sellerId,
                     type: "return_requested",
@@ -680,6 +718,18 @@ const processRefund = async (req, res) => {
 
                 await subOrderRef.update(updateData);
 
+                // Notify user about successful refund
+                await db.collection("userNotifications").add({
+                    userId: subOrderData.userId,
+                    imgUrl: item.imgUrl || "",
+                    type: "refund_success",
+                    message: `Your refund for ${refundItem.quantity} of ${item.productName} in order ${orderId} has been successfully processed.`,
+                    totalOrderId: orderId,
+                    subOrderId: subOrderId,
+                    createdAt: admin.firestore.Timestamp.now(),
+                    isRead: false,
+                });
+
                 const subOrdersSnap = await db
                     .collection("subOrders")
                     .where("totalOrderId", "==", orderId)
@@ -728,6 +778,17 @@ const processRefund = async (req, res) => {
             await subOrderRef.update({
                 refundItems: updatedRefundItems,
                 refundStatus: hasActiveRefunds ? "Requested" : "None",
+            });
+
+            await db.collection("userNotifications").add({
+                userId: subOrderData.userId,
+                imgUrl: item.imgUrl || "",
+                type: "refund_rejected",
+                message: `Your refund request for ${refundItem.quantity} of ${item.productName} in order ${orderId} has been declined.`,
+                totalOrderId: orderId,
+                subOrderId: subOrderId,
+                createdAt: admin.firestore.Timestamp.now(),
+                isRead: false,
             });
 
             await db.collection("sellerNotifications").add({
@@ -1194,6 +1255,18 @@ const processCancelRequest = async (req, res) => {
                 isRead: false,
             });
 
+            // Notify user
+            await db.collection("userNotifications").add({
+                userId: subOrderData.userId,
+                imgUrl: item.imgUrl || "",
+                type: "order_cancelled",
+                message: `Your cancellation request for ${cancelRequest.quantity} of ${item.productName} in order ${orderId} has been approved.`,
+                totalOrderId: orderId,
+                subOrderId: subOrderId,
+                createdAt: admin.firestore.Timestamp.now(),
+                isRead: false,
+            });
+
             res.status(200).json({ 
                 message: "Cancellation request approved successfully",
                 updatedTotalOrder: {
@@ -1220,6 +1293,17 @@ const processCancelRequest = async (req, res) => {
                 type: "cancel_rejected",
                 message: `Cancellation request for ${cancelRequest.quantity} of ${item.productName} in sub-order ${subOrderId} has been rejected.`,
                 userId: subOrderData.userId,
+                totalOrderId: orderId,
+                subOrderId: subOrderId,
+                createdAt: admin.firestore.Timestamp.now(),
+                isRead: false,
+            });
+
+            await db.collection("userNotifications").add({
+                userId: subOrderData.userId,
+                imgUrl: item.imgUrl || "",
+                type: "cancel_rejected",
+                message: `Your cancellation request for ${cancelRequest.quantity} of ${item.productName} in order ${orderId} has been rejected.`,
                 totalOrderId: orderId,
                 subOrderId: subOrderId,
                 createdAt: admin.firestore.Timestamp.now(),

@@ -862,11 +862,15 @@ const PlaceOrder = () => {
                                                     className={
                                                         c.status === "Requested"
                                                             ? "text-warning"
+                                                            : c.status === "Approved"
+                                                            ? "text-success"
                                                             : "text-danger"
                                                     }
                                                 >
                                                     {c.status === "Requested"
                                                         ? `Cancellation request pending for ${c.quantity} item(s)`
+                                                        : c.status === "Approved"
+                                                        ? `Successfully canceled ${c.quantity} item(s)`
                                                         : `Cancellation request rejected for ${c.quantity} item(s)`}
                                                 </p>
                                             )

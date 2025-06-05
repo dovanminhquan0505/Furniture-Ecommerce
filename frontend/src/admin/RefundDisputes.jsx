@@ -61,7 +61,7 @@ const RefundDisputes = () => {
             console.error("Error in handleResolveDispute:", error);
             const errorMessage = error.message.includes("current status")
                 ? "Cannot resolve dispute in its current state"
-                : `Failed to ${action} dispute: ${error.message}`;
+                : error.message || `Failed to ${action} dispute`;
             toast.error(errorMessage);
         } finally {
             setLoading(false);

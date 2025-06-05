@@ -460,21 +460,46 @@ const resolveRefundDispute = async (req, res) => {
 
             const paymentResult = totalOrderData.paymentResult;
             const refundAmount = subOrderData.totalAmount;
+
             if (paymentResult && totalOrderData.paymentMethod === "stripe") {
+                // Retrieve the payment intent to check the available balance
+                const paymentIntent = await stripe.paymentIntents.retrieve(paymentResult.id);
+                const unrefundedAmount = (paymentIntent.amount - paymentIntent.amount_refunded) / 100; // Convert from cents to dollars
+
+                if (refundAmount > unrefundedAmount) {
+                    return res.status(400).json({
+                        message: "Refund amount exceeds available balance",
+                        error: `Refund amount ($${refundAmount.toFixed(2)}) is greater than unrefunded amount on charge ($${unrefundedAmount.toFixed(2)})`,
+                    });
+                }
+
                 const refund = await stripe.refunds.create({
                     payment_intent: paymentResult.id,
                     amount: Math.round(refundAmount * 100),
                 });
                 updateData.refundResult = { id: refund.id, status: refund.status };
             } else if (paymentResult && totalOrderData.paymentMethod === "paypal") {
-                const request = new paypal.payments.CapturesRefundRequest(paymentResult.id);
-                request.requestBody({
+                // Similar validation for PayPal (if applicable)
+                const request = new paypal.payments.CapturesGetRequest(paymentResult.id);
+                const capture = await paypalClient.execute(request);
+                const unrefundedAmount = parseFloat(capture.result.amount.value) - (capture.result.refunded_amount?.value || 0);
+
+                if (refundAmount > unrefundedAmount) {
+                    return res.status(400).json({
+                        message: "Refund amount exceeds available balance",
+                        error: `Refund amount ($${refundAmount.toFixed(2)}) is greater than unrefunded amount on charge ($${unrefundedAmount.toFixed(2)})`,
+                    });
+                }
+
+                const refundRequest = new paypal.payments.CapturesRefundRequest(paymentResult.id);
+                refundRequest.requestBody({
                     amount: { value: refundAmount.toString(), currency_code: "USD" },
                 });
-                const refund = await paypalClient.execute(request);
+                const refund = await paypalClient.execute(refundRequest);
                 updateData.refundResult = { id: refund.result.id, status: refund.result.status };
             }
 
+            // Rest of the code remains the same
             const updatedSubOrderItems = subOrderData.items.filter(item => item.quantity > 0);
             const subOrderAmount = subOrderData.totalAmount;
             const subOrderQuantity = subOrderData.totalQuantity;
@@ -498,7 +523,6 @@ const resolveRefundDispute = async (req, res) => {
                 totalPrice: newTotalPrice,
             };
 
-            // Update subOrder with filtered items
             await subOrderRef.update({
                 ...updateData,
                 items: updatedSubOrderItems,
@@ -507,6 +531,30 @@ const resolveRefundDispute = async (req, res) => {
             });
 
             await totalOrderRef.update(totalOrderUpdateData);
+
+            // Notify seller
+            await db.collection("sellerNotifications").add({
+                sellerId: subOrderData.sellerId,
+                type: "appeal_approved",
+                message: `Appeal for refund of ${subOrderData.items.length} item(s) in sub-order ${subOrderId} has been approved by admin.`,
+                userId: subOrderData.userId,
+                totalOrderId: orderId,
+                subOrderId: subOrderId,
+                createdAt: admin.firestore.Timestamp.now(),
+                isRead: false,
+            });
+
+            // Notify user about appeal approval
+            await db.collection("userNotifications").add({
+                userId: subOrderData.userId,
+                imgUrl: subOrderData.items[0]?.imgUrl || "",
+                type: "appeal_approved",
+                message: `Your appeal for refund of ${subOrderData.items.length} item(s) in order ${orderId} has been approved by admin.`,
+                totalOrderId: orderId,
+                subOrderId: subOrderId,
+                createdAt: admin.firestore.Timestamp.now(),
+                isRead: false,
+            });
 
             res.status(200).json({ 
                 message: "Refund dispute approved by admin", 
@@ -520,6 +568,29 @@ const resolveRefundDispute = async (req, res) => {
                 resolvedByAdmin: true 
             };
             await subOrderRef.update(updateData);
+
+            await db.collection("userNotifications").add({
+                userId: subOrderData.userId,
+                imgUrl: subOrderData.items[0]?.imgUrl || "",
+                type: "appeal_rejected",
+                message: `Your appeal for refund of ${subOrderData.items.length} item(s) in order ${orderId} has been rejected by admin.`,
+                totalOrderId: orderId,
+                subOrderId: subOrderId,
+                createdAt: admin.firestore.Timestamp.now(),
+                isRead: false,
+            });
+
+            await db.collection("sellerNotifications").add({
+                sellerId: subOrderData.sellerId,
+                type: "appeal_rejected",
+                message: `Appeal for refund of ${subOrderData.items.length} item(s) in sub-order ${subOrderId} has been rejected by admin.`,
+                userId: subOrderData.userId,
+                totalOrderId: orderId,
+                subOrderId: subOrderId,
+                createdAt: admin.firestore.Timestamp.now(),
+                isRead: false,
+            });
+
             res.status(200).json({ 
                 message: "Refund dispute rejected by admin",
                 subOrderId: subOrderId

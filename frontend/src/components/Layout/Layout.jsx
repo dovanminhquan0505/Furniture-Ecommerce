@@ -25,7 +25,8 @@ const Layout = () => {
     const shouldShowFooter = () => {
         return !(
             location.pathname.startsWith("/admin") ||
-            location.pathname.startsWith("/seller")
+            location.pathname.startsWith("/seller") ||
+            location.pathname.startsWith("/profile")
         );
     };
 

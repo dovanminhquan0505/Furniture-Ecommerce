@@ -10,6 +10,8 @@ const {
     deleteUserOrder,
     getUserNotifications,
     markUserNotificationAsRead,
+    getUserSubOrders,
+    syncSubOrdersIsPaid,
 } = require("../controllers/userController");
 const { authenticateUser } = require("../controllers/authController");
 const multer = require("multer");
@@ -28,6 +30,7 @@ router.get("/:id/profile", getUserProfileById);
 router.put("/:id/photo", upload.single("file"), updateUserPhoto);
 router.put("/:id/password", updateUserPassword);
 router.get("/:id/orders", getUserOrders);
+router.get("/:id/subOrders", getUserSubOrders);
 router.delete("/orders/:orderId", deleteUserOrder);
 router.get("/:id/notifications", getUserNotifications);
 router.put("/:id/notifications/:notificationId/read", markUserNotificationAsRead);

@@ -271,7 +271,7 @@ const Header = () => {
                                                     className={`header__notification-item ${notif.isRead ? "read" : ""}`}
                                                     onClick={() => markAsRead(notif.id, notif.totalOrderId)}
                                                 >
-                                                    {notif.type === "order_cancelled" && notif.imgUrl && (
+                                                    {notif.imgUrl && (
                                                         <img
                                                             src={notif.imgUrl}
                                                             alt="Product"

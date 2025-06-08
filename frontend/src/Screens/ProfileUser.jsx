@@ -8,6 +8,7 @@ import {
     Form,
     Spinner,
     Alert,
+    Nav,
 } from "react-bootstrap";
 import {
     User,
@@ -41,13 +42,14 @@ import { useDispatch } from "react-redux";
 import { userActions } from "../redux/slices/userSlice";
 import {
     deleteUserOrder,
-    getUserOrders,
     getUserProfileById,
+    getUserSubOrders,
     updateUserById,
     updateUserPassword,
     updateUserPhoto,
     uploadFile,
 } from "../api";
+import OrderDetailsModal from "../components/Modal/OrderDetailsModal";
 
 const ProfileUser = () => {
     const [editing, setEditing] = useState(false);
@@ -61,10 +63,11 @@ const ProfileUser = () => {
     const [showPassword, setShowPassword] = useState(false);
     const { isDarkMode, toggleDarkMode } = useTheme();
     const [userInfo, setUserInfo] = useState(null);
-
     const [orderInfo, setOrderInfo] = useState([]);
-
     const [originalUserInfo, setOriginalUserInfo] = useState({ ...userInfo });
+    const [selectedStatus, setSelectedStatus] = useState('pending');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState(null);
 
     useEffect(() => {
         // Fetch user info
@@ -87,8 +90,8 @@ const ProfileUser = () => {
                 }
                 setUserInfo(userData);
                 setOriginalUserInfo(userData);
-                const orders = await getUserOrders(userId);
-                setOrderInfo(orders);
+                const subOrders = await getUserSubOrders(userId);
+                setOrderInfo(subOrders);
             } catch (error) {
                 toast.error("Failed to fetch user data: " + error.message);
             } finally {
@@ -382,146 +385,131 @@ const ProfileUser = () => {
         );
     };
 
-    // Hàm helper để parse chuỗi ngày giờ thành đối tượng Date
-    const parseDate = (dateString) => {
-        if (!dateString || typeof dateString !== "string") {
-            console.log("dateString is invalid or not a string:", dateString);
-            return null;
-        }
-
-        if (dateString === "No") {
-            console.log("dateString is 'No':", dateString);
-            return null;
-        }
-
-        const isoMatch = dateString.match(
-            /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
-        );
-        if (isoMatch) {
-            const parsedDate = new Date(dateString);
-            if (isNaN(parsedDate)) {
-                console.log("Failed to parse ISO string:", dateString);
-                return null;
-            }
-            // Điều chỉnh múi giờ sang UTC+7 (Việt Nam)
-            const offsetMinutes = 7 * 60; // UTC+7
-            parsedDate.setMinutes(
-                parsedDate.getMinutes() +
-                    parsedDate.getTimezoneOffset() +
-                    offsetMinutes
-            );
-            return parsedDate;
-        }
-        const dateOnlyMatch = dateString.match(/^\d{4}-\d{2}-\d{2}$/);
-        if (dateOnlyMatch) {
-            const dateTimeString = `${dateString}T00:00:00`;
-            console.log("Parsing date-only string:", dateTimeString);
-            const parsedDate = new Date(dateTimeString);
-            if (isNaN(parsedDate)) {
-                console.log(
-                    "Failed to parse date-only string:",
-                    dateTimeString
-                );
-                return null;
-            }
-            return parsedDate;
-        }
-
-        // Kiểm tra định dạng đầy đủ: "March 19, 2025 at 1:25:36PM UTC+7"
-        const [datePart, timePartWithTZ] = dateString.split(" at ");
-        if (!datePart || !timePartWithTZ) {
-            console.log("Failed to split dateString:", dateString);
-            return null;
-        }
-
-        const timeMatch = timePartWithTZ.match(/(\d{1,2}:\d{2}:\d{2})(AM|PM)/);
-        if (!timeMatch) {
-            console.log("Failed to match time in dateString:", dateString);
-            return null;
-        }
-
-        const time = timeMatch[1];
-        const period = timeMatch[2];
-        const dateTimeString = `${datePart} ${time} ${period}`;
-
-        const parsedDate = new Date(dateTimeString);
-        if (isNaN(parsedDate)) {
-            console.log("Failed to parse dateTimeString:", dateTimeString);
-            return null;
-        }
-
-        return parsedDate;
-    };
-
     // Render Order Information
-    const renderOrderInformation = () => (
+    const renderOrderInformation = () => {
+        const statusTabs = [
+        { key: "pending", label: "Pending Confirmation" },
+        { key: "shipping", label: "Awaiting shipment" },
+        { key: "success", label: "Delivered" },
+        { key: "cancelled", label: "Cancelled" },
+        { key: "Refunded", label: "Refunded" },
+        ];
+
+        const filteredOrders = orderInfo.filter((order) => {
+        if (selectedStatus === "cancelled") {
+            return order.cancelStatus === "cancelDirectly" || order.cancelStatus === "cancelled";
+        } else if (selectedStatus === "Refunded") {
+            return order.refundStatus === "Refunded";
+        } else {
+            return order.status === selectedStatus;
+        }
+        });
+
+        const handleShowOrderDetails = (order) => {
+        setSelectedOrder(order);
+        setIsModalOpen(true);
+        };
+
+        return (
         <div className="order-info">
             <h3>Your Orders</h3>
-            <Table striped bordered hover>
+            <Nav
+            variant="tabs"
+            activeKey={selectedStatus}
+            onSelect={(key) => setSelectedStatus(key)}
+            className="order-status-tabs"
+            >
+            {statusTabs.map((tab) => (
+                <Nav.Item key={tab.key}>
+                <Nav.Link eventKey={tab.key}>{tab.label}</Nav.Link>
+                </Nav.Item>
+            ))}
+            </Nav>
+            <Table striped bordered hover
+            className="mt-3">
                 <thead>
-                    <tr>
-                        <th>Order ID</th>
-                        <th>Date</th>
-                        <th>Total Price</th>
-                        <th>Paid At</th>
-                        <th>Delivered At</th>
-                        <th>Actions</th>
-                    </tr>
+                <tr>
+                    <th>Image</th>
+                    <th>Product Name</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Total Price</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
                 </thead>
                 <tbody>
-                {orderInfo.length > 0 ? (
-                        orderInfo.map((order) => {
-                            let paidAtDate = order.paidAt?.toDate ? order.paidAt.toDate() : parseDate(order.paidAt);
-                            const paidAtFormatted = paidAtDate
-                                ? paidAtDate.toLocaleString("en-US", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })
-                                : "Not Paid";
-                            const [paidAtDatePart, paidAtTimePart] = paidAtFormatted !== "Not Paid" ? paidAtFormatted.split(", ") : ["", ""];
-
-                            let deliveredAtDate = order.deliveredAt?.toDate ? order.deliveredAt.toDate() : parseDate(order.deliveredAt);
-                            const deliveredAtFormatted = deliveredAtDate
-                                ? deliveredAtDate.toLocaleString("en-US", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })
-                                : "Not Delivered";
-                            const [deliveredAtDatePart, deliveredAtTimePart] = deliveredAtFormatted !== "Not Delivered" ? deliveredAtFormatted.split(", ") : ["", ""];
-
-                            return (
-                                <tr key={order.orderId}>
-                                    <td>{order.orderId}</td>
-                                    <td>{order.date}</td>
-                                    <td>${order.totalPrice}</td>
-                                    <td>
-                                        {paidAtFormatted === "Not Paid" ? "Not Paid" : (
-                                            <div style={{ lineHeight: "1.2" }}>
-                                                <div>{paidAtDatePart}</div>
-                                                <div>{paidAtTimePart === "00:00" && paidAtDate && paidAtDate.getHours() === 0 && paidAtDate.getMinutes() === 0 ? "N/A" : paidAtTimePart}</div>
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td>
-                                        {deliveredAtFormatted === "Not Delivered" ? "Not Delivered" : (
-                                            <div style={{ lineHeight: "1.2" }}>
-                                                <div>{deliveredAtDatePart}</div>
-                                                <div>{deliveredAtTimePart === "00:00" && deliveredAtDate && deliveredAtDate.getHours() === 0 && deliveredAtDate.getMinutes() === 0 ? "N/A" : deliveredAtTimePart}</div>
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td>
-                                        <Button variant="secondary" size="sm" className="action-button" onClick={() => handleViewOrder(order.orderId)}>
-                                            View
-                                        </Button>
-                                        <Button variant="danger" size="sm" className="action-button" onClick={() => handleDeleteOrder(order.orderId)}>
-                                            Delete
-                                        </Button>
-                                    </td>
-                                </tr>
-                            );
-                        })
-                    ) : (
-                        <tr><td colSpan="7" className="text-center">No orders found.</td></tr>
-                    )}
+                {filteredOrders.length > 0 ? (
+                    filteredOrders.map((order, index) => (
+                    <tr
+                        key={`${order.subOrderId}-${order.itemId}-${order.cancelStatus}-${index}`}
+                        onClick={() => selectedStatus === 'pending' && handleShowOrderDetails(order)}
+                        style={{ cursor: selectedStatus === 'pending' ? 'pointer' : 'default' }}
+                    >
+                        <td>
+                        <img
+                            src={order.productImage || "https://via.placeholder.com/50"}
+                            alt={order.productName}
+                            style={{ width: "50px", height: "50px", objectFit: "cover" }}
+                            onError={(e) => {
+                            e.target.src = "https://via.placeholder.com/50";
+                            }}
+                        />
+                        </td>
+                        <td>{order.productName}</td>
+                        <td>{order.quantity}</td>
+                        <td>${order.price}</td>
+                        <td>${order.totalPrice}</td>
+                        <td>
+                        {order.cancelStatus === "cancelDirectly" || order.cancelStatus === "cancelled"
+                            ? `Cancelled`
+                            : order.refundedStatus === "Refunded"
+                            ? `Refunded`
+                            : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        </td>
+                        <td>
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            className="action-button"
+                            onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewOrder(order.orderId);
+                            }}
+                        >
+                            View
+                        </Button>
+                        <Button
+                            variant="danger"
+                            size="sm"
+                            className="action-button"
+                            onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteOrder(order.orderId);
+                            }}
+                        >
+                            Delete
+                        </Button>
+                        </td>
+                    </tr>
+                    ))
+                ) : (
+                    <tr>
+                    <td colSpan="7" className="text-center">
+                        No orders found for this status.
+                    </td>
+                    </tr>
+                )}
                 </tbody>
             </Table>
-        </div>
-    );
+            <OrderDetailsModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                order={selectedOrder}
+            />
+            </div>
+        );
+    };
 
     // Render Change Password
     const renderChangePassword = () => (
@@ -713,7 +701,7 @@ const ProfileUser = () => {
                             <div className="profile-avatar">
                                 <img
                                     src={
-                                        userInfo.photoURL ||
+                                        userInfo?.photoURL ||
                                         "https://via.placeholder.com/150"
                                     }
                                     alt="Admin Avatar"
@@ -748,9 +736,9 @@ const ProfileUser = () => {
                                 )}
                             </div>
                             <h1 className="profile-name">
-                                {userInfo.displayName}
+                                {userInfo?.displayName}
                             </h1>
-                            <p className="profile-role">{userInfo.role}</p>
+                            <p className="profile-role">{userInfo?.role}</p>
                         </div>
 
                         <div className="sidebar-content">

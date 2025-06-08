@@ -163,6 +163,321 @@ const getUserOrders = async (req, res) => {
     }
 };
 
+const getUserSubOrders = async (req, res) => {
+    try {
+        const db = getDb();
+        const { id } = req.params;
+        const snapshot = await db.collection("subOrders").where("userId", "==", id).get();
+
+        const batch = db.batch(); // Batch để cập nhật subOrders
+        const subOrders = await Promise.all(
+            snapshot.docs.map(async (doc) => {
+                const data = doc.data();
+                const items = [];
+
+                // Cache product and seller details
+                const productCache = new Map();
+                const sellerCache = new Map();
+
+                // Helper function to fetch product details
+                const fetchProductDetails = async (itemId) => {
+                    if (productCache.has(itemId)) {
+                        return productCache.get(itemId);
+                    }
+                    const productDoc = await db.collection("products").doc(itemId).get();
+                    if (productDoc.exists) {
+                        const productData = productDoc.data();
+                        productCache.set(itemId, productData);
+                        return productData;
+                    }
+                    return null;
+                };
+
+                // Helper function to fetch seller details
+                const fetchSellerDetails = async (sellerId) => {
+                    if (sellerCache.has(sellerId)) {
+                        return sellerCache.get(sellerId);
+                    }
+                    const sellerDoc = await db.collection("sellers").doc(sellerId).get();
+                    if (sellerDoc.exists) {
+                        const sellerData = sellerDoc.data();
+                        sellerCache.set(sellerId, sellerData);
+                        return sellerData;
+                    }
+                    return null;
+                };
+
+                // Fetch billing info and isPaid from totalOrders
+                let billingInfo = null;
+                let isPaid = false;
+                let paidAt = "No";
+                if (data.totalOrderId) {
+                    const totalOrderDoc = await db.collection("totalOrders").doc(data.totalOrderId).get();
+                    if (totalOrderDoc.exists) {
+                        const orderData = totalOrderDoc.data();
+                        billingInfo = {
+                            recipientName: orderData.billingInfo?.name || "Not Provided",
+                            phone: orderData.billingInfo?.phone || "Not Provided",
+                            address: `${orderData.billingInfo?.address || ""} ${orderData.billingInfo?.city || ""} ${orderData.billingInfo?.country || ""}`,
+                            email: orderData.billingInfo?.email || "Not Provided",
+                        };
+                        isPaid = orderData.isPaid || false;
+                        paidAt = orderData.isPaid
+                            ? orderData.paidAt?.toDate().toISOString() || "No"
+                            : "No";
+
+                        // Đồng bộ isPaid và paidAt trong subOrders nếu khác
+                        if (data.isPaid !== isPaid || data.paidAt !== paidAt) {
+                            const subOrderRef = db.collection("subOrders").doc(doc.id);
+                            batch.update(subOrderRef, { isPaid, paidAt });
+                        }
+                    }
+                }
+
+                // Process non-canceled items
+                if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+                    data.items.forEach((item) => {
+                        productCache.set(item.id, {
+                            productName: item.productName,
+                            imgUrl: item.imgUrl,
+                            price: item.price,
+                            category: item.category,
+                        });
+
+                        const cancelledItems = (data.cancelledItems || []).filter(
+                            (c) => c.itemId === item.id
+                        );
+                        const refundedItems = (data.refundItems || []).filter(
+                            (r) => r.itemId === item.id && r.status === "Refunded"
+                        );
+
+                        const nonCancelledQuantity = item.quantity || 0;
+                        if (nonCancelledQuantity > 0 && !refundedItems.length) {
+                            items.push({
+                                subOrderId: doc.id,
+                                orderId: data.totalOrderId || null,
+                                productName: item.productName || "Not Provided",
+                                productImage: item.imgUrl || null,
+                                quantity: nonCancelledQuantity,
+                                price: item.price || 0,
+                                totalPrice: (item.price || 0) * nonCancelledQuantity,
+                                status: data.status || "unknown",
+                                cancelStatus: "None",
+                                cancelledAt: null,
+                                reason: null,
+                                itemId: item.id,
+                                refundStatus: "None",
+                                isPaid,
+                                paidAt,
+                            });
+                        }
+
+                        cancelledItems.forEach((cancelledItem) => {
+                            items.push({
+                                subOrderId: doc.id,
+                                orderId: data.totalOrderId || null,
+                                productName: item.productName || "Not Provided",
+                                productImage: item.imgUrl || null,
+                                quantity: cancelledItem.quantity || 0,
+                                price: item.price || 0,
+                                totalPrice: (item.price || 0) * (cancelledItem.quantity || 0),
+                                status: data.status || "unknown",
+                                cancelStatus: cancelledItem.status || "cancelled",
+                                cancelledAt: cancelledItem.cancelledAt
+                                    ? cancelledItem.cancelledAt.toDate().toISOString()
+                                    : null,
+                                reason: cancelledItem.reason || null,
+                                itemId: item.id,
+                                refundStatus: "None",
+                                isPaid,
+                                paidAt,
+                            });
+                        });
+
+                        refundedItems.forEach((refundedItem) => {
+                            items.push({
+                                subOrderId: doc.id,
+                                orderId: data.totalOrderId || null,
+                                productName: item.productName || "Not Provided",
+                                productImage: item.imgUrl || null,
+                                quantity: refundedItem.quantity || 0,
+                                price: item.price || 0,
+                                totalPrice: (item.price || 0) * (refundedItem.quantity || 0),
+                                status: data.status || "unknown",
+                                cancelStatus: "None",
+                                cancelledAt: null,
+                                reason: refundedItem.reason || null,
+                                itemId: refundedItem.itemId,
+                                refundStatus: refundedItem.status || "Refunded",
+                                isPaid,
+                                paidAt,
+                            });
+                        });
+                    });
+                }
+
+                // Process canceled items for sub-orders with no active items
+                if (data.cancelledItems && Array.isArray(data.cancelledItems) && data.cancelledItems.length > 0) {
+                    await Promise.all(
+                        data.cancelledItems.map(async (cancelledItem) => {
+                            const alreadyProcessed = items.some(
+                                (entry) =>
+                                    entry.itemId === cancelledItem.itemId &&
+                                    entry.cancelStatus === cancelledItem.status &&
+                                    entry.quantity === cancelledItem.quantity
+                            );
+                            if (alreadyProcessed) return;
+
+                            let product = (data?.items || []).find((i) => i?.id === cancelledItem?.itemId);
+                            if (!product) {
+                                const productData = await fetchProductDetails(cancelledItem.itemId);
+                                product = productData || {
+                                    productName: "Not Provided",
+                                    imgUrl: null,
+                                    price: 0,
+                                    category: "Unknown",
+                                };
+                            }
+
+                            items.push({
+                                subOrderId: doc.id,
+                                orderId: data.totalOrderId || null,
+                                productName: product.productName || "Not Provided",
+                                productImage: product.imgUrl || null,
+                                quantity: cancelledItem.quantity || 0,
+                                price: product.price || 0,
+                                totalPrice: (product.price || 0) * (cancelledItem.quantity || 0),
+                                status: data.status || "unknown",
+                                cancelStatus: cancelledItem.status || "cancelled",
+                                cancelledAt: cancelledItem.cancelledAt
+                                    ? cancelledItem.cancelledAt.toDate().toISOString()
+                                    : null,
+                                reason: cancelledItem.reason || null,
+                                itemId: cancelledItem.itemId,
+                                refundStatus: "None",
+                                isPaid,
+                                paidAt,
+                            });
+                        })
+                    );
+                }
+
+                // Process refunded items
+                if (data.refundedItems && Array.isArray(data.refundedItems) && data.refundedItems.length > 0) {
+                    await Promise.all(
+                        data.refundedItems.map(async (refundedItem) => {
+                            if (refundedItem.status !== "Refunded") return;
+
+                            const alreadyProcessed = items.some(
+                                (entry) =>
+                                    entry.itemId === refundedItem.itemId &&
+                                    entry.refundedStatus === "Refunded" &&
+                                    entry.quantity === refundedItem.quantity
+                            );
+                            if (alreadyProcessed) return;
+
+                            let product = (data?.items || []).find((i) => i.id === refundedItem?.itemId);
+                            if (!product) {
+                                const productData = await fetchProductDetails(refundedItem.itemId);
+                                product = productData || {
+                                    productName: "Not Provided",
+                                    imgUrl: null,
+                                    price: 0,
+                                    category: "Unknown",
+                                };
+                            }
+
+                            items.push({
+                                subOrderId: doc.id,
+                                orderId: data.totalOrderId || null,
+                                productName: product.productName || "Not Provided",
+                                productImage: product.imgUrl || null,
+                                quantity: refundedItem.quantity || 0,
+                                price: product.price || 0,
+                                totalPrice: (product.price || 0) * (refundedItem.quantity || 0),
+                                status: data.status || "unknown",
+                                cancelStatus: "None",
+                                cancelledAt: null,
+                                reason: refundedItem.reason || null,
+                                itemId: refundedItem.itemId,
+                                refundStatus: refundedItem.status || "Refunded",
+                                isPaid,
+                                paidAt,
+                            });
+                        })
+                    );
+                }
+
+                // Fallback for sub-orders with no items
+                if (items.length === 0) {
+                    items.push({
+                        subOrderId: doc.id,
+                        orderId: data.totalOrderId || null,
+                        productName: "Not Provided",
+                        productImage: null,
+                        quantity: data.totalQuantity || 0,
+                        price: data.totalAmount || 0,
+                        totalPrice: data.totalAmount || 0,
+                        status: data.status || "unknown",
+                        cancelStatus: data.cancelStatus || "None",
+                        cancelledAt: data.cancelledAt
+                            ? data.cancelledAt?.toDate().toISOString()
+                            : null,
+                        reason: null,
+                        itemId: null,
+                        refundStatus: data.refundedStatus || "None",
+                        isPaid,
+                        paidAt,
+                    });
+                }
+
+                // Get seller's store name
+                const sellerData = await fetchSellerDetails(data.sellerId);
+                const storeName = sellerData?.storeName || "Not Provided";
+
+                return {
+                    subOrderId: doc.id,
+                    orderId: data.totalOrderId || null,
+                    items,
+                    refundItems: data.refundItems || [],
+                    status: data.status || "unknown",
+                    cancelStatus: data.cancelStatus || "None",
+                    totalQuantity: data.totalQuantity || 0,
+                    totalAmount: data.totalAmount || 0,
+                    sellerId: data.sellerId || null,
+                    storeName,
+                    userId: data.userId || null,
+                    createdAt: data.createdAt ? data.createdAt?.toDate().toISOString() : null,
+                    billingInfo,
+                    isPaid,
+                    paidAt,
+                };
+            })
+        );
+
+        // Commit batch updates
+        await batch.commit();
+
+        // Flatten the array
+        const flattenedSubOrders = subOrders.flatMap(subOrder => subOrder.items.map(item => ({
+            ...item,
+            refundItems: subOrder.refundItems,
+            sellerId: subOrder.sellerId,
+            storeName: subOrder.storeName,
+            userId: subOrder.userId,
+            createdAt: subOrder.createdAt,
+            billingInfo: subOrder.billingInfo,
+            isPaid: subOrder.isPaid,
+            paidAt: subOrder.paidAt,
+        })));
+
+        res.status(200).json(flattenedSubOrders);
+    } catch (error) {
+        console.error("Error fetching user subOrders:", error);
+        res.status(500).json({ error: "Failed to fetch user subOrders: " + error.message });
+    }
+};
+
 const deleteUserOrder = async (req, res) => {
     try {
         const db = getDb();
@@ -235,5 +550,6 @@ module.exports = {
     deleteUserOrder,
     getUserNotifications,
     markUserNotificationAsRead,
+    getUserSubOrders,
     getAllUsers
 }

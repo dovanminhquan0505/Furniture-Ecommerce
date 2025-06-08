@@ -193,6 +193,24 @@ export const getUserOrders = async (id) => {
     }
 };
 
+export const getUserSubOrders = async (id) => {
+    try {
+        const response = await fetch(`${BASE_URL}/users/${id}/subOrders`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Failed to fetch user subOrders");
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching user orders:", error);
+        throw error;
+    }
+};
+
 export const deleteUserOrder = async (orderId) => {
     try {
         const response = await fetch(`${BASE_URL}/users/orders/${orderId}`, {

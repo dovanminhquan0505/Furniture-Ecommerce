@@ -75,7 +75,7 @@
 }
 
 .menu-section {
-    flex: 0 0 30%; 
+    flex: 0 0 20%; 
     padding-right: 20px;
     border-right: 1px solid #e0e0e0;
 }
@@ -228,6 +228,7 @@ h2 {
     transition: background-color 0.3s, transform 0.3s;
     width: 80px;
     height: 35px;
+    margin-bottom: 5px;
 }
 
 .order-info .action-button:hover {
@@ -254,6 +255,42 @@ h2 {
 
 .action-button.danger:hover {
     background-color: #c82333;
+}
+
+.order-status-tabs {
+    margin-bottom: 20px;
+}
+
+.order-status-tabs .nav-link {
+    color: #333;
+    font-weight: 500;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 10px 15px;
+    transition: all 0.3s ease;
+}
+
+.order-status-tabs .nav-link:hover {
+    border-bottom: 2px solid #4e54c8;
+}
+
+.order-status-tabs .nav-link.active {
+    color: #4e54c8;
+    border-bottom: 2px solid #4e54c8;
+    background-color: transparent;
+}
+
+.dark-mode .order-status-tabs .nav-link {
+    color: #e0e0e0;
+}
+
+.dark-mode .order-status-tabs .nav-link:hover {
+    border-bottom: 2px solid #6c7ae0;
+}
+
+.dark-mode .order-status-tabs .nav-link.active {
+    color: #6c7ae0;
+    border-bottom: 2px solid #6c7ae0;
 }
 
 /* Change Password */

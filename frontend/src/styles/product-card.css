@@ -16,13 +16,13 @@
     position: relative;
     overflow: hidden;
     width: 100%;
-    height: 250px; /* Đặt chiều cao cố định cho ảnh */
+    height: 250px; 
 }
 
 .product__img img {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* Đảm bảo ảnh vừa với khung mà không bị méo */
+    object-fit: contain; 
     transition: transform 0.3s ease;
 }
 

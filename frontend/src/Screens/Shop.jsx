@@ -14,6 +14,8 @@ const Shop = () => {
     const [sortOrder, setSortOrder] = useState("default");
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("all");
+    const [currentPage, setCurrentPage] = useState(1);
+    const productsPerPage = 6;
 
     // Save database to local storage
     useEffect(() => {
@@ -37,6 +39,10 @@ const Shop = () => {
         return products.filter(item => item.category === categoryValue).length;
     };
 
+    const resetPagination = () => {
+        setCurrentPage(1);
+    };
+
     // Handle filter products based on category
     const handleFilter = (filterValue) => {
         setSelectedCategory(filterValue);
@@ -54,6 +60,7 @@ const Shop = () => {
         }
         
         setFilteredProducts(filtered);
+        resetPagination();
     };
 
     // Handle search products
@@ -76,6 +83,7 @@ const Shop = () => {
         }
         
         setFilteredProducts(filtered);
+        resetPagination();
     };
 
     // Handle sort products based on product name
@@ -95,6 +103,7 @@ const Shop = () => {
         }
         
         setFilteredProducts(sortedProducts);
+        resetPagination();
     };
 
     const handleResetFilters = () => {
@@ -102,6 +111,45 @@ const Shop = () => {
         setSearchTerm("");
         setSortOrder("default");
         setFilteredProducts(products);
+        resetPagination();
+    };
+
+    const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+    const startIndex = (currentPage - 1) * productsPerPage;
+    const endIndex = startIndex + productsPerPage;
+    const currentProducts = filteredProducts.slice(startIndex, endIndex);
+
+    const handlePageChange = (pageNumber) => {
+        setCurrentPage(pageNumber);
+        // Scroll to top of products section
+        document.querySelector('.products__content')?.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start' 
+        });
+    };
+
+    const generatePageNumbers = () => {
+        const pageNumbers = [];
+        const maxVisiblePages = 5;
+        
+        if (totalPages <= maxVisiblePages) {
+            for (let i = 1; i <= totalPages; i++) {
+                pageNumbers.push(i);
+            }
+        } else {
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            if (endPage - startPage < maxVisiblePages - 1) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                pageNumbers.push(i);
+            }
+        }
+        
+        return pageNumbers;
     };
 
     return (
@@ -176,7 +224,7 @@ const Shop = () => {
                                     onClick={handleResetFilters}
                                 >
                                     <i className="ri-refresh-line"></i>
-                                    Xóa bộ lọc
+                                    Clear Filter
                                 </button>
                             </div>
                         </Col>
@@ -185,7 +233,11 @@ const Shop = () => {
                         <Col lg="9" md="8" className="products__col">
                             <div className="products__header">
                                 <div className="products__count">
-                                    <span>Hiển thị {filteredProducts.length} sản phẩm</span>
+                                    <span>
+                                        Display {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} 
+                                        {' '}of {filteredProducts.length} products
+                                        {totalPages > 1 && ` (Page ${currentPage}/${totalPages})`}
+                                    </span>
                                 </div>
                             </div>
 
@@ -193,28 +245,101 @@ const Shop = () => {
                                 {loading ? (
                                     <div className="loading__container">
                                         <Spinner style={{ width: '3rem', height: '3rem' }} />
-                                        <span className="loading__text">Đang tải sản phẩm...</span>
+                                        <span className="loading__text">Loading product...</span>
                                     </div>
                                 ) : products.length === 0 ? (
                                     <div className="no__products">
                                         <i className="ri-shopping-bag-line"></i>
-                                        <h3>Không tìm thấy sản phẩm!</h3>
-                                        <p>Vui lòng thử lại sau</p>
+                                        <h3>Not found products!</h3>
+                                        <p>Please try again</p>
                                     </div>
                                 ) : filteredProducts.length === 0 ? (
                                     <div className="no__products">
                                         <i className="ri-search-line"></i>
-                                        <h3>Không có sản phẩm phù hợp</h3>
-                                        <p>Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+                                        <h3>No matching products</h3>
+                                        <p>Try changing your search filters or keywords</p>
                                         <button 
                                             className="btn__secondary"
                                             onClick={handleResetFilters}
                                         >
-                                            Xóa bộ lọc
+                                            Clear Filter
                                         </button>
                                     </div>
                                 ) : (
-                                    <ProductsList data={filteredProducts} />
+                                    <>
+                                        <ProductsList data={currentProducts} />
+                                        
+                                        {/* Pagination */}
+                                        {totalPages > 1 && (
+                                            <div className="pagination__container">
+                                                <div className="pagination__wrapper">
+                                                    {/* Previous Button */}
+                                                    <button
+                                                        className={`pagination__btn pagination__prev ${currentPage === 1 ? 'disabled' : ''}`}
+                                                        onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                                                        disabled={currentPage === 1}
+                                                    >
+                                                        <i className="ri-arrow-left-s-line"></i>
+                                                        Previous
+                                                    </button>
+
+                                                    {/* Page Numbers */}
+                                                    <div className="pagination__numbers">
+                                                        {currentPage > 3 && totalPages > 5 && (
+                                                            <>
+                                                                <button
+                                                                    className="pagination__number"
+                                                                    onClick={() => handlePageChange(1)}
+                                                                >
+                                                                    1
+                                                                </button>
+                                                                <span className="pagination__dots">...</span>
+                                                            </>
+                                                        )}
+
+                                                        {generatePageNumbers().map(pageNumber => (
+                                                            <button
+                                                                key={pageNumber}
+                                                                className={`pagination__number ${currentPage === pageNumber ? 'active' : ''}`}
+                                                                onClick={() => handlePageChange(pageNumber)}
+                                                            >
+                                                                {pageNumber}
+                                                            </button>
+                                                        ))}
+
+                                                        {currentPage < totalPages - 2 && totalPages > 5 && (
+                                                            <>
+                                                                <span className="pagination__dots">...</span>
+                                                                <button
+                                                                    className="pagination__number"
+                                                                    onClick={() => handlePageChange(totalPages)}
+                                                                >
+                                                                    {totalPages}
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Next Button */}
+                                                    <button
+                                                        className={`pagination__btn pagination__next ${currentPage === totalPages ? 'disabled' : ''}`}
+                                                        onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                                                        disabled={currentPage === totalPages}
+                                                    >
+                                                        Next
+                                                        <i className="ri-arrow-right-s-line"></i>
+                                                    </button>
+                                                </div>
+
+                                                {/* Page Info */}
+                                                <div className="pagination__info">
+                                                    <span>
+                                                        Page {currentPage} in total of {totalPages} pages.
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </Col>

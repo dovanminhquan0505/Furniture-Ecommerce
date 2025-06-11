@@ -33,6 +33,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import CancelOrderForm from "../components/Refund/CancelOrderForm.jsx";
 import RefundRequestForm from "../components/Refund/RefundRequestForm.jsx";
 import Modal from "../components/Modal/Modal.jsx";
+import SellerModal from "./../components/Modal/SellerModal.jsx";
 
 // eslint-disable-next-line no-undef
 // Get Paypal Client from your environment
@@ -138,6 +139,8 @@ const PlaceOrder = () => {
     const [confirmReturnData, setConfirmReturnData] = useState(null);
     const [appealFiles, setAppealFiles] = useState([]);
     const [selectedAppealItem, setSelectedAppealItem] = useState(null);
+    const [showSellerModal, setShowSellerModal] = useState(false);
+    const [selectedSeller, setSelectedSeller] = useState(null);
 
     const formatDate = (date) => {
         if (!date) return "N/A";
@@ -251,6 +254,16 @@ const PlaceOrder = () => {
 
         fetchOrderDetails();
     }, [orderId, navigate]);
+
+    const handleShowSellerModal = async (sellerId) => {
+        try {
+            const sellerInfo = await fetchSellerInfo(sellerId);
+            setSelectedSeller(sellerInfo);
+            setShowSellerModal(true);
+        } catch (error) {
+            toast.error("Error fetching seller info: " + error.message);
+        }
+    };
 
     if (sellerLoading || isFetchingOrder) {
         return (
@@ -775,7 +788,11 @@ const PlaceOrder = () => {
                 <div key={subOrder.id} className="border rounded p-3 mb-3">
                     <h6 className="seller__store">
                         <i className="fas fa-store me-1"></i>
-                        <div className="fw-bold">
+                        <div 
+                            className="fw-bold"
+                            style={{ cursor: "pointer" }}
+                            onClick={() => handleShowSellerModal(subOrder.sellerId)}
+                        >
                             {sellerNames[subOrder.sellerId] || "Đang tải..."}
                         </div>
                     </h6>
@@ -1298,6 +1315,15 @@ const PlaceOrder = () => {
                                     </Form>
                                 </div>
                             </Modal>
+
+                            <SellerModal
+                                isOpen={showSellerModal}
+                                onClose={() => {
+                                    setShowSellerModal(false);
+                                    setSelectedSeller(null);
+                                }}
+                                seller={selectedSeller}
+                            />
                         </Col>
 
                         {/* Order details summary */}

@@ -24,6 +24,7 @@ import {
     getSellerIdByUserId
 } from "../api.js";
 import DefaultAvatar from "../assets/images/user-icon.png";
+import SellerModal from "./../components/Modal/SellerModal.jsx";
 
 const ProductDetails = () => {
     const [tab, setTab] = useState("desc");
@@ -38,7 +39,6 @@ const ProductDetails = () => {
     const [isStaticProduct, setIsStaticProduct] = useState(false);
     const { isLoading: adminLoading } = useAdmin();
     const { currentUser } = useAuth();
-    // Set Reviews Comment State
     const [replyingTo, setReplyingTo] = useState(null);
     const [replyMessage, setReplyMessage] = useState("");
     const [reviewSubmitted, setReviewSubmitted] = useState(false);
@@ -46,6 +46,8 @@ const ProductDetails = () => {
     const [storeName, setStoreName] = useState("");
     const [userData, setUserData] = useState(null);
     const [currentUserSellerId, setCurrentUserSellerId] = useState(null);
+    const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
+    const [sellerInfo, setSellerInfo] = useState(null);
 
     // Fetch thông tin người dùng từ Firestore khi có currentUser
     useEffect(() => {
@@ -103,11 +105,13 @@ const ProductDetails = () => {
             if (product.sellerId) {
                 try {
                     const sellerData = await fetchSellerInfoByProduct(product.sellerId);
+                    setSellerInfo(sellerData);
                     setStoreName(sellerData.storeName || "Unknown Store");
                 } catch (error) {
                     console.error("Error fetching seller info:", error);
                     toast.error("Failed to load store information");
                     setStoreName("Unknown Store");
+                    setSellerInfo(null);
                 }
             }
         };
@@ -465,7 +469,15 @@ const ProductDetails = () => {
                                     <span>Category: {category}</span>
                                 </div>
                                 <p className="mt-3">{shortDesc}</p>
-                                <p className="mt-3">Store: {storeName || 'Loading...'}</p>
+                                <p className="mt-3">
+                                    Store: <span 
+                                        className="store-name" 
+                                        style={{ color: '#0a1d37', cursor: 'pointer' }}
+                                        onClick={() => setIsSellerModalOpen(true)}
+                                    >
+                                        {storeName || 'Loading...'}
+                                    </span>
+                                </p>
 
                                 <motion.button
                                     whileTap={{ scale: 1.2 }}
@@ -755,6 +767,12 @@ const ProductDetails = () => {
                     </Row>
                 </Container>
             </section>
+
+            <SellerModal
+                isOpen={isSellerModalOpen}
+                onClose={() => setIsSellerModalOpen(false)}
+                seller={sellerInfo}
+            />
         </Helmet>
     );
 };

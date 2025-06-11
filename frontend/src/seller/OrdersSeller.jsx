@@ -85,7 +85,11 @@ const Orders = () => {
             );
             toast.success("Delivery confirmed successfully!");
         } catch (error) {
-            toast.error("Failed to confirm delivery: " + error.message);
+            if (error.message === "Cannot confirm delivery while there are pending cancel requests") {
+                toast.info("Please process all pending cancel requests before confirming delivery.");
+            } else {
+                toast.error("Failed to confirm delivery: " + error.message);
+            }
         }
     };
     

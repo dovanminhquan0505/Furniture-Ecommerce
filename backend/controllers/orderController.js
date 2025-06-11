@@ -86,6 +86,11 @@ const confirmDelivery = async (req, res) => {
             return res.status(400).json({ message: "Order must be in processing status to confirm delivery" });
         }
 
+        // Check for pending cancel requests
+        if (subOrderData.cancelRequests?.some(c => c.status === "Requested")) {
+            return res.status(400).json({ message: "Cannot confirm delivery while there are pending cancel requests" });
+        }
+
         await subOrderRef.update({
             status: "shipping",
             statusUpdatedAt: admin.firestore.Timestamp.now(),
@@ -103,7 +108,7 @@ const confirmDelivery = async (req, res) => {
             isRead: false,
         });
 
-        // Schedule shipping to success transition after 10 seconds
+        // Schedule shipping to success transition after 30 seconds
         scheduleStatusUpdate(orderId, subOrderId, "shipping", 30000);
 
         res.status(200).json({ message: "Delivery confirmed successfully" });

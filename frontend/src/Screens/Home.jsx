@@ -152,7 +152,7 @@ const Home = () => {
                                 whileTap={{ scale: 1.2 }}
                                 className="buy__btn store__btn"
                             >
-                                <Link to="/shop">Visit Store</Link>
+                                <Link to="/shop/7DbOAEB6aw1DttiHFYJQ">Visit Store</Link>
                             </motion.button>
                         </Col>
                         <Col lg="6" md="12" className="text-end counter__img">

@@ -9,7 +9,7 @@ const Clock = () => {
     const [seconds, setSeconds] = useState();
 
     const countDown = () => {
-        const destination = new Date("Oct 20, 2024").getTime();
+        const destination = new Date("June 15, 2025").getTime();
         const interval = setInterval(() => {
             const now = new Date().getTime();
             const distance = destination - now;

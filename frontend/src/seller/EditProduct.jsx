@@ -18,6 +18,7 @@ const EditProduct = () => {
         category: "",
         price: "",
         imgUrl: "",
+        sellerId: "",
     });
 
     const [enterProductImg, setEnterProductImg] = useState(null);
@@ -61,29 +62,29 @@ const EditProduct = () => {
         try {
             let imgUrl = productDetails.imgUrl;
             if (enterProductImg) {
-              const storageRef = ref(storage, `productImages/${Date.now() + enterProductImg.name}`);
-              const uploadTask = uploadBytesResumable(storageRef, enterProductImg);
-              imgUrl = await new Promise((resolve, reject) => {
-                uploadTask.on(
-                  "state_changed",
-                  (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    console.log(`Upload is ${progress}% done`);
-                  },
-                  reject,
-                  async () => resolve(await getDownloadURL(uploadTask.snapshot.ref))
-                );
-              });
+                const storageRef = ref(storage, `productImages/${Date.now() + enterProductImg.name}`);
+                const uploadTask = uploadBytesResumable(storageRef, enterProductImg);
+                imgUrl = await new Promise((resolve, reject) => {
+                    uploadTask.on(
+                        "state_changed",
+                        (snapshot) => {
+                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                            console.log(`Upload is ${progress}% done`);
+                        },
+                        reject,
+                        async () => resolve(await getDownloadURL(uploadTask.snapshot.ref))
+                    );
+                });
             }
-      
-            await updateProduct(productId, { ...productDetails, imgUrl });
+
+            await updateProduct(productId, { ...productDetails, imgUrl }, productDetails.sellerId);
             setLoading(false);
             toast.success("Product updated successfully!");
             navigate("/seller/all-products");
-          } catch (error) {
+        } catch (error) {
             setLoading(false);
             toast.error("Product update failed: " + error.message);
-          }
+        }
     };
 
     return (

@@ -307,16 +307,22 @@ export const fetchProduct = async (productId) => {
     }
 };
 
-export const updateProduct = async (productId, updateData) => {
+export const updateProduct = async (productId, updateData, sellerId) => {
     try {
-        const response = await fetch(`${BASE_URL}/products/${productId}`, {
+        const response = await fetch(`${BASE_URL}/sellers/${productId}/products`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(updateData),
             credentials: "include",
         });
         if (!response.ok) {
-            const errorData = await response.json();
+            const contentType = response.headers.get("content-type");
+            let errorData = { message: "Failed to update product" };
+            if (contentType && contentType.includes("application/json")) {
+                errorData = await response.json();
+            } else {
+                errorData.message = await response.text();
+            }
             throw new Error(errorData.message || "Failed to update product");
         }
         return await response.json();

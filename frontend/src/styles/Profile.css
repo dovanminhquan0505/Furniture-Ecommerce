@@ -293,6 +293,115 @@ h2 {
     border-bottom: 2px solid #6c7ae0;
 }
 
+.order-status-tabs-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.order-search-bar {
+    width: 300px;
+}
+
+.order-search-bar .form-control {
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
+.order-search-bar .input-group-text {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-right: none;
+    border-radius: 4px 0 0 4px;
+}
+
+.dark-mode .order-search-bar .form-control {
+    background-color: #3a3a3a;
+    border: 1px solid #555;
+    color: #e0e0e0;
+}
+
+.dark-mode .order-search-bar .form-control:focus {
+    border-color: #6c7ae0;
+    box-shadow: 0 0 0 2px rgba(140, 156, 240, 0.2);
+    background-color: #444;
+}
+
+.dark-mode .order-search-bar .form-control::placeholder {
+    color: #888;
+}
+
+.dark-mode .order-search-bar .input-group-text {
+    background-color: #3a3a3a;
+    border: 1px solid #555;
+    border-right: none;
+    color: #8c9cf0;
+}
+
+.order-info .pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.order-info .pagination .page-item {
+    margin: 0 5px;
+    font-size: 14px;
+    color: #333;
+    background-color: #fff;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.order-info .pagination .page-item span {
+    font-size: 18px;
+}
+
+.order-info .pagination .page-link {
+    color: #4e54c8;
+    background-color: transparent;
+    border: none;
+}
+
+.order-info .pagination .page-link:hover {
+    color: #3a3f9a;
+    text-decoration: none;
+}
+
+.order-info .pagination .page-item.active .page-link {
+    color: #fff;
+    background-color: #555bc6;
+    border: 1px solid #ddd;
+    font-weight: bold; 
+    border-radius: 50%;
+}
+
+.order-info .pagination .page-link:disabled {
+    color: #aaa;
+    background-color: #f0f0f0;
+    cursor: not-allowed;
+}
+
+.dark-mode .order-info .pagination .page-link {
+    color: #e0e0e0;
+    background-color: #2c2c2c;
+    border: 1px solid #444;
+}
+
+.dark-mode .order-info .pagination .page-link:hover {
+    color: #fff;
+    background-color: #3a3a3a;
+}
+
+.dark-mode .order-info .pagination .page-item.active .page-link {
+    color: #fff;
+    background-color: #6c7ae0;
+    border: 1px solid #6c7ae0;
+    font-weight: bold; 
+}
+
 /* Change Password */
 .change-password {
     padding: 20px;

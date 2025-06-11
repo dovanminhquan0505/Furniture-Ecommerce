@@ -810,7 +810,7 @@ const PlaceOrder = () => {
                             subOrder.status === "success" &&
                             availableQuantity > 0 &&
                             !isCanceled &&
-                            !refundItems.some((r) => r.status === "Return Requested" || r.status === "Return Confirmed" || r.status === "Refunded");
+                            !refundItems.some((r) => r.status === "Return Requested" || r.status === "Return Confirmed");
 
                         const shouldShowConfirmReturnBtn =
                             !isSeller &&

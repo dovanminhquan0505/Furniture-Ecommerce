@@ -9,6 +9,9 @@ import {
     Spinner,
     Alert,
     Nav,
+    Pagination,
+    InputGroup,
+    FormControl,
 } from "react-bootstrap";
 import {
     User,
@@ -25,6 +28,7 @@ import {
     Calendar,
     Eye,
     EyeOff,
+    Search,
 } from "lucide-react";
 import "../styles/Profile.css";
 import { auth } from "../firebase.config";
@@ -68,6 +72,9 @@ const ProfileUser = () => {
     const [selectedStatus, setSelectedStatus] = useState('pending');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const ordersPerPage = 4;
+    const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
         // Fetch user info
@@ -111,6 +118,10 @@ const ProfileUser = () => {
         return () => unsubscribe();
     }, [navigate]);
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedStatus]);
+
     // Handle Edit Profile
     const handleEditUserProfile = async () => {
         const user = auth.currentUser;
@@ -149,23 +160,110 @@ const ProfileUser = () => {
         navigate(`/placeorder/${orderId}`);
     };
 
-    const handleDeleteOrder = async (orderId) => {
+    const handleDeleteOrder = async (subOrderId, itemId, orderStatus, cancelStatus, refundStatus) => {
         const user = auth.currentUser;
         if (!user) {
             toast.error("No authenticated user found!");
             return;
         }
 
+        const confirmDelete = window.confirm("Are you sure you want to delete this order from your order history?");
+        if (!confirmDelete) {
+            return;
+        }
+
         try {
-            await deleteUserOrder(orderId);
-            setOrderInfo((prevOrders) =>
-                prevOrders.filter((order) => order.orderId !== orderId)
-            );
-            toast.success("Order deleted successfully!");
+            // Determine the correct status to send to backend
+            let status;
+            if (cancelStatus === "cancelDirectly" || cancelStatus === "cancelled") {
+                status = cancelStatus;
+            } else if (refundStatus === "Refunded") {
+                status = "Refunded";
+            } else {
+                status = orderStatus;
+            }
+
+            await deleteUserOrder(subOrderId, { itemId, status });
+
+            // Remove the specific item from orderInfo state
+            setOrderInfo((prevOrders) => {
+                return prevOrders.filter((order) => {
+                    // For refunded items, only remove the refunded entry (not the delivered entry)
+                    if (status === "Refunded") {
+                        return !(order.subOrderId === subOrderId && order.itemId === itemId && 
+                                order.refundStatus === "Refunded");
+                    }
+                    
+                    // For cancelled items
+                    if (status === "cancelDirectly" || status === "cancelled") {
+                        return !(order.subOrderId === subOrderId && order.itemId === itemId && 
+                                (order.cancelStatus === "cancelDirectly" || order.cancelStatus === "cancelled"));
+                    }
+                    
+                    // For regular items
+                    return !(order.subOrderId === subOrderId && order.itemId === itemId && 
+                            order.status === status && order.cancelStatus !== "cancelDirectly" && 
+                            order.cancelStatus !== "cancelled" && order.refundStatus !== "Refunded");
+                });
+            });
+
+            toast.success("Order item deleted successfully!");
+
+            // Handle pagination adjustment
+            setTimeout(() => {
+                const updatedOrderInfo = orderInfo.filter((order) => {
+                    // For refunded items, only remove the refunded entry (not the delivered entry)
+                    if (status === "Refunded") {
+                        return !(order.subOrderId === subOrderId && order.itemId === itemId && 
+                                order.refundStatus === "Refunded");
+                    }
+                    
+                    // For cancelled items
+                    if (status === "cancelDirectly" || status === "cancelled") {
+                        return !(order.subOrderId === subOrderId && order.itemId === itemId && 
+                                (order.cancelStatus === "cancelDirectly" || order.cancelStatus === "cancelled"));
+                    }
+                    
+                    // For regular items
+                    return !(order.subOrderId === subOrderId && order.itemId === itemId && 
+                            order.status === status && order.cancelStatus !== "cancelDirectly" && 
+                            order.cancelStatus !== "cancelled" && order.refundStatus !== "Refunded");
+                });
+
+                const filteredOrders = updatedOrderInfo.filter((order) => {
+                    const matchesSearch = order.productName.toLowerCase().includes(searchQuery.toLowerCase());
+                    if (selectedStatus === "success") {
+                        return (
+                            (order.status === selectedStatus && 
+                            order.cancelStatus !== "cancelDirectly" && 
+                            order.cancelStatus !== "cancelled" &&
+                            order.refundStatus !== "Refunded") || 
+                            order.refundStatus === "Refunded" 
+                            ) && matchesSearch;
+                    } else if (selectedStatus === "cancelled") {
+                        return (order.cancelStatus === "cancelDirectly" || order.cancelStatus === "cancelled") && matchesSearch;
+                    } else if (selectedStatus === "Refunded") {
+                        return order.refundStatus === "Refunded" && matchesSearch;
+                    } else if (selectedStatus === "shipping") {
+                        return order.status === selectedStatus && order.cancelStatus !== "cancelDirectly" && 
+                            order.cancelStatus !== "cancelled" && order.refundStatus !== "Refunded" && matchesSearch;
+                    } else {
+                        return order.status === selectedStatus && order.cancelStatus !== "cancelDirectly" && 
+                            order.cancelStatus !== "cancelled" && order.refundStatus !== "Refunded" && matchesSearch;
+                    }
+                });
+
+                const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+                if (currentPage > totalPages && currentPage > 1) {
+                    setCurrentPage(currentPage - 1);
+                }
+            }, 100);
+
         } catch (error) {
             toast.error("Failed to delete order: " + error.message);
         }
     };
+
 
     const handleChangePassword = async (e) => {
         e.preventDefault();
@@ -388,125 +486,222 @@ const ProfileUser = () => {
     // Render Order Information
     const renderOrderInformation = () => {
         const statusTabs = [
-        { key: "pending", label: "Pending Confirmation" },
-        { key: "shipping", label: "Awaiting shipment" },
-        { key: "success", label: "Delivered" },
-        { key: "cancelled", label: "Cancelled" },
-        { key: "Refunded", label: "Refunded" },
+            { key: "pending", label: "Pending Confirmation" },
+            { key: "shipping", label: "Awaiting Shipment" },
+            { key: "success", label: "Delivered" },
+            { key: "cancelled", label: "Cancelled" },
+            { key: "Refunded", label: "Returned" },
         ];
 
         const filteredOrders = orderInfo.filter((order) => {
-        if (selectedStatus === "cancelled") {
-            return order.cancelStatus === "cancelDirectly" || order.cancelStatus === "cancelled";
-        } else if (selectedStatus === "Refunded") {
-            return order.refundStatus === "Refunded";
-        } else {
-            return order.status === selectedStatus;
-        }
+            const matchesSearch = order.productName.toLowerCase().includes(searchQuery.toLowerCase());
+            if (selectedStatus === "success") {
+                return (
+                    (order.status === selectedStatus && 
+                    order.cancelStatus !== "cancelDirectly" && 
+                    order.cancelStatus !== "cancelled" &&
+                    order.refundStatus !== "Refunded") || 
+                    order.refundStatus === "Refunded" 
+                    ) && matchesSearch;
+            } else if (selectedStatus === "cancelled") {
+                return (order.cancelStatus === "cancelDirectly" || order.cancelStatus === "cancelled") && matchesSearch;
+            } else if (selectedStatus === "Refunded") {
+                return order.refundStatus === "Refunded" && matchesSearch;
+            } else if (selectedStatus === "shipping") {
+                return order.status === selectedStatus && order.cancelStatus !== "cancelDirectly" && 
+                    order.cancelStatus !== "cancelled" && order.refundStatus !== "Refunded" && matchesSearch;
+            } else {
+                return order.status === selectedStatus && order.cancelStatus !== "cancelDirectly" && 
+                    order.cancelStatus !== "cancelled" && order.refundStatus !== "Refunded" && matchesSearch;
+            }
         });
 
+        const indexOfLastOrder = currentPage * ordersPerPage;
+        const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
+        const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+        const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+
         const handleShowOrderDetails = (order) => {
-        setSelectedOrder(order);
-        setIsModalOpen(true);
+            const orderDetails = {
+                ...order,
+                deliveredAt: order.deliveredAt || null, 
+                paymentMethod: order.paymentMethod || "Not Provided",
+                requestedAt: order.requestedAt || null,
+                refundedAt: order.refundedAt || null,
+                evidence: order.evidence || [],
+            };
+            setSelectedOrder(orderDetails);
+            setIsModalOpen(true);
+        };
+
+        const handlePageChange = (pageNumber) => {
+            setCurrentPage(pageNumber);
+        };
+
+        const renderPaginationItems = () => {
+            const items = [];
+            const maxVisiblePages = 5;
+            let startPage, endPage;
+
+            if (totalPages <= maxVisiblePages) {
+                startPage = 1;
+                endPage = totalPages;
+            } else {
+                const half = Math.floor(maxVisiblePages / 2);
+                if (currentPage <= half) {
+                    startPage = 1;
+                    endPage = maxVisiblePages;
+                } else if (currentPage + half >= totalPages) {
+                    startPage = totalPages - maxVisiblePages + 1;
+                    endPage = totalPages;
+                } else {
+                    startPage = currentPage - half;
+                    endPage = currentPage + half;
+                }
+            }
+
+            for (let number = startPage; number <= endPage; number++) {
+                items.push(
+                    <Pagination.Item
+                        key={number}
+                        active={number === currentPage}
+                        onClick={() => handlePageChange(number)}
+                    >
+                        {number}
+                    </Pagination.Item>
+                );
+            }
+
+            return items;
         };
 
         return (
-        <div className="order-info">
-            <h3>Your Orders</h3>
-            <Nav
-            variant="tabs"
-            activeKey={selectedStatus}
-            onSelect={(key) => setSelectedStatus(key)}
-            className="order-status-tabs"
-            >
-            {statusTabs.map((tab) => (
-                <Nav.Item key={tab.key}>
-                <Nav.Link eventKey={tab.key}>{tab.label}</Nav.Link>
-                </Nav.Item>
-            ))}
-            </Nav>
-            <Table striped bordered hover
-            className="mt-3">
-                <thead>
-                <tr>
-                    <th>Image</th>
-                    <th>Product Name</th>
-                    <th>Quantity</th>
-                    <th>Unit Price</th>
-                    <th>Total Price</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                {filteredOrders.length > 0 ? (
-                    filteredOrders.map((order, index) => (
-                    <tr
-                        key={`${order.subOrderId}-${order.itemId}-${order.cancelStatus}-${index}`}
-                        onClick={() => selectedStatus === 'pending' && handleShowOrderDetails(order)}
-                        style={{ cursor: selectedStatus === 'pending' ? 'pointer' : 'default' }}
+            <div className="order-info">
+                <h3>Your Orders</h3>
+                <div className="order-status-tabs-container">
+                    <Nav
+                        variant="tabs"
+                        activeKey={selectedStatus}
+                        onSelect={(key) => setSelectedStatus(key)}
+                        className="order-status-tabs"
                     >
-                        <td>
-                        <img
-                            src={order.productImage || "https://via.placeholder.com/50"}
-                            alt={order.productName}
-                            style={{ width: "50px", height: "50px", objectFit: "cover" }}
-                            onError={(e) => {
-                            e.target.src = "https://via.placeholder.com/50";
-                            }}
+                        {statusTabs.map((tab) => (
+                            <Nav.Item key={tab.key}>
+                                <Nav.Link eventKey={tab.key}>{tab.label}</Nav.Link>
+                            </Nav.Item>
+                        ))}
+                    </Nav>
+                    <InputGroup className="order-search-bar">
+                        <InputGroup.Text>
+                            <Search size={18} />
+                        </InputGroup.Text>
+                        <FormControl
+                            placeholder="Search by product name..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                         />
-                        </td>
-                        <td>{order.productName}</td>
-                        <td>{order.quantity}</td>
-                        <td>${order.price}</td>
-                        <td>${order.totalPrice}</td>
-                        <td>
-                        {order.cancelStatus === "cancelDirectly" || order.cancelStatus === "cancelled"
-                            ? `Cancelled`
-                            : order.refundedStatus === "Refunded"
-                            ? `Refunded`
-                            : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                        </td>
-                        <td>
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            className="action-button"
-                            onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewOrder(order.orderId);
-                            }}
-                        >
-                            View
-                        </Button>
-                        <Button
-                            variant="danger"
-                            size="sm"
-                            className="action-button"
-                            onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteOrder(order.orderId);
-                            }}
-                        >
-                            Delete
-                        </Button>
-                        </td>
-                    </tr>
-                    ))
-                ) : (
-                    <tr>
-                    <td colSpan="7" className="text-center">
-                        No orders found for this status.
-                    </td>
-                    </tr>
+                    </InputGroup>
+                </div>
+                <Table striped bordered hover className="mt-1">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Product Name</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total Price</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {currentOrders.length > 0 ? (
+                            currentOrders.map((order, index) => (
+                                <tr
+                                    key={`${order.subOrderId}-${order.itemId}-${order.cancelStatus}-${order.refundStatus}-${index}`}
+                                    onClick={() => handleShowOrderDetails(order)}
+                                    style={{ cursor: "pointer" }}
+                                >
+                                    <td>
+                                        <img
+                                            src={order.productImage || "https://via.placeholder.com/50"}
+                                            alt={order.productName}
+                                            style={{ width: "50px", height: "50px", objectFit: "cover" }}
+                                            onError={(e) => {
+                                                e.target.src = "https://via.placeholder.com/50";
+                                            }}
+                                        />
+                                    </td>
+                                    <td>{order.productName}</td>
+                                    <td>{order.quantity}</td>
+                                    <td>${order.price}</td>
+                                    <td>${order.totalPrice}</td>
+                                    <td>
+                                        {order.cancelStatus === "cancelDirectly" || order.cancelStatus === "cancelled"
+                                            ? `Cancelled`
+                                            : order.refundStatus === "Refunded"
+                                            ? `Refunded`
+                                            : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                    </td>
+                                    <td>
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            className="action-button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleViewOrder(order.orderId);
+                                            }}
+                                        >
+                                            View
+                                        </Button>
+                                        <Button
+                                            variant="danger"
+                                            size="sm"
+                                            className="action-button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteOrder(
+                                                    order.subOrderId, 
+                                                    order.itemId, 
+                                                    order.status, 
+                                                    order.cancelStatus,
+                                                    order.refundStatus
+                                                );
+                                            }}
+                                        >
+                                            Delete
+                                        </Button>
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="7" className="text-center">
+                                    No orders found for this status.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </Table>
+                {totalPages > 1 && (
+                    <Pagination>
+                        <Pagination.Prev
+                            onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 1}
+                        />
+                        {renderPaginationItems()}
+                        <Pagination.Next
+                            onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                        />
+                    </Pagination>
                 )}
-                </tbody>
-            </Table>
-            <OrderDetailsModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                order={selectedOrder}
-            />
+                <OrderDetailsModal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    order={selectedOrder}
+                />
             </div>
         );
     };

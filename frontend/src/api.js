@@ -211,20 +211,21 @@ export const getUserSubOrders = async (id) => {
     }
 };
 
-export const deleteUserOrder = async (orderId) => {
+export const deleteUserOrder = async (orderId, { itemId, status }) => {
     try {
         const response = await fetch(`${BASE_URL}/users/orders/${orderId}`, {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
+            body: JSON.stringify({ itemId, status }), 
         });
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to delete user");
+            throw new Error(errorData.message || "Failed to delete order item");
         }
         return await response.json();
     } catch (error) {
-        console.error("Error deleting order:", error);
+        console.error("Error deleting order item:", error);
         throw error;
     }
 };

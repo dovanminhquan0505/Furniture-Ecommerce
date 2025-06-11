@@ -169,7 +169,7 @@ const getUserSubOrders = async (req, res) => {
         const { id } = req.params;
         const snapshot = await db.collection("subOrders").where("userId", "==", id).get();
 
-        const batch = db.batch(); // Batch để cập nhật subOrders
+        const batch = db.batch();
         const subOrders = await Promise.all(
             snapshot.docs.map(async (doc) => {
                 const data = doc.data();
@@ -181,36 +181,33 @@ const getUserSubOrders = async (req, res) => {
 
                 // Helper function to fetch product details
                 const fetchProductDetails = async (itemId) => {
-                    if (productCache.has(itemId)) {
-                        return productCache.get(itemId);
-                    }
+                    if (productCache.has(itemId)) return productCache.get(itemId);
                     const productDoc = await db.collection("products").doc(itemId).get();
                     if (productDoc.exists) {
                         const productData = productDoc.data();
                         productCache.set(itemId, productData);
                         return productData;
                     }
-                    return null;
+                    return { productName: "Not Provided", imgUrl: null, price: 0, category: "Unknown" };
                 };
 
                 // Helper function to fetch seller details
                 const fetchSellerDetails = async (sellerId) => {
-                    if (sellerCache.has(sellerId)) {
-                        return sellerCache.get(sellerId);
-                    }
+                    if (sellerCache.has(sellerId)) return sellerCache.get(sellerId);
                     const sellerDoc = await db.collection("sellers").doc(sellerId).get();
                     if (sellerDoc.exists) {
                         const sellerData = sellerDoc.data();
                         sellerCache.set(sellerId, sellerData);
                         return sellerData;
                     }
-                    return null;
+                    return { storeName: "Not Provided" };
                 };
 
-                // Fetch billing info and isPaid from totalOrders
+                // Fetch billing info, isPaid, and paidAt from totalOrders
                 let billingInfo = null;
                 let isPaid = false;
                 let paidAt = "No";
+                let deliveredAt = "No";
                 if (data.totalOrderId) {
                     const totalOrderDoc = await db.collection("totalOrders").doc(data.totalOrderId).get();
                     if (totalOrderDoc.exists) {
@@ -222,11 +219,10 @@ const getUserSubOrders = async (req, res) => {
                             email: orderData.billingInfo?.email || "Not Provided",
                         };
                         isPaid = orderData.isPaid || false;
-                        paidAt = orderData.isPaid
-                            ? orderData.paidAt?.toDate().toISOString() || "No"
-                            : "No";
-
-                        // Đồng bộ isPaid và paidAt trong subOrders nếu khác
+                        paidAt = orderData.isPaid ? orderData.paidAt?.toDate().toISOString() : "No";
+                        deliveredAt = orderData.isDelivered ? orderData.deliveredAt?.toDate().toISOString() : "No";
+                        
+                        // Sync isPaid and paidAt with subOrders if different
                         if (data.isPaid !== isPaid || data.paidAt !== paidAt) {
                             const subOrderRef = db.collection("subOrders").doc(doc.id);
                             batch.update(subOrderRef, { isPaid, paidAt });
@@ -234,182 +230,138 @@ const getUserSubOrders = async (req, res) => {
                     }
                 }
 
-                // Process non-canceled items
+                // Track processed items to avoid duplicates
+                const processedItems = new Set();
+
+                // Process regular items first
                 if (data.items && Array.isArray(data.items) && data.items.length > 0) {
-                    data.items.forEach((item) => {
-                        productCache.set(item.id, {
-                            productName: item.productName,
-                            imgUrl: item.imgUrl,
-                            price: item.price,
-                            category: item.category,
-                        });
+                    await Promise.all(
+                        data.items.map(async (item) => {
+                            // Use the exact quantity from database without any calculation
+                            const currentQuantity = item.quantity || 0;
 
-                        const cancelledItems = (data.cancelledItems || []).filter(
-                            (c) => c.itemId === item.id
-                        );
-                        const refundedItems = (data.refundItems || []).filter(
-                            (r) => r.itemId === item.id && r.status === "Refunded"
-                        );
-
-                        const nonCancelledQuantity = item.quantity || 0;
-                        if (nonCancelledQuantity > 0 && !refundedItems.length) {
-                            items.push({
-                                subOrderId: doc.id,
-                                orderId: data.totalOrderId || null,
-                                productName: item.productName || "Not Provided",
-                                productImage: item.imgUrl || null,
-                                quantity: nonCancelledQuantity,
-                                price: item.price || 0,
-                                totalPrice: (item.price || 0) * nonCancelledQuantity,
-                                status: data.status || "unknown",
-                                cancelStatus: "None",
-                                cancelledAt: null,
-                                reason: null,
-                                itemId: item.id,
-                                refundStatus: "None",
-                                isPaid,
-                                paidAt,
-                            });
-                        }
-
-                        cancelledItems.forEach((cancelledItem) => {
-                            items.push({
-                                subOrderId: doc.id,
-                                orderId: data.totalOrderId || null,
-                                productName: item.productName || "Not Provided",
-                                productImage: item.imgUrl || null,
-                                quantity: cancelledItem.quantity || 0,
-                                price: item.price || 0,
-                                totalPrice: (item.price || 0) * (cancelledItem.quantity || 0),
-                                status: data.status || "unknown",
-                                cancelStatus: cancelledItem.status || "cancelled",
-                                cancelledAt: cancelledItem.cancelledAt
-                                    ? cancelledItem.cancelledAt.toDate().toISOString()
-                                    : null,
-                                reason: cancelledItem.reason || null,
-                                itemId: item.id,
-                                refundStatus: "None",
-                                isPaid,
-                                paidAt,
-                            });
-                        });
-
-                        refundedItems.forEach((refundedItem) => {
-                            items.push({
-                                subOrderId: doc.id,
-                                orderId: data.totalOrderId || null,
-                                productName: item.productName || "Not Provided",
-                                productImage: item.imgUrl || null,
-                                quantity: refundedItem.quantity || 0,
-                                price: item.price || 0,
-                                totalPrice: (item.price || 0) * (refundedItem.quantity || 0),
-                                status: data.status || "unknown",
-                                cancelStatus: "None",
-                                cancelledAt: null,
-                                reason: refundedItem.reason || null,
-                                itemId: refundedItem.itemId,
-                                refundStatus: refundedItem.status || "Refunded",
-                                isPaid,
-                                paidAt,
-                            });
-                        });
-                    });
+                            // Only include items that have quantity > 0
+                            if (currentQuantity > 0) {
+                                let product = item;
+                                if (!product.productName) {
+                                    const productData = await fetchProductDetails(item.id);
+                                    product = { ...item, ...productData };
+                                }
+                                
+                                const itemKey = `${item.id}-regular`;
+                                if (!processedItems.has(itemKey)) {
+                                    items.push({
+                                        subOrderId: doc.id,
+                                        orderId: data.totalOrderId || null,
+                                        productName: product.productName || "Not Provided",
+                                        productImage: product.imgUrl || null,
+                                        quantity: currentQuantity, 
+                                        price: product.price || 0,
+                                        totalPrice: (product.price || 0) * currentQuantity,
+                                        status: data.status || "unknown",
+                                        cancelStatus: "None",
+                                        cancelledAt: null,
+                                        reason: null,
+                                        itemId: item.id,
+                                        refundStatus: "None",
+                                        isPaid,
+                                        paidAt,
+                                        deliveredAt: data.isDelivered ? deliveredAt : "No",
+                                        paymentMethod: data.paymentMethod || "Not Provided",
+                                    });
+                                    processedItems.add(itemKey);
+                                }
+                            }
+                        })
+                    );
                 }
 
-                // Process canceled items for sub-orders with no active items
+                // Process cancelled items - ONLY show items that still exist in cancelledItems array
                 if (data.cancelledItems && Array.isArray(data.cancelledItems) && data.cancelledItems.length > 0) {
                     await Promise.all(
                         data.cancelledItems.map(async (cancelledItem) => {
-                            const alreadyProcessed = items.some(
-                                (entry) =>
-                                    entry.itemId === cancelledItem.itemId &&
-                                    entry.cancelStatus === cancelledItem.status &&
-                                    entry.quantity === cancelledItem.quantity
-                            );
-                            if (alreadyProcessed) return;
-
-                            let product = (data?.items || []).find((i) => i?.id === cancelledItem?.itemId);
-                            if (!product) {
-                                const productData = await fetchProductDetails(cancelledItem.itemId);
-                                product = productData || {
-                                    productName: "Not Provided",
-                                    imgUrl: null,
-                                    price: 0,
-                                    category: "Unknown",
-                                };
+                            const itemKey = `${cancelledItem.itemId}-cancelled`;
+                            if (!processedItems.has(itemKey)) {
+                                let product = (data.items || []).find(i => i.id === cancelledItem.itemId);
+                                if (!product || !product.productName) {
+                                    const productData = await fetchProductDetails(cancelledItem.itemId);
+                                    product = { ...product, ...productData };
+                                }
+                                
+                                items.push({
+                                    subOrderId: doc.id,
+                                    orderId: data.totalOrderId || null,
+                                    productName: product.productName || "Not Provided",
+                                    productImage: product.imgUrl || null,
+                                    quantity: cancelledItem.quantity || 0,
+                                    price: product.price || 0,
+                                    totalPrice: (product.price || 0) * (cancelledItem.quantity || 0),
+                                    status: data.status || "unknown",
+                                    cancelStatus: cancelledItem.status || "cancelled",
+                                    cancelledAt: cancelledItem.cancelledAt ? cancelledItem.cancelledAt.toDate().toISOString() : null,
+                                    reason: cancelledItem.reason || null,
+                                    itemId: cancelledItem.itemId,
+                                    refundStatus: "None",
+                                    isPaid,
+                                    paidAt,
+                                    deliveredAt: "No",
+                                    paymentMethod: data.paymentMethod || "Not Provided",
+                                });
+                                processedItems.add(itemKey);
                             }
-
-                            items.push({
-                                subOrderId: doc.id,
-                                orderId: data.totalOrderId || null,
-                                productName: product.productName || "Not Provided",
-                                productImage: product.imgUrl || null,
-                                quantity: cancelledItem.quantity || 0,
-                                price: product.price || 0,
-                                totalPrice: (product.price || 0) * (cancelledItem.quantity || 0),
-                                status: data.status || "unknown",
-                                cancelStatus: cancelledItem.status || "cancelled",
-                                cancelledAt: cancelledItem.cancelledAt
-                                    ? cancelledItem.cancelledAt.toDate().toISOString()
-                                    : null,
-                                reason: cancelledItem.reason || null,
-                                itemId: cancelledItem.itemId,
-                                refundStatus: "None",
-                                isPaid,
-                                paidAt,
-                            });
                         })
                     );
                 }
 
-                // Process refunded items
-                if (data.refundedItems && Array.isArray(data.refundedItems) && data.refundedItems.length > 0) {
+                // Process refunded items - ONLY show items that still exist in refundItems array
+                if (data.refundItems && Array.isArray(data.refundItems) && data.refundItems.length > 0) {
                     await Promise.all(
-                        data.refundedItems.map(async (refundedItem) => {
+                        data.refundItems.map(async (refundedItem) => {
                             if (refundedItem.status !== "Refunded") return;
 
-                            const alreadyProcessed = items.some(
-                                (entry) =>
-                                    entry.itemId === refundedItem.itemId &&
-                                    entry.refundedStatus === "Refunded" &&
-                                    entry.quantity === refundedItem.quantity
-                            );
-                            if (alreadyProcessed) return;
+                            const itemKey = `${refundedItem.itemId}-refunded`;
+                            if (!processedItems.has(itemKey)) {
+                                let product = (data.items || []).find(i => i.id === refundedItem.itemId);
+                                if (!product || !product.productName) {
+                                    const productData = await fetchProductDetails(refundedItem.itemId);
+                                    product = { ...product, ...productData };
+                                }
 
-                            let product = (data?.items || []).find((i) => i.id === refundedItem?.itemId);
-                            if (!product) {
-                                const productData = await fetchProductDetails(refundedItem.itemId);
-                                product = productData || {
-                                    productName: "Not Provided",
-                                    imgUrl: null,
-                                    price: 0,
-                                    category: "Unknown",
-                                };
+                                items.push({
+                                    subOrderId: doc.id,
+                                    orderId: data.totalOrderId || null,
+                                    productName: product.productName || "Not Provided",
+                                    productImage: product.imgUrl || null,
+                                    quantity: refundedItem.quantity || 0,
+                                    price: product.price || 0,
+                                    totalPrice: (product.price || 0) * (refundedItem.quantity || 0),
+                                    status: data.status || "unknown", 
+                                    cancelStatus: "None",
+                                    cancelledAt: null,
+                                    reason: refundedItem.reason || null,
+                                    itemId: refundedItem.itemId,
+                                    refundStatus: refundedItem.status || "Refunded",
+                                    isPaid,
+                                    paidAt,
+                                    deliveredAt: data.isDelivered ? deliveredAt : "No",
+                                    paymentMethod: data.paymentMethod || "Not Provided",
+                                    refundedAt: refundedItem.refundedAt ? refundedItem.refundedAt.toDate().toISOString() : null,
+                                    requestedAt: refundedItem.requestedAt ? refundedItem.requestedAt.toDate().toISOString() : null,
+                                    returnRequestedAt: refundedItem.returnRequestedAt ? refundedItem.returnRequestedAt.toDate().toISOString() : null,
+                                    returnConfirmedAt: refundedItem.returnConfirmedAt ? refundedItem.returnConfirmedAt.toDate().toISOString() : null,
+                                    evidence: refundedItem.evidence || [],
+                                });
+                                processedItems.add(itemKey);
                             }
-
-                            items.push({
-                                subOrderId: doc.id,
-                                orderId: data.totalOrderId || null,
-                                productName: product.productName || "Not Provided",
-                                productImage: product.imgUrl || null,
-                                quantity: refundedItem.quantity || 0,
-                                price: product.price || 0,
-                                totalPrice: (product.price || 0) * (refundedItem.quantity || 0),
-                                status: data.status || "unknown",
-                                cancelStatus: "None",
-                                cancelledAt: null,
-                                reason: refundedItem.reason || null,
-                                itemId: refundedItem.itemId,
-                                refundStatus: refundedItem.status || "Refunded",
-                                isPaid,
-                                paidAt,
-                            });
                         })
                     );
                 }
 
-                // Fallback for sub-orders with no items
-                if (items.length === 0) {
+                // Fallback for sub-orders with no items - only if truly no items exist
+                if (items.length === 0 && 
+                    (!data.items || data.items.length === 0) && 
+                    (!data.cancelledItems || data.cancelledItems.length === 0) && 
+                    (!data.refundItems || data.refundItems.length === 0)) {
                     items.push({
                         subOrderId: doc.id,
                         orderId: data.totalOrderId || null,
@@ -420,18 +372,17 @@ const getUserSubOrders = async (req, res) => {
                         totalPrice: data.totalAmount || 0,
                         status: data.status || "unknown",
                         cancelStatus: data.cancelStatus || "None",
-                        cancelledAt: data.cancelledAt
-                            ? data.cancelledAt?.toDate().toISOString()
-                            : null,
+                        cancelledAt: data.cancelledAt ? data.cancelledAt.toDate().toISOString() : null,
                         reason: null,
                         itemId: null,
                         refundStatus: data.refundedStatus || "None",
                         isPaid,
                         paidAt,
+                        deliveredAt,
+                        paymentMethod: data.paymentMethod || "Not Provided",
                     });
                 }
 
-                // Get seller's store name
                 const sellerData = await fetchSellerDetails(data.sellerId);
                 const storeName = sellerData?.storeName || "Not Provided";
 
@@ -447,18 +398,17 @@ const getUserSubOrders = async (req, res) => {
                     sellerId: data.sellerId || null,
                     storeName,
                     userId: data.userId || null,
-                    createdAt: data.createdAt ? data.createdAt?.toDate().toISOString() : null,
+                    createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
                     billingInfo,
                     isPaid,
                     paidAt,
+                    deliveredAt: data.isDelivered && data.deliveredAt ? data.deliveredAt.toDate().toISOString() : "No",
                 };
             })
         );
 
-        // Commit batch updates
         await batch.commit();
 
-        // Flatten the array
         const flattenedSubOrders = subOrders.flatMap(subOrder => subOrder.items.map(item => ({
             ...item,
             refundItems: subOrder.refundItems,
@@ -469,6 +419,7 @@ const getUserSubOrders = async (req, res) => {
             billingInfo: subOrder.billingInfo,
             isPaid: subOrder.isPaid,
             paidAt: subOrder.paidAt,
+            deliveredAt: item.deliveredAt,
         })));
 
         res.status(200).json(flattenedSubOrders);
@@ -481,9 +432,74 @@ const getUserSubOrders = async (req, res) => {
 const deleteUserOrder = async (req, res) => {
     try {
         const db = getDb();
-        const { orderId } = req.params;
-        await db.collection("totalOrders").doc(orderId).delete();
-        res.status(200).json({ message: "Order deleted successfully" });
+        const { orderId: subOrderId } = req.params;
+        const { itemId, status } = req.body; 
+        const subOrderRef = db.collection("subOrders").doc(subOrderId);
+        const subOrderDoc = await subOrderRef.get();
+
+        if (!subOrderDoc.exists) {
+            return res.status(404).json({ error: "Sub-order not found" });
+        }
+
+        const subOrderData = subOrderDoc.data();
+        const totalOrderId = subOrderData.totalOrderId;
+
+        let updatedItems = subOrderData.items || [];
+        let updatedCancelledItems = subOrderData.cancelledItems || [];
+        let updatedRefundItems = subOrderData.refundItems || [];
+
+        if (status === "cancelled" || status === "cancelDirectly") {
+            // Simply remove from cancelled items without restoring quantity
+            updatedCancelledItems = updatedCancelledItems.filter(
+                (item) => item.itemId !== itemId
+            );
+        } else if (status === "Refunded") {
+            // Handle refunded item deletion
+            updatedRefundItems = updatedRefundItems.filter(
+                (item) => !(item.itemId === itemId && item.status === "Refunded")
+            );
+        } else {
+            // Deleting from regular items
+            updatedItems = updatedItems.filter(
+                (item) => item.id !== itemId
+            );
+        }
+
+        // Check if sub-order should be deleted entirely
+        if (updatedItems.length === 0 && updatedCancelledItems.length === 0 && updatedRefundItems.length === 0) {
+            await subOrderRef.delete();
+
+            if (totalOrderId) {
+                const remainingSubOrders = await db
+                    .collection("subOrders")
+                    .where("totalOrderId", "==", totalOrderId)
+                    .get();
+
+                if (remainingSubOrders.empty) {
+                    const totalOrderRef = db.collection("totalOrders").doc(totalOrderId);
+                    const totalOrderDoc = await totalOrderRef.get();
+                    if (totalOrderDoc.exists) {
+                        await totalOrderRef.delete();
+                    }
+                }
+            }
+        } else {
+            // Update the sub-order with new data
+            const updateData = {
+                items: updatedItems,
+                cancelledItems: updatedCancelledItems,
+                refundItems: updatedRefundItems,
+                totalQuantity: updatedItems.reduce((sum, item) => sum + (item.quantity || 0), 0),
+                totalAmount: updatedItems.reduce(
+                    (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
+                    0
+                ),
+            };
+
+            await subOrderRef.update(updateData);
+        }
+
+        res.status(200).json({ message: "Order item deleted successfully" });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

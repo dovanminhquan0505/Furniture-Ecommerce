@@ -145,7 +145,7 @@
 
 /* Reviews */
 .product__review {
-    margin-top: 3rem;
+    margin-top: 2rem;
 }
 
 .review__wrapper ul {
@@ -153,358 +153,247 @@
     padding: 0;
 }
 
-.review__wrapper ul li {
-    background-color: #fff;
-    padding: 1.5rem;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 2px 10px var(--shadow-color);
-}
-
-.review__wrapper ul li h6 {
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    color: var(--primary-color);
-    padding-top: 6px;
-}
-
-.review__wrapper ul li span {
-    color: var(--accent-color);
-    font-weight: 600;
-    margin-right: 0.5rem;
-}
-
-.review__wrapper ul li p {
-    margin-top: 0.5rem;
-    color: var(--text-color);
-    line-height: 1.6;
-}
-
-.review__wrapper .stars {
-    color: #ffc107;
-    font-size: 1.2rem;
-    margin-right: 0.2rem;
-}
-
 .review__item {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 12px var(--shadow-color);
     position: relative;
-    padding-right: 40px;
 }
 
-.review__item .review__comment {
-    font-size: 1.2rem;
+.review__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
 }
 
-.review__item .review__actions {
+.user__info {
     display: flex;
     align-items: center;
-    cursor: pointer;
-    margin-top: 10px;
+    gap: 0.75rem;
 }
 
-.review__item .review__actions span {
-    font-size: 0.9rem;
-    color: #636363;
-}
-
-.review__item .review__actions span:hover {
-    color: #333;
-}
-
-.review__item .review__actions .actions__like {
-    margin-right: 20px;
-    margin-bottom: 2px;
-}
-
-.rating__stars {
-    display: inline-flex;
-    color: #ffd700;
-    font-size: 0.9rem;
-}
-
-.review__content {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.delete-review-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
-    background: none;
-    border: none;
-    color: #787777 !important;
-    font-size: 1.2rem;
-    cursor: pointer;
-    padding: 5px;
-    transition: all 0.3s ease;
-}
-
-/* Review Form */
-.review__form {
-    background-color: #fff;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px var(--shadow-color);
-}
-
-.review__form h4 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 1.5rem;
-    color: var(--primary-color);
-}
-
-.review__form button {
-    margin-top: -10px;
-}
-
-.form__group {
-    margin-bottom: 1.5rem;
-}
-
-.form__group input,
-.form__group textarea {
-    width: 100%;
-    padding: 1rem;
+.review__avatar, .reply__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 1rem;
-    transition: border-color 0.3s ease;
 }
 
-.form__group input:focus,
-.form__group textarea:focus {
-    outline: none;
-    border-color: var(--accent-color);
+.reply__avatar {
+    width: 32px;
+    height: 32px;
 }
 
-.rating__group {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    margin-bottom: 0 !important;
-    margin-left: 5px;
-}
-
-.star__rating-item {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 2.5rem;
-    height: 2rem;
-    font-size: 1rem;
-    position: relative;
-}
-
-.star__rating-item span {
-    position: absolute;
-    left: 0;
-    font-weight: bold;
-    z-index: 1;
-}
-
-.star__rating-item i {
-    position: absolute;
-    left: 0.7rem;
-    bottom: 0.45rem;
+.user__info h6 {
     font-size: 1.1rem;
-}
-/* Related Products */
-.related__title {
-    font-size: 2rem;
-    font-weight: 700;
-    text-align: center;
-    margin: 4rem 0 2rem;
-    color: var(--primary-color);
-}
-
-/* Reply Comment */
-.replies-list {
-    margin-top: 15px;
-    padding-left: 20px;
-    list-style-type: none;
-}
-
-.reply-item {
-    background-color: #f9f9f9;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
-    box-shadow: 0 2px 10px var(--shadow-color);
-}
-
-.reply-item h6 {
-    font-size: 1rem;
     font-weight: 600;
-    margin-bottom: 5px;
     color: var(--primary-color);
+    margin: 0;
 }
 
-.reply-item p {
-    font-size: 0.95rem;
-    margin-bottom: 5px;
-    color: var(--text-color);
-    line-height: 1.6;
-}
-
-.reply-item small {
-    font-size: 0.8rem;
+.review__time, .reply__time {
+    font-size: 0.85rem;
     color: var(--light-text-color);
 }
 
-.reply-form {
-    margin-top: 15px;
-    background-color: #f0f0f0;
-    border-radius: 8px;
-    padding: 15px;
-    box-shadow: 0 2px 10px var(--shadow-color);
+.review__content {
+    margin-top: 0.5rem;
 }
 
-.reply-form input,
-.reply-form textarea {
-    width: 100%;
-    margin-bottom: 10px;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
+.review__comment, .reply__comment {
     font-size: 1rem;
-    transition: border-color 0.3s ease;
+    color: var(--text-color);
+    line-height: 1.5;
+    margin-bottom: 0.5rem;
 }
 
-.reply-form input:focus,
-.reply-form textarea:focus {
-    outline: none;
-    border-color: var(--accent-color);
+.review__actions, .reply__actions {
+    display: flex;
+    gap: 1.2rem;
+    align-items: center;
 }
 
-.reply-form textarea {
-    min-height: 80px;
-    resize: vertical;
-}
-
-.reply-form button {
-    background-color: var(--accent-color);
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 4px;
+.action__btn {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 1rem;
+    color: var(--light-text-color);
     cursor: pointer;
-    transition: background-color 0.3s;
-    font-size: 1rem;
-    font-weight: 600;
-    margin-top: -9px;
+    transition: color 0.3s ease;
 }
 
-.reply-form button:hover {
-    background-color: var(--primary-color);
+.action__btn i {
+    font-size: 1.2rem; 
+}
+
+.action__btn:hover {
+    color: var(--accent-color);
+}
+
+.like__btn.liked {
+    color: var(--accent-color);
+}
+
+.like__btn.liked i {
+    color: var(--accent-color);
+}
+
+.edit__btn, .delete__btn {
+    font-size: 0.9rem;
+    color: var(--light-text-color);
+}
+
+.edit__btn:hover, .delete__btn:hover {
+    color: var(--accent-color);
 }
 
 .toggle__replies {
-    display: inline-block;
-    margin-top: 10px;
-    padding: 5px 10px;
-    background-color: #f0f0f0;
-    border-radius: 15px;
-    font-size: 0.9em;
-    color: #696a6c !important;
-    font-weight: 600;
+    font-size: 1rem;
+    color: #444;
     cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.toggle__replies:hover {
-    background-color: #e0e0e0;
-    color: #000;
+    margin-top: 0.5rem;
+    display: inline-block;
 }
 
 .toggle__replies::before {
-    content: "\25B6"; /* Right-pointing triangle */
-    display: inline-block;
-    margin-right: 5px;
-    font-size: 0.8em;
+    content: "\2192";
+    margin-right: 0.5rem;
     transition: transform 0.3s ease;
 }
 
 .toggle__replies.expanded::before {
-    transform: rotate(90deg);
+    content: "\2193";
 }
 
-/* Responsive adjustments for new styles */
+/* Replies List */
+.replies__list {
+    margin-top: 1rem;
+    padding-left: 2rem;
+    border-left: 2px solid var(--border-color);
+}
+
+.reply__item {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.reply__content {
+    margin-top: 0.5rem;
+}
+
+/* Review and Reply Forms */
+.review__form, .reply__form, .edit__review-form, .edit__reply-form {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    margin-top: 1.5rem;
+}
+
+.review__form h4 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.review__textarea, .reply__textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    resize: vertical;
+    transition: border-color 0.3s ease;
+}
+
+.review__textarea:focus, .reply__textarea:focus {
+    border-color: var(--accent-color);
+    outline: none;
+}
+
+.rating__group {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.star__rating-item {
+    cursor: pointer;
+    color: #d3d3d3;
+    font-size: 1.2rem;
+}
+
+.star__rating-item.active {
+    color: var(--accent-color);
+}
+
+.submit__review-btn, .submit__reply-btn, .save__btn, .cancel__btn {
+    background: var(--accent-color);
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.cancel__btn {
+    background: #6c757d;
+    margin-left: 0.5rem;
+}
+
+.submit__review-btn:hover, .submit__reply-btn:hover, .save__btn:hover, .cancel__btn:hover {
+    background: var(--primary-color);
+}
+
+.edit__actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+/* Responsive Adjustments */
 @media only screen and (max-width: 768px) {
-    .reply-item {
-        padding: 12px;
+    .review__item, .reply__item {
+        padding: 1rem;
     }
 
-    .reply-form {
-        padding: 12px;
+    .review__form, .reply__form {
+        padding: 1rem;
+    }
+
+    .review__header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
     }
 }
 
 @media only screen and (max-width: 576px) {
-    .replies-list {
-        padding-left: 10px;
+    .review__avatar, .reply__avatar {
+        width: 32px;
+        height: 32px;
     }
 
-    .reply-item {
-        padding: 10px;
-    }
-
-    .reply-form {
-        padding: 10px;
-    }
-
-    .reply-form input,
-    .reply-form textarea {
-        padding: 8px;
-    }
-
-    .reply-form button {
-        padding: 8px 12px;
-    }
-}
-
-@media only screen and (max-width: 768px) {
-    .product__details h2 {
-        font-size: 2rem;
-    }
-
-    .tab__wrapper h6 {
-        padding: 0.8rem 1.5rem;
+    .user__info h6 {
         font-size: 1rem;
     }
 
-    .review__form {
-        padding: 1.5rem;
-    }
-}
-
-@media only screen and (max-width: 576px) {
-    .product-details-container {
-        padding: 2rem 0;
+    .review__comment, .reply__comment {
+        font-size: 0.95rem;
     }
 
-    .product__details h2 {
-        font-size: 1.8rem;
-    }
-
-    .product__price {
-        font-size: 1.6rem;
-    }
-
-    .tab__wrapper {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .tab__wrapper h6 {
-        width: 100%;
-        text-align: center;
-        padding: 0.8rem 0;
-    }
-
-    .review__form {
-        padding: 1rem;
+    .action__btn {
+        font-size: 0.85rem;
     }
 }

@@ -184,7 +184,7 @@ const addReplyToReview = async (req, res) => {
     try {
         const db = getDb();
         const productId = req.params.id;
-        const { reviewIndex, userName, message, avatar } = req.body;
+        const { reviewIndex, userId, userName, message, avatar } = req.body;
 
         const productRef = db.collection("products").doc(productId);
         const productDoc = await productRef.get();
@@ -205,20 +205,22 @@ const addReplyToReview = async (req, res) => {
         }
 
         updatedReviews[reviewIndex].replies.push({
+            userId,
             userName,
             message,
             avatar,
             createdAt: new Date().toISOString(),
-            likes: [],
+            likes: []
         });
 
         await productRef.update({
-            reviews: updatedReviews,
+            reviews: updatedReviews
         });
 
         res.status(200).json({ message: "Reply added successfully" });
     } catch (error) {
-        res.status(500).json({ message: "Error adding reply", error });
+        console.error("Error adding reply:", error);
+        res.status(500).json({ message: "Error adding reply", error: error.message });
     }
 };
 
@@ -270,6 +272,126 @@ const toggleLikeReply = async (req, res) => {
     }
 };
 
+const editReview = async (req, res) => {
+    try {
+        const db = getDb();
+        const productId = req.params.id;
+        const { reviewIndex, message, rating, userId } = req.body;
+
+        const productRef = db.collection("products").doc(productId);
+        const productDoc = await productRef.get();
+
+        if (!productDoc.exists) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        const product = productDoc.data();
+        const reviews = product.reviews || [];
+
+        if (!reviews[reviewIndex]) {
+            return res.status(404).json({ message: "Review not found" });
+        }
+
+        // Check if user owns the review
+        if (reviews[reviewIndex].userId !== userId) {
+            return res.status(403).json({ message: "You can only edit your own reviews" });
+        }
+
+        // Update the review
+        reviews[reviewIndex].message = message;
+        reviews[reviewIndex].rating = rating;
+        reviews[reviewIndex].updatedAt = new Date().toISOString();
+
+        await productRef.update({
+            reviews: reviews
+        });
+
+        res.status(200).json({ message: "Review updated successfully" });
+    } catch (error) {
+        console.error("Error editing review:", error);
+        res.status(500).json({ message: "Error editing review", error: error.message });
+    }
+};
+
+const editReply = async (req, res) => {
+    try {
+        const db = getDb();
+        const productId = req.params.id;
+        const { reviewIndex, replyIndex, message, userId } = req.body;
+
+        const productRef = db.collection("products").doc(productId);
+        const productDoc = await productRef.get();
+
+        if (!productDoc.exists) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        const product = productDoc.data();
+        const reviews = product.reviews || [];
+
+        if (!reviews[reviewIndex] || !reviews[reviewIndex].replies || !reviews[reviewIndex].replies[replyIndex]) {
+            return res.status(404).json({ message: "Reply not found" });
+        }
+
+        // Check if user owns the reply
+        if (reviews[reviewIndex].replies[replyIndex].userId !== userId) {
+            return res.status(403).json({ message: "You can only edit your own replies" });
+        }
+
+        // Update the reply
+        reviews[reviewIndex].replies[replyIndex].message = message;
+        reviews[reviewIndex].replies[replyIndex].updatedAt = new Date().toISOString();
+
+        await productRef.update({
+            reviews: reviews
+        });
+
+        res.status(200).json({ message: "Reply updated successfully" });
+    } catch (error) {
+        console.error("Error editing reply:", error);
+        res.status(500).json({ message: "Error editing reply", error: error.message });
+    }
+};
+
+const deleteReply = async (req, res) => {
+    try {
+        const db = getDb();
+        const productId = req.params.id;
+        const { reviewIndex, replyIndex, userId } = req.body;
+
+        const productRef = db.collection("products").doc(productId);
+        const productDoc = await productRef.get();
+
+        if (!productDoc.exists) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        const product = productDoc.data();
+        const reviews = product.reviews || [];
+
+        if (!reviews[reviewIndex] || !reviews[reviewIndex].replies || !reviews[reviewIndex].replies[replyIndex]) {
+            return res.status(404).json({ message: "Reply not found" });
+        }
+
+        // Check if user owns the reply
+        if (reviews[reviewIndex].replies[replyIndex].userId !== userId) {
+            return res.status(403).json({ message: "You can only delete your own replies" });
+        }
+
+        // Remove the reply
+        reviews[reviewIndex].replies.splice(replyIndex, 1);
+
+        await productRef.update({
+            reviews: reviews
+        });
+
+        res.status(200).json({ message: "Reply deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting reply:", error);
+        res.status(500).json({ message: "Error deleting reply", error: error.message });
+    }
+};
+
 /**************************** SELLER ****************************/
 const getSellerInfo = async (req, res) => {
     try {
@@ -296,5 +418,8 @@ module.exports = {
     toggleLikeReview,
     addReplyToReview,
     toggleLikeReply,
+    editReview,
+    editReply,
+    deleteReply,
     getSellerInfo
 }

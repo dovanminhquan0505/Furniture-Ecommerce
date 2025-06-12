@@ -281,42 +281,44 @@
     text-overflow: ellipsis;
     margin-bottom: 0px;
     margin-top: 0px;
+    background: transparent;
+    border: 1.5px solid;
 }
 
 /* Category Colors */
 .product__category.sofa {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #ffffff;
+    border-color: #8b7fdb;
+    color: #6b5fb0;
     font-size: 14px;
 }
 
 .product__category.bed {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: #ffffff;
+    border-color: #f288b8;
+    color: #d1567a;
     font-size: 14px;
 }
 
 .product__category.chair {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    color: #ffffff;
+    border-color: #5eb8fe;
+    color: #2e8fd4;
     font-size: 14px;
 }
 
 .product__category.table {
-    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-    color: #ffffff;
+    border-color: #6be584;
+    color: #44c766;
     font-size: 14px;
 }
 
 .product__category.television {
-    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    color: #ffffff;
+    border-color: #fc8aa6;
+    color: #e6697f;
     font-size: 14px;
 }
 
 .product__category.default {
-    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-    color: #495057;
+    border-color: #b8ddd9;
+    color: #7cb3ad;
     font-size: 14px;
 }
 

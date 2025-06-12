@@ -956,6 +956,87 @@ export const toggleLikeReply = async (
     }
 };
 
+export const editReview = async (productId, reviewIndex, reviewData) => {
+    try {
+        const response = await fetch(`${BASE_URL}/products/${productId}/edit-review`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                reviewIndex,
+                ...reviewData
+            }),
+            credentials: "include",
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to edit review');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error editing review:', error);
+        throw error;
+    }
+};
+
+export const editReply = async (productId, reviewIndex, replyIndex, replyData) => {
+    try {
+        const response = await fetch(`${BASE_URL}/products/${productId}/edit-reply`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                reviewIndex,
+                replyIndex,
+                ...replyData
+            }),
+            credentials: "include",
+
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to edit reply');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error editing reply:', error);
+        throw error;
+    }
+};
+
+export const deleteReply = async (productId, reviewIndex, replyIndex, userData) => {
+    try {
+        const response = await fetch(`${BASE_URL}/products/${productId}/delete-reply`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                reviewIndex,
+                replyIndex,
+                ...userData
+            }),
+            credentials: "include",
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to delete reply');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error deleting reply:', error);
+        throw error;
+    }
+};
+
 // Orders
 export const createOrder = async (orderData) => {
     try {

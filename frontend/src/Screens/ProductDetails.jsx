@@ -21,7 +21,10 @@ import {
     toggleLikeReply, 
     fetchSellerInfoByProduct,
     getUserById,
-    getSellerIdByUserId
+    getSellerIdByUserId,
+    editReview,
+    editReply,
+    deleteReply
 } from "../api.js";
 import DefaultAvatar from "../assets/images/user-icon.png";
 import SellerModal from "./../components/Modal/SellerModal.jsx";
@@ -48,6 +51,13 @@ const ProductDetails = () => {
     const [currentUserSellerId, setCurrentUserSellerId] = useState(null);
     const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
     const [sellerInfo, setSellerInfo] = useState(null);
+
+    // Edit states
+    const [editingReview, setEditingReview] = useState(null);
+    const [editingReply, setEditingReply] = useState(null);
+    const [editReviewMessage, setEditReviewMessage] = useState("");
+    const [editReviewRating, setEditReviewRating] = useState(null);
+    const [editReplyMessage, setEditReplyMessage] = useState("");
 
     // Fetch thông tin người dùng từ Firestore khi có currentUser
     useEffect(() => {
@@ -197,6 +207,124 @@ const ProductDetails = () => {
         setReviewSubmitted(true);
     };
 
+    const startEditReview = (reviewIndex, review) => {
+        setEditingReview(reviewIndex);
+        setEditReviewMessage(review.message);
+        setEditReviewRating(review.rating);
+    };
+
+    const saveEditReview = async (reviewIndex) => {
+        if (!editReviewMessage.trim()) {
+            toast.error("Please enter a review message.");
+            return;
+        }
+
+        if (!editReviewRating) {
+            toast.error("Please select a rating.");
+            return;
+        }
+
+        try {
+            await editReview(id, reviewIndex, {
+                message: editReviewMessage,
+                rating: editReviewRating,
+                userId: currentUser.uid
+            });
+
+            const updatedProduct = await fetchProduct(id);
+            if (Array.isArray(updatedProduct.reviews) && updatedProduct.reviews.length > 0) {
+                const avgRating = updatedProduct.reviews.reduce((sum, review) => sum + review.rating, 0) / updatedProduct.reviews.length;
+                setProduct({ ...updatedProduct, avgRating: avgRating.toFixed(1) });
+            } else {
+                setProduct({ ...updatedProduct, avgRating: "0.0" });
+            }
+
+            setEditingReview(null);
+            setEditReviewMessage("");
+            setEditReviewRating(null);
+            toast.success("Review updated successfully!");
+        } catch (error) {
+            console.error("Error editing review:", error);
+            toast.error(error.message || "Failed to update review.");
+        }
+    };
+
+    const cancelEditReview = () => {
+        setEditingReview(null);
+        setEditReviewMessage("");
+        setEditReviewRating(null);
+    };
+
+    const startEditReply = (reviewIndex, replyIndex, reply) => {
+        setEditingReply(`${reviewIndex}-${replyIndex}`);
+        setEditReplyMessage(reply.message);
+    };
+
+    const saveEditReply = async (reviewIndex, replyIndex) => {
+        if (!editReplyMessage.trim()) {
+            toast.error("Please enter a reply message.");
+            return;
+        }
+
+        try {
+            await editReply(id, reviewIndex, replyIndex, {
+                message: editReplyMessage,
+                userId: currentUser.uid
+            });
+
+            const updatedProduct = await fetchProduct(id);
+            if (Array.isArray(updatedProduct.reviews) && updatedProduct.reviews.length > 0) {
+                const avgRating = updatedProduct.reviews.reduce((sum, review) => sum + review.rating, 0) / updatedProduct.reviews.length;
+                setProduct({ ...updatedProduct, avgRating: avgRating.toFixed(1) });
+            } else {
+                setProduct({ ...updatedProduct, avgRating: "0.0" });
+            }
+
+            setEditingReply(null);
+            setEditReplyMessage("");
+            toast.success("Reply updated successfully!");
+        } catch (error) {
+            console.error("Error editing reply:", error);
+            toast.error(error.message || "Failed to update reply.");
+        }
+    };
+
+    const cancelEditReply = () => {
+        setEditingReply(null);
+        setEditReplyMessage("");
+    };
+
+    const deleteReplyHandler = async (reviewIndex, replyIndex, reply) => {
+        if (!currentUser) {
+            toast.error("Please log in to delete replies.");
+            return;
+        }
+
+        if (reply.userId !== currentUser.uid) {
+            toast.error("You can only delete your own replies.");
+            return;
+        }
+
+        try {
+            await deleteReply(id, reviewIndex, replyIndex, {
+                userId: currentUser.uid
+            });
+
+            const updatedProduct = await fetchProduct(id);
+            if (Array.isArray(updatedProduct.reviews) && updatedProduct.reviews.length > 0) {
+                const avgRating = updatedProduct.reviews.reduce((sum, review) => sum + review.rating, 0) / updatedProduct.reviews.length;
+                setProduct({ ...updatedProduct, avgRating: avgRating.toFixed(1) });
+            } else {
+                setProduct({ ...updatedProduct, avgRating: "0.0" });
+            }
+
+            toast.success("Reply deleted successfully!");
+        } catch (error) {
+            console.error("Error deleting reply:", error);
+            toast.error(error.message || "Failed to delete reply.");
+        }
+    };
+
     // Handle Delete reviews for admin only
     const deleteReviewHandler = async (reviewToDelete, index) => {
         if (!currentUser) {
@@ -328,8 +456,8 @@ const ProductDetails = () => {
 
     // Handle submit reply comment
     const handleReplySubmit = async (reviewIndex) => {
-        if(!replyMessage.trim()) {
-            toast.error("Please fill in both name and message fields.")
+        if (!replyMessage.trim()) {
+            toast.error("Please fill in the message field.");
             return;
         }
 
@@ -349,8 +477,10 @@ const ProductDetails = () => {
                 userName: userData.userName,
                 message: replyMessage,
                 avatar: userData.avatar,
+                createdAt: new Date().toISOString(),
+                likes: []
             });
-    
+
             const updatedProduct = await fetchProduct(id);
             if (Array.isArray(updatedProduct.reviews) && updatedProduct.reviews.length > 0) {
                 const avgRating = updatedProduct.reviews.reduce((sum, review) => sum + review.rating, 0) / updatedProduct.reviews.length;
@@ -358,17 +488,18 @@ const ProductDetails = () => {
             } else {
                 setProduct({ ...updatedProduct, avgRating: "0.0" });
             }
+
             toast.success("Reply sent successfully!");
         } catch (error) {
             console.error("Error adding reply:", error);
-            toast.error("Failed to save reply to server: " + error.message);
-            return; 
+            toast.error("Failed to save reply: " + error.message);
+            return;
         }
 
         // Reset form
         setReplyingTo(null);
         setReplyMessage("");
-    } 
+    };
 
     const addToCart = () => {
         dispatch(
@@ -519,242 +650,281 @@ const ProductDetails = () => {
                                 </h6>
                             </div>
 
-                            {tab === "desc" ? (
-                                <div className="tab__content mt-3">
-                                    <p>{description}</p>
-                                </div>
-                            ) : (
-                                <div className="product__review mt-5">
-                                    <div className="review__wrapper">
-                                        <ul>
-                                            {Array.isArray(reviews) &&
-                                                reviews.map((item, index) => {
-                                                    const isReviewOwner = item.userId === userData?.userId;
-                                                    const isProductSeller = currentUserSellerId && sellerId === currentUserSellerId;
-                                                    const canDelete = isReviewOwner || isProductSeller;
-                                                    return (
-                                                        <li
-                                                            key={index}
-                                                            className="review__item mb-4"
-                                                        >
-                                                            <div className="review__content">
-                                                                <div className="d-flex align-items-center">
-                                                                    {item.avatar && (
+                            {
+                                tab === "desc" ? (
+                                    <div className="tab__content mt-3">
+                                        <p>{description}</p>
+                                    </div>
+                                ) : (
+                                    <div className="product__review mt-5">
+                                        <div className="review__wrapper">
+                                            <ul>
+                                                {Array.isArray(reviews) &&
+                                                    reviews.map((item, index) => {
+                                                        const isReviewOwner = item.userId === userData?.userId;
+                                                        const isProductSeller = currentUserSellerId && sellerId === currentUserSellerId;
+                                                        const canDelete = isReviewOwner || isProductSeller;
+                                                        return (
+                                                            <li key={index} className="review__item mb-4">
+                                                                <div className="review__header">
+                                                                    <div className="user__info">
                                                                         <img
-                                                                            src={item.avatar}
+                                                                            src={item.avatar || DefaultAvatar}
                                                                             alt="avatar"
                                                                             className="review__avatar"
-                                                                            style={{ width: "40px", height: "40px", borderRadius: "50%", marginRight: "10px" }}
                                                                         />
-                                                                    )}
-                                                                    <h6 className="mt-2">{item.userName}</h6>
-                                                                </div>
-                                                                <div
-                                                                    className="stars"
-                                                                    style={{
-                                                                        display: "flex",
-                                                                        alignItems: "center",
-                                                                        gap: "10px",
-                                                                    }}
-                                                                >
-                                                                    <span className="rating__stars">
-                                                                        {[
-                                                                            1, 2, 3, 4, 5,
-                                                                        ].map(
-                                                                            (star) => (
-                                                                                <i
-                                                                                    key={star}
-                                                                                    className={`ri-star-${
-                                                                                        star <=
-                                                                                        item.rating
-                                                                                            ? "fill"
-                                                                                            : "line"
-                                                                                    }`}
-                                                                                    style={{
-                                                                                        color:
-                                                                                            star <=
-                                                                                            item.rating
-                                                                                                ? "#FFD700"
-                                                                                                : "gray",
-                                                                                    }}
-                                                                                ></i>
-                                                                            )
-                                                                        )}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Time Reviews */}
-                                                            {item.createdAt && (
-                                                                <small className="text-muted">
-                                                                    {formatTime(
-                                                                        item.createdAt
-                                                                    )}
-                                                                </small>
-                                                            )}
-
-                                                            <p className="review__comment">
-                                                                {item.message}
-                                                            </p>
-
-                                                            <div className="review__actions">
-                                                                <motion.span
-                                                                    whileTap={{scale: 1.2}} 
-                                                                    onClick={() => toggleLikeReviewHandler(item, index)}
-                                                                    className="actions__like"
-                                                                >
-                                                                    {item.likes && item.likes.includes(currentUser?.uid) ? "Dislike" : "Like"}
-                                                                    ({item.likes ? item.likes.length : 0})
-                                                                </motion.span>
-                                                                <motion.span 
-                                                                    whileTap={{scale: 1.1}}
-                                                                    onClick={() => handleReplyClick(index)}
-                                                                >
-                                                                    Comment
-                                                                </motion.span>
-                                                            </div>
-
-                                                            {/* Show replies */}
-                                                            {item.replies && item.replies.length > 0 && (
-                                                                <motion.span 
-                                                                    id={`toggle__replies-${index}`}
-                                                                    whileTap={{scale: 1}}
-                                                                    className={`toggle__replies ${expandedReplies[index] ? 'expanded' : ''}`}
-                                                                    onClick={() => toggleShowReplies(index)}
-                                                                >
-                                                                    {expandedReplies[index] ? 'Hide' : 'Show'} {item.replies.length} {item.replies.length > 1 ? "replies" : "reply"}
-                                                                </motion.span>
-                                                            )}
-
-                                                            {/* Display existing replies */}
-                                                            {item.replies && item.replies.length > 0 && expandedReplies[index] && (
-                                                                <ul className="replies-list">
-                                                                {item.replies.map((reply, replyIndex) => (
-                                                                    <li key={replyIndex} className="reply-item">
-                                                                        <div className="d-flex align-items-center">
-                                                                            {reply.avatar && (
-                                                                                <img
-                                                                                    src={reply.avatar}
-                                                                                    alt="avatar"
-                                                                                    className="review__avatar"
-                                                                                    style={{ width: "30px", height: "30px", borderRadius: "50%", marginRight: "10px" }}
-                                                                                />
-                                                                            )}
-                                                                            <h6>{reply.userName}</h6>
+                                                                        <div>
+                                                                            <h6>{item.userName}</h6>
+                                                                            <small className="review__time">{formatTime(item.createdAt)}</small>
                                                                         </div>
-                                                                        <p>{reply.message}</p>
-                                                                        <small className="text-muted">
-                                                                            {formatTime(reply.createdAt)}
-                                                                        </small>
+                                                                    </div>
+                                                                    <div className="rating__stars">
+                                                                        {[1, 2, 3, 4, 5].map((star) => (
+                                                                            <i
+                                                                                key={star}
+                                                                                className={`ri-star-${star <= item.rating ? "fill" : "line"}`}
+                                                                                style={{ color: star <= item.rating ? "#FFD700" : "#d3d3d3" }}
+                                                                            ></i>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+
+                                                                {editingReview === index ? (
+                                                                    <div className="edit__review-form">
+                                                                        <div className="form__group rating__group">
+                                                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                                                <motion.span
+                                                                                    key={star}
+                                                                                    whileTap={{ scale: 1.2 }}
+                                                                                    onClick={() => setEditReviewRating(star)}
+                                                                                    className={`star__rating-item ${editReviewRating >= star ? "active" : ""}`}
+                                                                                >
+                                                                                    <i className="ri-star-s-fill"></i>
+                                                                                </motion.span>
+                                                                            ))}
+                                                                        </div>
+                                                                        <textarea
+                                                                            value={editReviewMessage}
+                                                                            onChange={(e) => setEditReviewMessage(e.target.value)}
+                                                                            placeholder="Edit your review..."
+                                                                            rows={3}
+                                                                            className="review__textarea"
+                                                                        />
+                                                                        <div className="edit__actions">
+                                                                            <motion.button
+                                                                                whileTap={{ scale: 1.1 }}
+                                                                                onClick={() => saveEditReview(index)}
+                                                                                className="save__btn"
+                                                                            >
+                                                                                Save
+                                                                            </motion.button>
+                                                                            <motion.button
+                                                                                whileTap={{ scale: 1.1 }}
+                                                                                onClick={cancelEditReview}
+                                                                                className="cancel__btn"
+                                                                            >
+                                                                                Cancel
+                                                                            </motion.button>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="review__content">
+                                                                        <p className="review__comment">{item.message}</p>
                                                                         <div className="review__actions">
                                                                             <motion.span
-                                                                                whileTap={{scale: 1.2}} 
-                                                                                onClick={() => toggleLikeRepliesHandler(index, replyIndex)}
-                                                                                className="actions__like"
+                                                                                whileTap={{ scale: 1.2 }}
+                                                                                onClick={() => toggleLikeReviewHandler(item, index)}
+                                                                                className={`action__btn like__btn ${item.likes?.includes(currentUser?.uid) ? "liked" : ""}`}
                                                                             >
-                                                                                {reply.likes && reply.likes.includes(currentUser?.uid) ? "Dislike" : "Like"}
-                                                                                ({reply.likes ? reply.likes.length : 0})
+                                                                                <i className="ri-thumb-up-line"></i>
+                                                                                {item.likes?.length || 0}
                                                                             </motion.span>
-                                                                            <motion.span 
-                                                                                whileTap={{scale: 1.1}}
+                                                                            <motion.span
+                                                                                whileTap={{ scale: 1.2 }}
                                                                                 onClick={() => handleReplyClick(index)}
+                                                                                className="action__btn comment__btn"
                                                                             >
-                                                                                Comment
+                                                                                <i className="ri-chat-3-line"></i>
+                                                                                Reply
                                                                             </motion.span>
+                                                                            {isReviewOwner && (
+                                                                                <motion.span
+                                                                                    whileTap={{ scale: 1.2 }}
+                                                                                    onClick={() => startEditReview(index, item)}
+                                                                                    className="action__btn edit__btn"
+                                                                                >
+                                                                                    <i className="ri-edit-line"></i>
+                                                                                </motion.span>
+                                                                            )}
+                                                                            {canDelete && (
+                                                                                <motion.span
+                                                                                    whileTap={{ scale: 1.2 }}
+                                                                                    onClick={() => deleteReviewHandler(item, index)}
+                                                                                    className="action__btn delete__btn"
+                                                                                >
+                                                                                    <i className="ri-delete-bin-line"></i>
+                                                                                </motion.span>
+                                                                            )}
                                                                         </div>
-                                                                    </li>
-                                                                ))}
-                                                            </ul>
-                                                            )}
+                                                                    </div>
+                                                                )}
 
-                                                            {/* Reply form */}
-                                                            {replyingTo === index && (
-                                                                <div className="reply-form">
-                                                                    <textarea
-                                                                        placeholder="Your reply"
-                                                                        value={replyMessage}
-                                                                        onChange={(e) => setReplyMessage(e.target.value)}
-                                                                        required
-                                                                    ></textarea>
-                                                                    <motion.button
-                                                                        whileTap={{ scale: 1.2 }}
-                                                                        onClick={() => handleReplySubmit(index)}
-                                                                        className="buy__btn"
+                                                                {item.replies?.length > 0 && (
+                                                                    <motion.span
+                                                                        whileTap={{ scale: 1.1 }}
+                                                                        onClick={() => toggleShowReplies(index)}
+                                                                        className={`toggle__replies ${expandedReplies[index] ? "expanded" : ""}`}
                                                                     >
-                                                                        Send Reply
-                                                                    </motion.button>
-                                                                </div>
-                                                            )}
+                                                                        {expandedReplies[index] ? "Hide" : "Show"} {item.replies.length} {item.replies.length > 1 ? "Replies" : "Reply"}
+                                                                    </motion.span>
+                                                                )}
 
-                                                            {canDelete && (
-                                                                <span
-                                                                    className="delete-review-btn"
-                                                                    onClick={() => deleteReviewHandler(item, index)}
-                                                                    title="Delete review"
-                                                                >
-                                                                    <i className="ri-delete-bin-line"></i>
-                                                                </span>
-                                                            )}
-                                                        </li>
-                                                    );
-                                                })}
-                                        </ul>
+                                                                {expandedReplies[index] && item.replies?.length > 0 && (
+                                                                    <ul className="replies__list">
+                                                                        {item.replies.map((reply, replyIndex) => (
+                                                                            <li key={replyIndex} className="reply__item">
+                                                                                {editingReply === `${index}-${replyIndex}` ? (
+                                                                                    <div className="edit__reply-form">
+                                                                                        <textarea
+                                                                                            value={editReplyMessage}
+                                                                                            onChange={(e) => setEditReplyMessage(e.target.value)}
+                                                                                            placeholder="Edit your reply..."
+                                                                                            rows={2}
+                                                                                            className="reply__textarea"
+                                                                                        />
+                                                                                        <div className="edit__actions">
+                                                                                            <motion.button
+                                                                                                whileTap={{ scale: 1.1 }}
+                                                                                                onClick={() => saveEditReply(index, replyIndex)}
+                                                                                                className="save__btn"
+                                                                                            >
+                                                                                                Save
+                                                                                            </motion.button>
+                                                                                            <motion.button
+                                                                                                whileTap={{ scale: 1.1 }}
+                                                                                                onClick={cancelEditReply}
+                                                                                                className="cancel__btn"
+                                                                                            >
+                                                                                                Cancel
+                                                                                            </motion.button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <div className="reply__content">
+                                                                                        <div className="user__info">
+                                                                                            <img
+                                                                                                src={reply.avatar || DefaultAvatar}
+                                                                                                alt="avatar"
+                                                                                                className="reply__avatar"
+                                                                                            />
+                                                                                            <div>
+                                                                                                <h6>{reply.userName}</h6>
+                                                                                                <small className="reply__time">{formatTime(reply.createdAt)}</small>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <p className="reply__comment">{reply.message}</p>
+                                                                                        <div className="reply__actions">
+                                                                                            <motion.span
+                                                                                                whileTap={{ scale: 1.2 }}
+                                                                                                onClick={() => toggleLikeRepliesHandler(index, replyIndex)}
+                                                                                                className={`action__btn like__btn ${reply.likes?.includes(currentUser?.uid) ? "liked" : ""}`}
+                                                                                            >
+                                                                                                <i className="ri-thumb-up-line"></i>
+                                                                                                {reply.likes?.length || 0}
+                                                                                            </motion.span>
+                                                                                            <motion.span
+                                                                                                whileTap={{ scale: 1.2 }}
+                                                                                                onClick={() => handleReplyClick(index)}
+                                                                                                className="action__btn comment__btn"
+                                                                                            >
+                                                                                                <i className="ri-chat-3-line"></i>
+                                                                                                Reply
+                                                                                            </motion.span>
+                                                                                            {currentUser && reply.userId && reply.userId === currentUser.uid && (
+                                                                                                <>
+                                                                                                    <motion.span
+                                                                                                        whileTap={{ scale: 1.2 }}
+                                                                                                        onClick={() => startEditReply(index, replyIndex, reply)}
+                                                                                                        className="action__btn edit__btn"
+                                                                                                    >
+                                                                                                        <i className="ri-edit-line"></i>
+                                                                                                    </motion.span>
+                                                                                                    <motion.span
+                                                                                                        whileTap={{ scale: 1.2 }}
+                                                                                                        onClick={() => deleteReplyHandler(index, replyIndex, reply)}
+                                                                                                        className="action__btn delete__btn"
+                                                                                                    >
+                                                                                                        <i className="ri-delete-bin-line"></i>
+                                                                                                    </motion.span>
+                                                                                                </>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+                                                                            </li>
+                                                                        ))}
+                                                                    </ul>
+                                                                )}
 
-                                        <div className="review__form">
-                                            <h4>Leave Your Experience</h4>
-                                            <form onSubmit={submitHandler}>
-                                                <div className="form__group rating__group">
-                                                    {[1, 2, 3, 4, 5].map(
-                                                        (star) => (
+                                                                {replyingTo === index && (
+                                                                    <div className="reply__form">
+                                                                        <textarea
+                                                                            placeholder="Write your reply..."
+                                                                            value={replyMessage}
+                                                                            onChange={(e) => setReplyMessage(e.target.value)}
+                                                                            className="reply__textarea"
+                                                                            rows={2}
+                                                                        />
+                                                                        <motion.button
+                                                                            whileTap={{ scale: 1.1 }}
+                                                                            onClick={() => handleReplySubmit(index)}
+                                                                            className="submit__reply-btn"
+                                                                        >
+                                                                            Send Reply
+                                                                        </motion.button>
+                                                                    </div>
+                                                                )}
+                                                            </li>
+                                                        );
+                                                    })}
+                                            </ul>
+
+                                            <div className="review__form">
+                                                <h4>Leave Your Review</h4>
+                                                <form onSubmit={submitHandler}>
+                                                    <div className="form__group rating__group">
+                                                        {[1, 2, 3, 4, 5].map((star) => (
                                                             <motion.span
                                                                 key={star}
-                                                                whileTap={{
-                                                                    scale: 1.2,
-                                                                }}
-                                                                onClick={() =>
-                                                                    setRating(star)
-                                                                }
-                                                                style={{
-                                                                    cursor: "pointer",
-                                                                    color:
-                                                                        rating >=
-                                                                        star
-                                                                            ? "orange"
-                                                                            : "gray",
-                                                                }}
-                                                                className="star__rating-item"
+                                                                whileTap={{ scale: 1.2 }}
+                                                                onClick={() => setRating(star)}
+                                                                className={`star__rating-item ${rating >= star ? "active" : ""}`}
                                                             >
-                                                                {star}
                                                                 <i className="ri-star-s-fill"></i>
                                                             </motion.span>
-                                                        )
-                                                    )}
-                                                </div>
-
-                                                <div className="form__group">
-                                                    <textarea
-                                                        ref={reviewMessage}
-                                                        rows={4}
-                                                        type="text"
-                                                        placeholder="Review Message..."
-                                                        required
-                                                    />
-                                                </div>
-
-                                                <motion.button
-                                                    whileTap={{
-                                                        scale: 1.2,
-                                                    }}
-                                                    type="submit"
-                                                    className="buy__btn"
-                                                >
-                                                    Send
-                                                </motion.button>
-                                            </form>
+                                                        ))}
+                                                    </div>
+                                                    <div className="form__group">
+                                                        <textarea
+                                                            ref={reviewMessage}
+                                                            rows={4}
+                                                            placeholder="Write your review..."
+                                                            className="review__textarea"
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <motion.button
+                                                        whileTap={{ scale: 1.1 }}
+                                                        type="submit"
+                                                        className="submit__review-btn"
+                                                    >
+                                                        Submit Review
+                                                    </motion.button>
+                                                </form>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
                         </Col>
 
                         <Col lg="12" className="mt-5">

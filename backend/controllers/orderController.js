@@ -108,8 +108,8 @@ const confirmDelivery = async (req, res) => {
             isRead: false,
         });
 
-        // Schedule shipping to success transition after 30 seconds
-        scheduleStatusUpdate(orderId, subOrderId, "shipping", 30000);
+        // Schedule shipping to success transition after 20 seconds
+        scheduleStatusUpdate(orderId, subOrderId, "shipping", 20000);
 
         res.status(200).json({ message: "Delivery confirmed successfully" });
     } catch (error) {
